@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil Pengguna - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style-g.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div>
+        <div class="brand-name">SiPresensi</div>
+        <div class="brand-sub">Sistem Absensi</div>
+      </div>
+    </div>
+    <nav class="nav">
+        <a href="dashboard.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Dashboard</span></a>
+        <a href="data-siswa.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Data Siswa</span></a>
+        <a href="data-guru.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Data Guru</span></a>
+        <a href="data-kelas.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span>Data Kelas</span></a>
+        <a href="absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Absensi</span></a>
+        <a href="riwayat-absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Riwayat Absensi</span></a>
+        <a href="rekap-bulanan.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Rekap Bulanan</span></a>
+        <a href="notifikasi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifikasi</span></a>
+        <a href="profil-sekolah.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg><span>Profil Sekolah</span></a>
+        <a href="pengaturan.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Pengaturan</span></a>
+    </nav>
+    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Profil Pengguna</h1>
+      <div class="topbar-right">
+        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari siswa, guru, kelas..."></label>
+        <a class="bell" href="notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <div class="user">
+          <div class="avatar"><svg viewBox="0 0 40 40" role="img" aria-label="Foto Hj. Endang Triwati"><rect width="40" height="40" fill="#cbd5e1"/><path d="M6 40c1-9 7-13 14-13s13 4 14 13z" fill="#1f2937"/><ellipse cx="20" cy="17" rx="10" ry="11" fill="#1f2937"/><ellipse cx="20" cy="18" rx="6.5" ry="7.5" fill="#f1c9a5"/><path d="M13.5 15c2-4 11-4 13 0-3-1.5-10-1.5-13 0z" fill="#1f2937"/></svg></div>
+          <div>
+            <div class="user-name">Hj. Endang Triwati</div>
+            <div class="user-role">Admin Kepegawaian</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="profile-grid">
+        <aside class="card profile-card">
+          <div class="avatar-lg" id="profile-avatar-initial">-</div>
+          <div class="profile-name" id="profile-card-name">-</div>
+          <div class="profile-role" id="profile-card-role">-</div>
+          <div class="profile-kv">
+            <div><span id="profile-id-label">NIP / NIS</span><b id="profile-id-val">-</b></div>
+            <div><span>Unit Kerja</span><b>SMA Negeri 1 Jakarta</b></div>
+          </div>
+        </aside>
+        <div>
+          <section class="card form-card">
+            <h2 class="form-title">Informasi Pribadi</h2>
+            <div class="form-grid">
+              <div><label class="label" for="nama">Nama Lengkap</label><input class="input sm" id="nama" type="text" placeholder="Nama lengkap"></div>
+              <div><label class="label" for="mail">Alamat E-mail</label><input class="input sm" id="mail" type="email" placeholder="Alamat email"></div>
+              <div><label class="label" for="tel">No. Telepon / WA</label><input class="input sm" id="tel" type="text" placeholder="08xx-xxxx-xxxx"></div>
+              <div><label class="label" for="jabatan">Jabatan / Kelas</label><input class="input sm" id="jabatan" type="text" placeholder="Jabatan"></div>
+            </div>
+          </section>
+          <section class="card form-card">
+            <h2 class="form-title">Keamanan Akun</h2>
+            <div class="form-grid">
+              <div><label class="label" for="lama">Kata Sandi Lama</label><input class="input sm white" id="lama" type="password" placeholder="Masukkan kata sandi lama"></div>
+              <div><label class="label" for="baru">Kata Sandi Baru</label><input class="input sm white" id="baru" type="password" placeholder="Minimal 5 karakter..."></div>
+            </div>
+          </section>
+          <div class="form-actions">
+            <button class="btn btn-outline" id="btn-cancel-profile" type="button">Batal</button>
+            <button class="btn btn-primary" id="btn-save-profile" type="button">Simpan Perubahan</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<script src="script.js"></script>
+<script src="app-core.js"></script>
+<script>
+  (async function() {
+    let currentUser = null;
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const json = await res.json();
+        if (json.success && json.user) {
+          currentUser = json.user;
+          const u = json.user;
+          document.getElementById('nama').value = u.name || '';
+          document.getElementById('mail').value = u.email || '';
+          document.getElementById('tel').value = u.phone || '';
+          document.getElementById('jabatan').value = u.title || (u.role === 'guru' ? 'Guru / Pengajar' : (u.kelas || '-'));
+
+          document.getElementById('profile-card-name').textContent = u.name;
+          document.getElementById('profile-card-role').textContent = u.title || (u.role === 'guru' ? 'Guru / Staf Pengajar' : 'Siswa');
+          document.getElementById('profile-avatar-initial').textContent = u.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+
+          const idLabel = document.getElementById('profile-id-label');
+          const idVal = document.getElementById('profile-id-val');
+          if (u.role === 'guru') {
+            idLabel.textContent = 'NIP';
+            idVal.textContent = u.nip || '-';
+          } else {
+            idLabel.textContent = 'NIS';
+            idVal.textContent = u.nis || '-';
+          }
+        }
+      } catch (e) {
+        console.warn('Gagal memuat profil pengguna:', e);
+      }
+    }
+
+    document.getElementById('btn-save-profile').addEventListener('click', async () => {
+      const name = document.getElementById('nama').value.trim();
+      const email = document.getElementById('mail').value.trim();
+      const phone = document.getElementById('tel').value.trim();
+      const title = document.getElementById('jabatan').value.trim();
+      const oldPw = document.getElementById('lama').value;
+      const newPw = document.getElementById('baru').value;
+
+      try {
+        // Update profile
+        const res = await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, title })
+        });
+        const json = await res.json();
+
+        // Update password if specified
+        if (newPw) {
+          if (!oldPw) {
+            SiPresensi.showToast('Masukkan kata sandi lama untuk mengubah kata sandi!', 'error');
+            return;
+          }
+          const pwRes = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw, confirmPassword: newPw })
+          });
+          const pwJson = await pwRes.json();
+          if (!pwJson.success) {
+            SiPresensi.showToast(pwJson.message, 'error');
+            return;
+          }
+        }
+
+        if (json.success) {
+          SiPresensi.showToast('Perubahan profil berhasil disimpan ke database!', 'success');
+          loadProfile();
+        } else {
+          SiPresensi.showToast(json.message || 'Gagal menyimpan profil', 'error');
+        }
+      } catch (err) {
+        SiPresensi.showToast('Terjadi kesalahan koneksi.', 'error');
+      }
+    });
+
+    document.getElementById('btn-cancel-profile').addEventListener('click', loadProfile);
+
+    loadProfile();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rekap Bulanan - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style-g.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div>
+        <div class="brand-name">SiPresensi</div>
+        <div class="brand-sub">Sistem Absensi</div>
+      </div>
+    </div>
+    <nav class="nav">
+        <a href="dashboard.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Dashboard</span></a>
+        <a href="data-siswa.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Data Siswa</span></a>
+        <a href="data-guru.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Data Guru</span></a>
+        <a href="data-kelas.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span>Data Kelas</span></a>
+        <a href="absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Absensi</span></a>
+        <a href="riwayat-absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Riwayat Absensi</span></a>
+        <a href="rekap-bulanan.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Rekap Bulanan</span></a>
+        <a href="notifikasi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifikasi</span></a>
+        <a href="profil-sekolah.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg><span>Profil Sekolah</span></a>
+        <a href="pengaturan.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Pengaturan</span></a>
+    </nav>
+    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Rekap Bulanan</h1>
+      <div class="topbar-right">
+        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="topbar-search-rekap" placeholder="Cari siswa, guru, kelas..."></label>
+        <a class="bell" href="notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <div class="user">
+          <div class="avatar"><svg viewBox="0 0 40 40" role="img" aria-label="Foto Hj. Endang Triwati"><rect width="40" height="40" fill="#cbd5e1"/><path d="M6 40c1-9 7-13 14-13s13 4 14 13z" fill="#1f2937"/><ellipse cx="20" cy="17" rx="10" ry="11" fill="#1f2937"/><ellipse cx="20" cy="18" rx="6.5" ry="7.5" fill="#f1c9a5"/><path d="M13.5 15c2-4 11-4 13 0-3-1.5-10-1.5-13 0z" fill="#1f2937"/></svg></div>
+          <div>
+            <div class="user-name">Hj. Endang Triwati</div>
+            <div class="user-role">Admin Kepegawaian</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <!-- Dropdown Bulan Interaktif -->
+          <div class="select" style="padding:0; border:1px solid var(--border); background:#fff; overflow:hidden;">
+            <select id="filter-rekap-bulan" style="border:none; background:transparent; padding:8px 14px; font:inherit; font-size:12px; font-weight:600; color:var(--text); outline:none; cursor:pointer;">
+              <option value="Oktober 2024">Oktober 2024</option>
+              <option value="September 2024">September 2024</option>
+              <option value="Agustus 2024">Agustus 2024</option>
+              <option value="Juli 2024">Juli 2024</option>
+            </select>
+          </div>
+
+          <!-- Dropdown Kelas Interaktif -->
+          <div class="select" style="padding:0; border:1px solid var(--border); background:#fff; overflow:hidden;">
+            <select id="filter-rekap-kelas" style="border:none; background:transparent; padding:8px 14px; font:inherit; font-size:12px; font-weight:600; color:var(--text); outline:none; cursor:pointer;">
+              <option value="Semua Kelas">Semua Kelas</option>
+              <option value="XII IPA 1">XII IPA 1</option>
+              <option value="XII IPA 2">XII IPA 2</option>
+              <option value="XII IPS 1">XII IPS 1</option>
+              <option value="XI IPA 1">XI IPA 1</option>
+              <option value="XI IPS 1">XI IPS 1</option>
+              <option value="XI IPS 2">XI IPS 2</option>
+              <option value="X IPA 1">X IPA 1</option>
+              <option value="X IPA 2">X IPA 2</option>
+              <option value="X IPS 1">X IPS 1</option>
+            </select>
+          </div>
+
+          <!-- Input Pencarian -->
+          <input type="text" id="search-rekap-input" placeholder="Cari nama atau NIS..." style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:12px; outline:none; min-width:180px; background:#fff;">
+        </div>
+      </div>
+      <section class="rekap-top">
+        <div class="card donut-card">
+          <div class="donut"><div class="donut-center"><b id="donut-pct">0%</b><span>Kehadiran</span></div></div>
+          <div class="donut-legend">
+            <span><i class="dot lg hadir"></i>Hadir (<span id="pct-hadir">0%</span>)</span>
+            <span><i class="dot lg izin"></i>Izin (<span id="pct-izin">0%</span>)</span>
+            <span><i class="dot lg blue"></i>Sakit (<span id="pct-sakit">0%</span>)</span>
+            <span><i class="dot lg alfa"></i>Alfa (<span id="pct-alfa">0%</span>)</span>
+          </div>
+        </div>
+        <div class="mini-grid">
+          <div class="card mini"><span class="mini-label">Total Hari Efektif</span><span class="mini-value" id="card-hari">-</span><span class="mini-note" id="card-bulan-label">Periode Berjalan</span></div>
+          <div class="card mini"><span class="mini-label">Rata-rata Kehadiran</span><span class="mini-value" id="card-rata">0%</span><span class="mini-note up">Berdasarkan rekap kelas</span></div>
+          <div class="card mini"><span class="mini-label">Siswa Terajin</span><span class="mini-value" id="card-rajin" style="font-size:17px; margin-top:4px;">-</span><span class="mini-note">Tingkat kehadiran terbaik</span></div>
+          <div class="card mini"><span class="mini-label">Siswa Butuh Perhatian</span><span class="mini-value" id="card-sering-alfa" style="font-size:17px; margin-top:4px;">Nihil</span><span class="mini-note">Catatan absensi terbanyak</span></div>
+        </div>
+      </section>
+      <section class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>No</th><th>NIS</th><th>Nama Lengkap</th><th>Kelas</th><th>Rasio Kehadiran</th></tr></thead>
+            <tbody id="rekap-tbody">
+              <tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Memuat rekap kehadiran bulanan...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<script src="script.js"></script>
+<script src="app-core.js"></script>
+<script>
+  (function() {
+    const filterBulan = document.getElementById('filter-rekap-bulan');
+    const filterKelas = document.getElementById('filter-rekap-kelas');
+    const searchInput = document.getElementById('search-rekap-input');
+    const topSearch = document.getElementById('topbar-search-rekap');
+    const tbody = document.getElementById('rekap-tbody');
+
+    const donutPct = document.getElementById('donut-pct');
+    const pctHadir = document.getElementById('pct-hadir');
+    const pctIzin = document.getElementById('pct-izin');
+    const pctSakit = document.getElementById('pct-sakit');
+    const pctAlfa = document.getElementById('pct-alfa');
+
+    const cardHari = document.getElementById('card-hari');
+    const cardBulanLabel = document.getElementById('card-bulan-label');
+    const cardRata = document.getElementById('card-rata');
+    const cardRajin = document.getElementById('card-rajin');
+    const cardAlfa = document.getElementById('card-sering-alfa');
+
+    async function loadRekap() {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Memuat data rekap...</td></tr>';
+
+      const bulan = filterBulan.value;
+      const kelas = filterKelas.value;
+      const q = (searchInput.value || (topSearch ? topSearch.value : '')).trim();
+
+      const params = new URLSearchParams();
+      if (bulan) params.append('bulan', bulan);
+      if (kelas && kelas !== 'Semua Kelas') params.append('kelas', kelas);
+      if (q) params.append('q', q);
+
+      try {
+        const res = await fetch(`/api/absensi/rekap-bulanan?${params.toString()}`);
+        const json = await res.json();
+        if (json.success) {
+          renderData(json.data, json.summary, bulan);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#ef4444;">Gagal memuat rekap.</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#ef4444;">Gagal terhubung ke backend server.</td></tr>';
+      }
+    }
+
+    function renderData(list, summary, bulan) {
+      if (summary) {
+        if (donutPct) donutPct.textContent = summary.kehadiranOverall || '0%';
+        if (pctHadir) pctHadir.textContent = summary.pctHadir || '0%';
+        if (pctIzin)  pctIzin.textContent  = summary.pctIzin || '0%';
+        if (pctSakit) pctSakit.textContent = summary.pctSakit || '0%';
+        if (pctAlfa)  pctAlfa.textContent  = summary.pctAlfa || '0%';
+        if (cardHari) cardHari.textContent = summary.totalHari || '-';
+        if (cardBulanLabel) cardBulanLabel.textContent = bulan;
+        if (cardRata)  cardRata.textContent = summary.kehadiranOverall || '0%';
+        if (cardRajin) cardRajin.textContent = summary.siswaTerajin || '-';
+        if (cardAlfa)  cardAlfa.textContent  = summary.siswaSeringAlfa || 'Nihil';
+      }
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Tidak ada data rekap siswa yang cocok dengan filter.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      list.forEach((item, index) => {
+        const pctNum = parseFloat(item.persentase) || 0;
+        let colorClass = 'g';
+        if (pctNum < 85) colorClass = 'r';
+        else if (pctNum < 93) colorClass = 'y';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="bold">${item.nis}</td>
+          <td>${item.nama}</td>
+          <td>${item.kelas}</td>
+          <td>
+            <div class="ratio">
+              <div class="ratio-track"><div class="ratio-fill ${colorClass}" style="width:${pctNum}%"></div></div>
+              <span class="ratio-pct">${item.persentase}</span>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    filterBulan.addEventListener('change', loadRekap);
+    filterKelas.addEventListener('change', loadRekap);
+    searchInput.addEventListener('input', () => {
+      clearTimeout(window._rekapSearchTimer);
+      window._rekapSearchTimer = setTimeout(loadRekap, 300);
+    });
+    if (topSearch) {
+      topSearch.addEventListener('input', () => {
+        searchInput.value = topSearch.value;
+        clearTimeout(window._rekapSearchTimer);
+        window._rekapSearchTimer = setTimeout(loadRekap, 300);
+      });
+    }
+
+    loadRekap();
+  })();
+</script>
+</body>
+</html>

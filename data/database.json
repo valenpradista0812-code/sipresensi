@@ -1,0 +1,497 @@
+{
+  "users": [
+    {
+      "id": "usr-1",
+      "email": "admin.endang@sman1jkt.sch.id",
+      "password": "$2a$10$LwOcqAiSoFf/txqjayJbQexZq9ZAIUcEQh3u1yjZOMnZi/TEBbq4W",
+      "name": "Hj. Endang Triwati, M.Pd.",
+      "role": "guru",
+      "title": "Admin Kepegawaian & Guru",
+      "nip": "1972041501",
+      "phone": "0812-9876-5432",
+      "avatar": "ET"
+    },
+    {
+      "id": "usr-2",
+      "email": "guru@sman1jkt.sch.id",
+      "password": "$2a$10$LwOcqAiSoFf/txqjayJbQexZq9ZAIUcEQh3u1yjZOMnZi/TEBbq4W",
+      "name": "Drs. Heri Susanto",
+      "role": "guru",
+      "title": "Guru Matematika",
+      "nip": "1975031201",
+      "phone": "0812-7766-5544",
+      "avatar": "HS"
+    },
+    {
+      "id": "usr-3",
+      "email": "siswa@sman1jkt.sch.id",
+      "password": "$2a$10$LwOcqAiSoFf/txqjayJbQexZq9ZAIUcEQh3u1yjZOMnZi/TEBbq4W",
+      "name": "Rizky Pratama",
+      "role": "siswa",
+      "title": "Siswa • XII IPA 1",
+      "nis": "10924",
+      "kelas": "XII IPA 1",
+      "phone": "0821-5566-7788",
+      "avatar": "RP"
+    },
+    {
+      "id": "usr-4",
+      "email": "budi@sman1jkt.sch.id",
+      "password": "$2a$10$LwOcqAiSoFf/txqjayJbQexZq9ZAIUcEQh3u1yjZOMnZi/TEBbq4W",
+      "name": "Budi Santoso",
+      "role": "siswa",
+      "title": "Siswa • XII IPA 1",
+      "nis": "10921",
+      "kelas": "XII IPA 1",
+      "phone": "0812-3456-7890",
+      "avatar": "BS"
+    }
+  ],
+  "siswa": [
+    {
+      "id": "sis-1",
+      "nis": "10921",
+      "name": "Budi Santoso",
+      "kelas": "XII IPA 2",
+      "gender": "Laki-laki",
+      "phone": "0812-3456-7890",
+      "email": "budi@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-2",
+      "nis": "10922",
+      "name": "Aditya Pratama",
+      "kelas": "XII IPA 1",
+      "gender": "Laki-laki",
+      "phone": "0812-4455-8899",
+      "email": "aditya@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-3",
+      "nis": "10923",
+      "name": "Siti Aminah",
+      "kelas": "XI IPS 2",
+      "gender": "Perempuan",
+      "phone": "0813-8899-0011",
+      "email": "siti@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-4",
+      "nis": "10924",
+      "name": "Rizky Pratama",
+      "kelas": "XII IPA 1",
+      "gender": "Laki-laki",
+      "phone": "0821-5566-7788",
+      "email": "siswa@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-5",
+      "nis": "10925",
+      "name": "Larasati Putri",
+      "kelas": "XII IPS 1",
+      "gender": "Perempuan",
+      "phone": "0815-1122-3344",
+      "email": "larasati@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-6",
+      "nis": "10926",
+      "name": "Farhan Saputra",
+      "kelas": "X IPA 1",
+      "gender": "Laki-laki",
+      "phone": "0857-4433-2211",
+      "email": "farhan@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-7",
+      "nis": "10927",
+      "name": "Amanda Lestari",
+      "kelas": "XI IPA 2",
+      "gender": "Perempuan",
+      "phone": "0811-9988-7766",
+      "email": "amanda@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-8",
+      "nis": "10928",
+      "name": "Dewa Gede",
+      "kelas": "XII IPA 1",
+      "gender": "Laki-laki",
+      "phone": "0819-2233-4455",
+      "email": "dewa@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-9",
+      "nis": "10929",
+      "name": "Putri Handayani",
+      "kelas": "X IPS 1",
+      "gender": "Perempuan",
+      "phone": "0813-5566-1122",
+      "email": "putri@sman1jkt.sch.id",
+      "status": "Aktif"
+    },
+    {
+      "id": "sis-10",
+      "nis": "10930",
+      "name": "Muhammad Fauzan",
+      "kelas": "XI IPS 1",
+      "gender": "Laki-laki",
+      "phone": "0852-9900-1122",
+      "email": "fauzan@sman1jkt.sch.id",
+      "status": "Aktif"
+    }
+  ],
+  "guru": [
+    {
+      "id": "gur-1",
+      "nip": "1975031201",
+      "name": "Drs. Heri Susanto",
+      "mapel": "Matematika",
+      "phone": "0812-7766-5544",
+      "email": "heri.susanto@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-2",
+      "nip": "1982052402",
+      "name": "Sri Wahyuni, S.Pd.",
+      "mapel": "Bahasa Indonesia",
+      "phone": "0813-2211-9988",
+      "email": "sri.wahyuni@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-3",
+      "nip": "1978100501",
+      "name": "Bambang Hartono, M.Pd.",
+      "mapel": "Fisika (IPA)",
+      "phone": "0811-3344-5566",
+      "email": "bambang.h@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-4",
+      "nip": "1985121402",
+      "name": "Dewi Lestari, S.Si.",
+      "mapel": "Biologi (IPA)",
+      "phone": "0857-1122-3344",
+      "email": "dewi.lestari@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-5",
+      "nip": "1980081801",
+      "name": "Ahmad Dahlan, S.Pd.",
+      "mapel": "Sejarah",
+      "phone": "0819-5566-7788",
+      "email": "ahmad.dahlan@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-6",
+      "nip": "1989040301",
+      "name": "Rian Hidayat, S.Or.",
+      "mapel": "PJOK",
+      "phone": "0852-8899-0011",
+      "email": "rian.hidayat@sman1jkt.sch.id"
+    },
+    {
+      "id": "gur-7",
+      "nip": "1973022802",
+      "name": "Dra. Maria Ulfah",
+      "mapel": "Kimia (IPA)",
+      "phone": "0812-4455-6677",
+      "email": "maria.ulfah@sman1jkt.sch.id"
+    }
+  ],
+  "kelas": [
+    {
+      "id": "kls-1",
+      "name": "XII IPA 1",
+      "totalSiswa": 36,
+      "waliKelas": "Drs. Heri Susanto",
+      "ruangan": "Gedung A, Lantai 3"
+    },
+    {
+      "id": "kls-2",
+      "name": "XII IPA 2",
+      "totalSiswa": 35,
+      "waliKelas": "Dewi Lestari, S.Si.",
+      "ruangan": "Gedung A, Lantai 3"
+    },
+    {
+      "id": "kls-3",
+      "name": "XII IPS 1",
+      "totalSiswa": 34,
+      "waliKelas": "Ahmad Dahlan, S.Pd.",
+      "ruangan": "Gedung B, Lantai 3"
+    },
+    {
+      "id": "kls-4",
+      "name": "XI IPA 1",
+      "totalSiswa": 36,
+      "waliKelas": "Bambang Hartono, M.Pd.",
+      "ruangan": "Gedung A, Lantai 2"
+    },
+    {
+      "id": "kls-5",
+      "name": "XI IPA 2",
+      "totalSiswa": 35,
+      "waliKelas": "Dra. Maria Ulfah",
+      "ruangan": "Gedung A, Lantai 2"
+    },
+    {
+      "id": "kls-6",
+      "name": "XI IPS 1",
+      "totalSiswa": 34,
+      "waliKelas": "Rian Hidayat, S.Or.",
+      "ruangan": "Gedung B, Lantai 2"
+    },
+    {
+      "id": "kls-7",
+      "name": "XI IPS 2",
+      "totalSiswa": 35,
+      "waliKelas": "Sri Wahyuni, S.Pd.",
+      "ruangan": "Gedung B, Lantai 2"
+    },
+    {
+      "id": "kls-8",
+      "name": "X IPA 1",
+      "totalSiswa": 36,
+      "waliKelas": "Sri Wahyuni, S.Pd.",
+      "ruangan": "Gedung A, Lantai 1"
+    },
+    {
+      "id": "kls-9",
+      "name": "X IPA 2",
+      "totalSiswa": 35,
+      "waliKelas": "Dewi Lestari, S.Si.",
+      "ruangan": "Gedung A, Lantai 1"
+    },
+    {
+      "id": "kls-10",
+      "name": "X IPS 1",
+      "totalSiswa": 34,
+      "waliKelas": "Ahmad Dahlan, S.Pd.",
+      "ruangan": "Gedung B, Lantai 1"
+    }
+  ],
+  "absensi": [
+    {
+      "id": "abs-1",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika",
+      "nis": "10921",
+      "studentName": "Budi Santoso",
+      "status": "hadir",
+      "checkIn": "07:12:00",
+      "checkOut": "15:30:00",
+      "note": "Tepat Waktu"
+    },
+    {
+      "id": "abs-2",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika (Drs. Heri S)",
+      "nis": "10922",
+      "studentName": "Aditya Pratama",
+      "status": "izin",
+      "checkIn": "07:14:00",
+      "checkOut": "15:30:00",
+      "note": "Tepat Waktu"
+    },
+    {
+      "id": "abs-3",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika",
+      "nis": "10923",
+      "studentName": "Siti Aminah",
+      "status": "izin",
+      "checkIn": "-",
+      "checkOut": "-",
+      "note": "Surat Izin Keluarga"
+    },
+    {
+      "id": "abs-4",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika (Drs. Heri S)",
+      "nis": "10924",
+      "studentName": "Rizky Pratama",
+      "status": "hadir",
+      "checkIn": "07:15:22",
+      "checkOut": "15:30:14",
+      "note": "Tepat Waktu"
+    },
+    {
+      "id": "abs-5",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika",
+      "nis": "10925",
+      "studentName": "Larasati Putri",
+      "status": "sakit",
+      "checkIn": "-",
+      "checkOut": "-",
+      "note": "Surat Dokter"
+    },
+    {
+      "id": "abs-6",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika",
+      "nis": "10926",
+      "studentName": "Farhan Saputra",
+      "status": "hadir",
+      "checkIn": "07:20:00",
+      "checkOut": "15:30:00",
+      "note": "Tepat Waktu"
+    },
+    {
+      "id": "abs-7",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika",
+      "nis": "10927",
+      "studentName": "Amanda Lestari",
+      "status": "hadir",
+      "checkIn": "07:10:00",
+      "checkOut": "15:30:00",
+      "note": "Tepat Waktu"
+    },
+    {
+      "id": "abs-8",
+      "date": "2024-10-14",
+      "kelas": "XII IPA 1",
+      "mapel": "Matematika (Drs. Heri S)",
+      "nis": "10928",
+      "studentName": "Dewa Gede",
+      "status": "alfa",
+      "checkIn": "-",
+      "checkOut": "-",
+      "note": "Tanpa Keterangan"
+    }
+  ],
+  "studentLogs": [
+    {
+      "id": "log-1",
+      "nis": "10924",
+      "tgl": "Senin, 14 Oktober 2024",
+      "masuk": "07:15:22 WIB",
+      "keluar": "16:36:53 WIB",
+      "zona": "Gedung Kelas XII",
+      "status": "hadir",
+      "statusText": "Memenuhi Target (>8 Jam)",
+      "valid": true,
+      "durasi": "08j 15m"
+    },
+    {
+      "id": "log-2",
+      "nis": "10924",
+      "tgl": "Jumat, 11 Oktober 2024",
+      "masuk": "07:10:05 WIB",
+      "keluar": "15:35:41 WIB",
+      "zona": "Gedung Kelas XII",
+      "status": "hadir",
+      "statusText": "Memenuhi Target (>8 Jam)",
+      "valid": true,
+      "durasi": "08j 25m"
+    },
+    {
+      "id": "log-3",
+      "nis": "10924",
+      "tgl": "Kamis, 10 Oktober 2024",
+      "masuk": "07:22:48 WIB",
+      "keluar": "15:30:02 WIB",
+      "zona": "Gedung Kelas XII",
+      "status": "hadir",
+      "statusText": "Memenuhi Target (>8 Jam)",
+      "valid": true,
+      "durasi": "08j 08m"
+    },
+    {
+      "id": "log-4",
+      "nis": "10924",
+      "tgl": "Rabu, 09 Oktober 2024",
+      "masuk": "17:20:20 WIB",
+      "keluar": "-",
+      "zona": "Luar Sekolah (Lomba)",
+      "status": "izin",
+      "statusText": "Izin Lomba OSN",
+      "valid": true,
+      "durasi": "-"
+    },
+    {
+      "id": "log-5",
+      "nis": "10924",
+      "tgl": "Selasa, 08 Oktober 2024",
+      "masuk": "07:14:30 WIB",
+      "keluar": "15:40:19 WIB",
+      "zona": "Gedung Kelas XII",
+      "status": "hadir",
+      "statusText": "Memenuhi Target (>8 Jam)",
+      "valid": true,
+      "durasi": "08j 26m"
+    },
+    {
+      "id": "log-6",
+      "nis": "10924",
+      "tgl": "Senin, 07 Oktober 2024",
+      "masuk": "07:35:12 WIB",
+      "keluar": "15:30:00 WIB",
+      "zona": "Gedung Kelas XII",
+      "status": "late",
+      "statusText": "Kurang Target (<8 Jam)",
+      "valid": true,
+      "durasi": "07j 55m"
+    }
+  ],
+  "pengaturan": {
+    "sekolah": "SMA Negeri 1 Jakarta",
+    "ta": "2024/2025 Ganjil",
+    "jamMasuk": "07:00 WIB",
+    "toleransi": "15 Menit",
+    "emailNotif": true,
+    "whatsappRekap": true,
+    "bahasa": "Bahasa Indonesia"
+  },
+  "profilSekolah": {
+    "nama": "SMA Negeri 1 Jakarta",
+    "npsn": "20101589",
+    "akreditasi": "A (Unggul)",
+    "alamat": "Jl. Budi Utomo No.7, Ps. Baru, Sawah Besar, Jakarta Pusat",
+    "email": "info@sman1jkt.sch.id",
+    "telepon": "(021) 3865001",
+    "kepsek": "Dr. H. Sudirman, M.Pd.",
+    "nipKepsek": "196803151992031004",
+    "kurikulum": "Kurikulum Merdeka"
+  },
+  "notifikasi": [
+    {
+      "id": "notif-1",
+      "title": "Laporan Presensi Harian Siap",
+      "text": "Rekap kehadiran seluruh kelas untuk hari Senin, 14 Oktober telah selesai diproses.",
+      "time": "10 menit yang lalu",
+      "unread": true
+    },
+    {
+      "id": "notif-2",
+      "title": "Pemberitahuan Toleransi Absen",
+      "text": "Batas toleransi keterlambatan semester ganjil ditetapkan 15 menit setelah jam masuk.",
+      "time": "2 jam yang lalu",
+      "unread": true
+    },
+    {
+      "id": "notif-3",
+      "title": "Sinkronisasi Data Berhasil",
+      "text": "Database absensi siswa otomatis telah berhasil disinkronkan dengan server pusat.",
+      "time": "1 hari yang lalu",
+      "unread": false
+    }
+  ]
+}

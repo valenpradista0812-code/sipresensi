@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style-g.css">
+</head>
+<body>
+<div class="login">
+  <section class="login-left">
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div class="brand-name">SiPresensi</div>
+    </div>
+    <div class="login-visual">
+      <div class="login-img"><svg viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gedung SMA Bhakti Mulia">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd0f4"/><stop offset="1" stop-color="#d9f0fb"/></linearGradient>
+  </defs>
+  <rect width="360" height="250" fill="url(#sky)"/>
+  <ellipse cx="70" cy="40" rx="34" ry="9" fill="#fff" opacity=".85"/>
+  <ellipse cx="290" cy="32" rx="40" ry="10" fill="#fff" opacity=".8"/>
+  <rect y="190" width="360" height="60" fill="#c9c4b8"/>
+  <rect y="182" width="360" height="12" fill="#7fbf6a"/>
+  <rect x="70" y="80" width="220" height="108" fill="#c86a3f"/>
+  <rect x="70" y="72" width="220" height="10" fill="#e9e2d4"/>
+  <rect x="100" y="52" width="160" height="22" fill="#b85a32"/>
+  <rect x="96" y="46" width="168" height="8" fill="#e9e2d4"/>
+  <rect x="120" y="96" width="120" height="92" fill="#f1ebdd"/>
+  <g fill="#6ea9c9">
+    <rect x="82" y="92" width="26" height="16"/><rect x="82" y="120" width="26" height="16"/><rect x="82" y="148" width="26" height="16"/>
+    <rect x="252" y="92" width="26" height="16"/><rect x="252" y="120" width="26" height="16"/><rect x="252" y="148" width="26" height="16"/>
+    <rect x="128" y="104" width="24" height="16"/><rect x="168" y="104" width="24" height="16"/><rect x="208" y="104" width="24" height="16"/>
+    <rect x="128" y="130" width="24" height="16"/><rect x="168" y="130" width="24" height="16"/><rect x="208" y="130" width="24" height="16"/>
+  </g>
+  <rect x="164" y="156" width="32" height="32" fill="#5b7f95"/>
+  <rect x="112" y="84" width="82" height="10" rx="2" fill="#fff"/>
+  <rect x="116" y="87" width="8" height="4" fill="#1b2a4b"/>
+  <text x="128" y="92" font-family="Arial, sans-serif" font-size="6" font-weight="700" fill="#10b981">SMA BHAKTI MULIA</text>
+  <g><circle cx="34" cy="120" r="30" fill="#4c9a4a"/><circle cx="52" cy="104" r="24" fill="#5db15a"/><rect x="30" y="140" width="8" height="44" fill="#6b4a2f"/></g>
+  <g><circle cx="328" cy="118" r="30" fill="#4c9a4a"/><circle cx="310" cy="104" r="22" fill="#5db15a"/><rect x="324" y="140" width="8" height="44" fill="#6b4a2f"/></g>
+  <g fill="#3d4b63"><rect x="120" y="196" width="6" height="18" rx="2"/><rect x="146" y="200" width="6" height="18" rx="2"/><rect x="214" y="198" width="6" height="18" rx="2"/><rect x="238" y="202" width="6" height="18" rx="2"/></g>
+  <g fill="#f1c9a5"><circle cx="123" cy="192" r="4"/><circle cx="149" cy="196" r="4"/><circle cx="217" cy="194" r="4"/><circle cx="241" cy="198" r="4"/></g>
+</svg></div>
+      <h2>Sistem Presensi Digital Sekolah</h2>
+      <p>Kelola data absensi siswa dan guru secara praktis, akurat, dan real-time.</p>
+    </div>
+    <div class="login-copy">&copy; 2024 Dinas Pendidikan DKI Jakarta, SMAN 1 Jakarta. All rights reserved.</div>
+  </section>
+  <section class="login-right">
+    <form class="login-form" id="login-form">
+      <h1>Selamat Datang</h1>
+      <p class="lead">Silakan masuk menggunakan akun presensi Anda.</p>
+      
+      <!-- Role Quick Switcher -->
+      <div style="display:flex; gap:8px; margin-bottom:18px; padding:4px; background:#f1f5f9; border-radius:8px;">
+        <button type="button" id="role-btn-guru" class="btn" style="flex:1; padding:8px 12px; font-size:13px; font-weight:600; border-radius:6px; background:#10b981; color:#fff; border:none; cursor:pointer;">Guru / Admin</button>
+        <button type="button" id="role-btn-siswa" class="btn" style="flex:1; padding:8px 12px; font-size:13px; font-weight:600; border-radius:6px; background:transparent; color:#64748b; border:none; cursor:pointer;">Siswa / Murid</button>
+      </div>
+
+      <div id="login-alert" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
+
+      <div class="form-group">
+        <label class="label" for="email" style="margin-bottom:8px">Alamat E-mail / NIS / NIP</label>
+        <input class="input" id="email" type="text" value="admin.endang@sman1jkt.sch.id" placeholder="Masukkan email, NIS, atau NIP" required>
+      </div>
+      <div class="form-group">
+        <div class="label-row">
+          <label class="label" for="password">Kata Sandi</label>
+          <a class="link-green" href="javascript:alert('Gunakan kata sandi default: password123')">Lupa Password?</a>
+        </div>
+        <div class="input-wrap">
+          <input class="input" id="password" type="password" value="password123" placeholder="Masukkan kata sandi" required>
+          <button class="eye" type="button" data-toggle-pass="password" aria-label="Tampilkan kata sandi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-submit" type="submit">Masuk Ke Sistem</button>
+
+      <div style="margin-top:16px; text-align:center; font-size:12px; color:#94a3b8;">
+        Akun Demo: <b>admin.endang@sman1jkt.sch.id</b> (Guru) | <b>siswa@sman1jkt.sch.id</b> (Siswa)
+      </div>
+    </form>
+  </section>
+</div>
+<script src="script.js"></script>
+<script>
+  // Login form handler
+  (function() {
+    const form = document.getElementById('login-form');
+    const emailInput = document.getElementById('email');
+    const passInput = document.getElementById('password');
+    const btnSubmit = document.getElementById('btn-submit');
+    const alertBox = document.getElementById('login-alert');
+    const btnGuru = document.getElementById('role-btn-guru');
+    const btnSiswa = document.getElementById('role-btn-siswa');
+
+    function showAlert(msg, isSuccess) {
+      alertBox.textContent = msg;
+      alertBox.style.display = 'block';
+      if (isSuccess) {
+        alertBox.style.background = '#dcfce7';
+        alertBox.style.color = '#15803d';
+        alertBox.style.border = '1px solid #86efac';
+      } else {
+        alertBox.style.background = '#fee2e2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.style.border = '1px solid #fca5a5';
+      }
+    }
+
+    if (btnGuru && btnSiswa) {
+      btnGuru.addEventListener('click', function() {
+        btnGuru.style.background = '#10b981';
+        btnGuru.style.color = '#ffffff';
+        btnSiswa.style.background = 'transparent';
+        btnSiswa.style.color = '#64748b';
+        emailInput.value = 'admin.endang@sman1jkt.sch.id';
+        passInput.value = 'password123';
+        alertBox.style.display = 'none';
+      });
+
+      btnSiswa.addEventListener('click', function() {
+        btnSiswa.style.background = '#10b981';
+        btnSiswa.style.color = '#ffffff';
+        btnGuru.style.background = 'transparent';
+        btnGuru.style.color = '#64748b';
+        emailInput.value = 'siswa@sman1jkt.sch.id';
+        passInput.value = 'password123';
+        alertBox.style.display = 'none';
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+        const password = passInput.value;
+
+        if (!email || !password) {
+          showAlert('Silakan masukkan email/ID dan kata sandi.', false);
+          return;
+        }
+
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Memproses...';
+        alertBox.style.display = 'none';
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            showAlert('Login berhasil! Mengalihkan ke dashboard...', true);
+            setTimeout(() => {
+              window.location.href = data.redirectUrl || '/';
+            }, 600);
+          } else {
+            showAlert(data.message || 'Login gagal.', false);
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = 'Masuk Ke Sistem';
+          }
+        } catch (err) {
+          showAlert('Gagal terhubung ke server backend.', false);
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = 'Masuk Ke Sistem';
+        }
+      });
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Absensi - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style-g.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div>
+        <div class="brand-name">SiPresensi</div>
+        <div class="brand-sub">Sistem Absensi</div>
+      </div>
+    </div>
+    <nav class="nav">
+        <a href="dashboard.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Dashboard</span></a>
+        <a href="data-siswa.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Data Siswa</span></a>
+        <a href="data-guru.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Data Guru</span></a>
+        <a href="data-kelas.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span>Data Kelas</span></a>
+        <a href="absensi.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Absensi</span></a>
+        <a href="riwayat-absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Riwayat Absensi</span></a>
+        <a href="rekap-bulanan.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Rekap Bulanan</span></a>
+        <a href="notifikasi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifikasi</span></a>
+        <a href="profil-sekolah.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg><span>Profil Sekolah</span></a>
+        <a href="pengaturan.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Pengaturan</span></a>
+    </nav>
+    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Input Absensi Hari Ini</h1>
+      <div class="topbar-right">
+        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari siswa, guru, kelas..."></label>
+        <a class="bell" href="notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <div class="user">
+          <div class="avatar"><svg viewBox="0 0 40 40" role="img" aria-label="Foto Hj. Endang Triwati"><rect width="40" height="40" fill="#cbd5e1"/><path d="M6 40c1-9 7-13 14-13s13 4 14 13z" fill="#1f2937"/><ellipse cx="20" cy="17" rx="10" ry="11" fill="#1f2937"/><ellipse cx="20" cy="18" rx="6.5" ry="7.5" fill="#f1c9a5"/><path d="M13.5 15c2-4 11-4 13 0-3-1.5-10-1.5-13 0z" fill="#1f2937"/></svg></div>
+          <div>
+            <div class="user-name">Hj. Endang Triwati</div>
+            <div class="user-role">Admin Kepegawaian</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="card filter-card">
+        <div class="filter-field">
+          <span class="label">Kelas</span>
+          <div class="field-select">
+            <select id="filter-kelas" style="background:transparent; border:none; font:inherit; font-weight:600; color:inherit; outline:none; cursor:pointer; width:100%;">
+              <option value="XII IPA 1">XII IPA 1</option>
+              <option value="XII IPA 2">XII IPA 2</option>
+              <option value="XII IPS 1">XII IPS 1</option>
+              <option value="XI IPA 1">XI IPA 1</option>
+              <option value="XI IPS 2">XI IPS 2</option>
+              <option value="X IPA 1">X IPA 1</option>
+            </select>
+          </div>
+        </div>
+        <div class="filter-field">
+          <span class="label">Mata Pelajaran</span>
+          <div class="field-select">
+            <select id="filter-mapel" style="background:transparent; border:none; font:inherit; font-weight:600; color:inherit; outline:none; cursor:pointer; width:100%;">
+              <option value="Matematika (Drs. Heri S)">Matematika (Drs. Heri S)</option>
+              <option value="B. Indonesia (Sri Wahyuni)">B. Indonesia (Sri Wahyuni)</option>
+              <option value="Fisika (Bambang H)">Fisika (Bambang H)</option>
+              <option value="Biologi (Dewi Lestari)">Biologi (Dewi Lestari)</option>
+            </select>
+          </div>
+        </div>
+        <div class="filter-field">
+          <span class="label">Tanggal</span>
+          <div class="field-select">
+            <input type="date" id="filter-date" style="background:transparent; border:none; font:inherit; font-weight:600; color:inherit; outline:none; cursor:pointer; width:100%;">
+          </div>
+        </div>
+      </section>
+      <section class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>No</th><th>NIS</th><th>Nama Siswa</th><th class="right" style="padding-right:56px">Pilih Status Absensi</th></tr></thead>
+            <tbody id="absensi-tbody">
+              <tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Memuat data siswa...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="save-status-hint">Pilih status absensi lalu klik tombol Simpan Absensi.</span>
+          <button class="btn btn-primary" id="btn-save-absensi" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Absensi</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<script src="script.js"></script>
+<script src="app-core.js"></script>
+<script>
+  (function() {
+    const tbody = document.getElementById('absensi-tbody');
+    const filterKelas = document.getElementById('filter-kelas');
+    const filterMapel = document.getElementById('filter-mapel');
+    const filterDate = document.getElementById('filter-date');
+    if (filterDate && !filterDate.value) {
+      filterDate.value = new Date().toLocaleDateString('en-CA');
+    }
+    const btnSave = document.getElementById('btn-save-absensi');
+    const statusHint = document.getElementById('save-status-hint');
+
+    let currentRecords = [];
+
+    async function loadAbsensi() {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Memuat data absensi...</td></tr>';
+      try {
+        const res = await fetch(`/api/absensi?kelas=${encodeURIComponent(filterKelas.value)}&tanggal=${filterDate.value}&mapel=${encodeURIComponent(filterMapel.value)}`);
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          currentRecords = json.data;
+          renderTable();
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Tidak ada data siswa untuk kelas ini.</td></tr>';
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat data dari server.</td></tr>';
+      }
+    }
+
+    function renderTable() {
+      tbody.innerHTML = '';
+      currentRecords.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.dataset.nis = item.nis;
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="bold">${item.nis}</td>
+          <td>${item.name}</td>
+          <td class="right">
+            <div class="status-group" data-nis="${item.nis}">
+              <button type="button" class="st-btn ${item.status === 'hadir' ? 'on-hadir' : ''}" data-status="hadir">Hadir</button>
+              <button type="button" class="st-btn ${item.status === 'izin' ? 'on-izin' : ''}" data-status="izin">Izin</button>
+              <button type="button" class="st-btn ${item.status === 'sakit' ? 'on-sakit' : ''}" data-status="sakit">Sakit</button>
+              <button type="button" class="st-btn ${item.status === 'alfa' ? 'on-alfa' : ''}" data-status="alfa">Alfa</button>
+            </div>
+          </td>
+        `;
+
+        // Bind status buttons
+        tr.querySelectorAll('.st-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            tr.querySelectorAll('.st-btn').forEach(b => b.className = 'st-btn');
+            btn.classList.add('on-' + btn.dataset.status);
+            item.status = btn.dataset.status;
+            statusHint.textContent = 'Ada perubahan yang belum disimpan.';
+            statusHint.style.color = '#eab308';
+          });
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    filterKelas.addEventListener('change', loadAbsensi);
+    filterMapel.addEventListener('change', loadAbsensi);
+    filterDate.addEventListener('change', loadAbsensi);
+
+    btnSave.addEventListener('click', async () => {
+      btnSave.disabled = true;
+      btnSave.textContent = 'Menyimpan...';
+
+      try {
+        const res = await fetch('/api/absensi/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: filterDate.value,
+            kelas: filterKelas.value,
+            mapel: filterMapel.value,
+            records: currentRecords
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          SiPresensi.showToast(result.message || 'Absensi berhasil disimpan!', 'success');
+          statusHint.textContent = 'Semua perubahan berhasil disimpan ke database.';
+          statusHint.style.color = '#10b981';
+        } else {
+          SiPresensi.showToast(result.message || 'Gagal menyimpan.', 'error');
+        }
+      } catch (err) {
+        SiPresensi.showToast('Gagal terhubung ke backend server.', 'error');
+      } finally {
+        btnSave.disabled = false;
+        btnSave.innerHTML = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Absensi`;
+      }
+    });
+
+    loadAbsensi();
+  })();
+</script>
+</body>
+</html>
