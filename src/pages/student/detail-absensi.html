@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detail Absensi - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       GLOBAL RESET & VARIABEL
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    :root {
+      --navy: #0f1e3d;
+      --navy-2: #1e293b;
+      --green: #10b981;
+      --green-soft: #d1fae5;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --card: #ffffff;
+      --sidebar-w: 240px;
+    }
+
+    .i {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       LAYOUT APP
+       ============================================================ */
+    .app {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+        /* ============================================================
+       TABEL: Status Center Rapi
+       ============================================================ */
+    .log-table th:last-child,
+    .log-table td:last-child {
+      text-align: center;
+    }
+    
+    .badge {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+      text-align: center;
+      min-width: 70px; /* Menjaga lebar badge seragam */
+    }
+    .b-hadir { background: var(--green-soft); color: #047857; }
+    .b-izin  { background: #dbeafe; color: #1d4ed8; }
+    .b-late  { background: #fef3c7; color: #b45309; }
+    .b-alfa  { background: #fee2e2; color: #b91c1c; }
+
+
+    /* ============================================================
+       RESPONSIVE — MOBILE (≤ 640px) 
+       Perbaikan Filter Bar & Tombol
+       ============================================================ */
+    @media (max-width: 640px) {
+      /* ... (biarkan CSS sidebar & topbar yang sebelumnya tetap ada) ... */
+
+      /* Filter bar stacking */
+      .filter-bar { padding: 16px; gap: 12px; }
+      .filter-bar .left { width: 100%; }
+      .filter-bar .right { 
+        width: 100%; 
+        flex-direction: column; /* Tombol menumpuk atas-bawah agar full width */
+        gap: 8px;
+      }
+      .filter-bar .right .btn { 
+        width: 100%; 
+        padding: 12px; /* Tombol lebih mudah di-tap */
+      }
+      
+      .period { 
+        width: 100%; 
+        justify-content: space-between; 
+        padding: 10px 14px;
+      }
+      
+      /* Tab filter scrollable tanpa scrollbar kotor */
+      .tabs { 
+        width: 100%; 
+        overflow-x: auto; 
+        flex-wrap: nowrap; 
+        padding-bottom: 6px;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Sembunyikan scrollbar */
+      .tabs::-webkit-scrollbar { display: none; }
+      .tabs { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      .tabs button { 
+        flex-shrink: 0; 
+        padding: 8px 16px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+      }
+      .tabs button.active {
+        background: var(--navy);
+        border-color: var(--navy);
+      }
+
+      /* ... (biarkan CSS stats, table, dll yang sebelumnya tetap ada) ... */
+    }
+
+    /* ============================================================
+       SIDEBAR (desktop: sticky, mobile: drawer)
+       ============================================================ */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--navy);
+      color: #cbd5e1;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 50;
+      transition: width .3s ease, transform .3s ease;
+      overflow: hidden;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 36px; height: 36px;
+      background: var(--green);
+      color: white;
+      border-radius: 10px;
+      display: grid; place-items: center;
+    }
+    .brand-name { color: #fff; font-weight: 800; font-size: 15px; }
+    .brand-sub { font-size: 11px; color: #94a3b8; }
+
+    .nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background .15s;
+    }
+    .nav a:hover { background: rgba(255,255,255,.06); }
+    .nav a.active { background: var(--green); color: #fff; font-weight: 700; }
+
+    .sidebar-foot {
+      font-size: 11px; color: #64748b; line-height: 1.5;
+      padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+     /* State sidebar collapsed - benar-benar hilang */
+     .sidebar.collapsed {
+       width: 0;
+       padding: 0;
+       overflow: hidden;
+     }
+     .sidebar.collapsed * {
+       display: none;
+     }
+
+     .sidebar-close {
+       display: none;
+       position: absolute;
+       top: 12px; right: 12px;
+       width: 34px; height: 34px;
+       border-radius: 8px;
+       background: rgba(255,255,255,.08);
+       color: #cbd5e1;
+       border: none; cursor: pointer;
+       place-items: center;
+     }
+     .sidebar-close:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.5);
+      z-index: 40;
+      opacity: 0;
+      transition: opacity .25s ease;
+    }
+    .sidebar-overlay.show { display: block; opacity: 1; }
+
+    /* ============================================================
+       MAIN
+       ============================================================ */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ============================================================
+       TOPBAR
+       ============================================================ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 24px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-left {
+      display: flex; align-items: center; gap: 12px;
+      min-width: 0;
+    }
+    .page-title {
+      font-size: 18px; font-weight: 800; margin: 0;
+      color: var(--navy-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .page-sub {
+      font-size: 12px; color: var(--muted);
+      margin: 2px 0 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Tombol hamburger — tampil di desktop & mobile */
+    .hamburger {
+      display: grid;
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: var(--navy-2);
+      border: none; cursor: pointer;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .hamburger:hover { background: #e2e8f0; }
+    .hamburger:active { transform: scale(.96); }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .search {
+      display: flex; align-items: center; gap: 8px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: var(--muted);
+    }
+    .search input {
+      border: none; background: transparent; outline: none;
+      font-family: inherit; font-size: 13px;
+      width: 220px; color: var(--navy-2);
+    }
+    .bell {
+      width: 38px; height: 38px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      color: var(--muted);
+      background: #f1f5f9;
+      text-decoration: none;
+    }
+    .user { display: flex; align-items: center; gap: 10px; }
+    .user-name { font-size: 13px; font-weight: 700; color: var(--navy-2); }
+    .user-role { font-size: 11px; color: var(--muted); }
+    .avatar-initial {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 13px;
+    }
+
+    .btn-logout {
+      width: 38px; height: 38px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      color: var(--muted);
+      background: #f1f5f9;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+    .btn-logout:hover {
+      background: #e2e8f0;
+      color: var(--danger);
+    }
+    .btn-logout:active {
+      transform: scale(.95);
+    }
+
+    /* ============================================================
+       CONTENT
+       ============================================================ */
+    .content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ============================================================
+       CARD BASE
+       ============================================================ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.03);
+    }
+
+    /* ============================================================
+       FILTER BAR
+       ============================================================ */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .filter-bar .left {
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 12px; min-width: 0;
+    }
+    .filter-bar .right {
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+
+    .period {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .period b { color: var(--navy-2); }
+    .period .i { width: 16px; height: 16px; }
+
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .tabs button {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .tabs button:hover { background: #f8fafc; }
+    .tabs button.active {
+      background: var(--navy);
+      color: #fff;
+      border-color: var(--navy);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 13px; font-weight: 700;
+      border: none; cursor: pointer;
+      padding: 10px 18px;
+      border-radius: 10px;
+      transition: transform .1s, opacity .2s, background .15s;
+      max-width: 100%;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn .i { width: 16px; height: 16px; }
+
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover { background: #059669; }
+    .btn-outline {
+      background: #fff; color: var(--navy-2);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-block { width: 100%; margin-top: 12px; }
+
+    /* ============================================================
+       STATS GRID
+       ============================================================ */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .stat-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .stat-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .stat-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: #f1f5f9; color: var(--navy-2);
+    }
+    .stat-icon.green  { background: var(--green-soft); color: var(--green); }
+    .stat-icon.blue   { background: #dbeafe; color: var(--blue); }
+    .stat-icon.amber  { background: #fef3c7; color: var(--warn); }
+    .stat-icon.purple { background: #ede9fe; color: var(--purple); }
+    .stat-value {
+      font-size: 24px; font-weight: 800; color: var(--navy-2);
+      line-height: 1.1; word-break: break-word;
+    }
+    .stat-value small { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .stat-note { margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .stat-note .ok     { color: var(--green); font-weight: 700; }
+    .stat-note .warn   { color: var(--warn); font-weight: 700; }
+    .stat-note .danger { color: var(--danger); font-weight: 700; }
+
+    /* ============================================================
+       D-GRID
+       ============================================================ */
+    .d-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .g-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+    /* ============================================================
+       TABLE CARD
+       ============================================================ */
+    .table-card { padding: 18px; overflow: hidden; }
+    .table-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .panel-title { font-size: 16px; margin: 0; color: var(--navy-2); }
+    .panel-sub { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+    .chip {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    /* Scrollbar tipis */
+    .table-scroll::-webkit-scrollbar { height: 8px; }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1; border-radius: 4px;
+    }
+
+    .log-table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .log-table thead th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .log-table tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--navy-2);
+    }
+    .log-table tbody tr:last-child td { border-bottom: none; }
+    .log-table tbody tr { cursor: pointer; transition: background .15s; }
+    .log-table tbody tr:hover { background: #f8fafc; }
+    .log-table tbody tr.selected { background: #ecfdf5; }
+
+    .day { font-weight: 600; white-space: nowrap; }
+    .t-ok { color: var(--green); font-weight: 700; }
+    .t-late { color: var(--warn); font-weight: 700; }
+    .t-none { color: #cbd5e1; }
+    .muted { color: var(--muted); font-style: italic; }
+
+    .loc {
+      display: inline-flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .loc .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+    }
+    .loc .r { color: var(--muted); font-size: 11px; }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .b-hadir { background: var(--green-soft); color: #047857; }
+    .b-izin  { background: #dbeafe; color: #1d4ed8; }
+    .b-late  { background: #fef3c7; color: #b45309; }
+    .b-alfa  { background: #fee2e2; color: #b91c1c; }
+
+    .table-foot {
+      display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      font-size: 12px; color: var(--muted);
+    }
+    .table-foot b { color: var(--navy-2); }
+
+    .pager { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pager button {
+      font-family: inherit;
+      font-size: 12px; font-weight: 600;
+      min-width: 32px; height: 32px;
+      padding: 0 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--navy-2);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .pager button:hover { background: #f8fafc; }
+    .pager button.active {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+    }
+
+    /* ============================================================
+       INSPECT PANEL
+       ============================================================ */
+    .inspect-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700;
+      padding: 6px 10px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .pill-valid { background: var(--green-soft); color: #047857; }
+    .pill .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+    }
+
+    .kv-box {
+      display: flex; flex-direction: column;
+      gap: 8px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .kv-row {
+      display: flex; justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .kv-row b { color: var(--navy-2); text-align: right; }
+    .kv-row b.ok { color: var(--green); }
+    .kv-row b.mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+
+    .note-box {
+      padding: 14px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .eyebrow {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .note-box p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--navy-2);
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .sync-card { padding: 14px 18px; }
+    .sync-row {
+      display: flex; justify-content: space-between;
+      align-items: center; gap: 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .sync-row .ok {
+      color: var(--green); font-weight: 700;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .sync-row .ok .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+    }
+
+    /* ============================================================
+       RESPONSIVE — TABLET (≤ 900px)
+       ============================================================ */
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .search input { width: 160px; }
+      .d-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+        RESPONSIVE — MOBILE (≤ 640px)
+        ============================================================ */
+    @media (max-width: 640px) {
+      /* Sidebar jadi drawer off-canvas */
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        box-shadow: 0 10px 30px rgba(15,23,42,.25);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-close { display: grid; }
+      .hamburger { display: grid; }
+
+      /* Topbar clean: sembunyikan judul + nama user */
+      .topbar { padding: 12px 14px; flex-wrap: nowrap; gap: 8px; }
+      .topbar-left { gap: 10px; flex: 1; min-width: 0; }
+      .topbar-left > div { display: none; }   /* sembunyikan title & sub */
+
+      .topbar-right { gap: 8px; flex-shrink: 0; }
+      .search { display: none; }
+      .user { gap: 0; }
+      .user > div:first-child { display: none; } /* sembunyikan nama + role */
+      .avatar-initial { width: 34px; height: 34px; font-size: 12px; }
+      .bell { width: 34px; height: 34px; }
+
+      /* Content - flex column untuk urusan vertikal dengan order */
+      .content { 
+        padding: 0; 
+        gap: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ===== 1. FILTER BAR: Periode + Filter Status ===== */
+      .filter-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+        background: var(--card);
+        border: none;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        order: 1;
+      }
+      .filter-bar .left {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+      }
+      .filter-bar .right {
+        display: none; /* Disembunyikan di sini, akan ditampilkan setelah tabel */
+      }
+      
+      .period { 
+        width: 100%; 
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: #f1f5f9;
+        border-radius: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .period b { color: var(--navy-2); }
+      .period .i { width: 16px; height: 16px; }
+      
+      .tabs { 
+        width: 100%; 
+        display: flex;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 0;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tabs { -ms-overflow-style: none; scrollbar-width: none; }
+      .tabs button { 
+        flex-shrink: 0;
+        padding: 8px 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 999px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: all .15s;
+      }
+      .tabs button:hover { background: #f1f5f9; }
+      .tabs button.active {
+        background: var(--navy);
+        border-color: var(--navy);
+        color: #fff;
+      }
+
+      /* ===== 2. STATS ===== */
+      .stats { 
+        grid-template-columns: 1fr; 
+        gap: 10px;
+        padding: 14px;
+        margin: 0;
+        order: 2;
+      }
+      .stat { 
+        padding: 14px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+      .stat-value { font-size: 22px; }
+
+      /* ===== 3. D-GRID: Transform to flex untuk mobile ===== */
+      .d-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        grid-template-columns: none;
+        order: 3;
+        align-items: stretch;
+      }
+
+      .g-col {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        min-width: 0;
+      }
+
+      /* ===== 3a. TABLE CARD ===== */
+      .table-card {
+        padding: 0;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        order: 1;
+      }
+
+      .table-head { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 10px;
+        margin-bottom: 0;
+        padding: 14px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+      .panel-title { font-size: 15px; }
+
+      .table-scroll {
+        box-shadow: inset -10px 0 8px -8px rgba(15,23,42,.08);
+        background: var(--card);
+        border: none;
+        border-radius: 0;
+      }
+      .log-table { min-width: 680px; font-size: 11px; }
+      .log-table thead th { padding: 8px 10px; font-size: 11px; }
+      .log-table tbody td { padding: 10px; }
+
+      .table-foot { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 10px;
+        padding: 14px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        margin: 0;
+        font-size: 12px;
+      }
+      .pager { width: 100%; justify-content: center; }
+
+      /* ===== 3b. EXPORT & SYNC BUTTONS ===== */
+      /* Reposition .filter-bar .right setelah tabel dengan CSS grid/flex hack */
+      .d-grid::after {
+        content: '';
+        display: block;
+        order: 2;
+        background: var(--card);
+      }
+
+      /* Tampilkan .right button section setelah tabel */
+      .content > .filter-bar .right {
+        display: flex !important;
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+        padding: 14px;
+        background: var(--card);
+        border: none;
+        border-bottom: 1px solid var(--border);
+        margin: 0;
+        border-radius: 0;
+        order: 4;
+        position: static;
+      }
+
+      .filter-bar .right .btn {
+        width: 100%;
+        padding: 12px;
+      }
+
+      /* ===== 3c. INSPECT PANEL ===== */
+      .g-col > .card {
+        background: var(--card);
+        border: none;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        padding: 14px;
+        order: 5;
+      }
+
+      .g-col > .card:last-child {
+        border-bottom: none;
+      }
+
+      .inspect-head { flex-direction: column; align-items: flex-start; }
+      .kv-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+      .kv-row b { text-align: left; }
+    }
+
+    /* ============================================================
+       RESPONSIVE — VERY SMALL (≤ 380px)
+       ============================================================ */
+    @media (max-width: 380px) {
+      .stat-value { font-size: 20px; }
+      .btn { font-size: 12px; padding: 9px 14px; }
+      .tabs button { font-size: 11px; padding: 7px 10px; }
+    }
+
+    body.no-scroll { overflow: hidden; }
+  </style>
+</head>
+<body class="siswa">
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="sidebar-close" aria-label="Tutup menu">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div>
+        <div class="brand-name">SiPresensi</div>
+        <div class="brand-sub">Sistem Absensi</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="/src/pages/student/dashboard.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></a>
+      <a href="/src/pages/student/detail-absensi.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Absensi</span></a>
+    </nav>
+    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div class="main">
+    <!-- ===== TOPBAR ===== -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger" aria-label="Buka menu">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <h1 class="page-title">Detail Absensi &amp; Riwayat Kehadiran</h1>
+          <p class="page-sub">Monitoring waktu belajar harian dan log kehadiran siswa</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari tanggal, status, atau lokasi..."></label>
+         <a class="bell" href="#" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+         <button class="btn-logout" aria-label="Keluar" title="Logout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+         <div class="user">
+          <div>
+            <div class="user-name">Rizky Pratama</div>
+            <div class="user-role">Siswa &bull; XII IPA 1</div>
+          </div>
+          <div class="avatar-initial">RP</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- Filter & aksi -->
+      <section class="card filter-bar">
+        <div class="left">
+          <div class="period"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Periode: <b>Oktober 2024</b></span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="tabs" id="tab-status">
+            <button type="button" class="active" data-filter="all">Semua (22)</button>
+            <button type="button" data-filter="hadir">Hadir (20)</button>
+            <button type="button" data-filter="izin">Izin (1)</button>
+            <button type="button" data-filter="late">Terlambat (1)</button>
+          </div>
+        </div>
+        <div class="right">
+          <button class="btn btn-outline" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>Export PDF / Excel</button>
+          <button class="btn btn-primary" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Sinkronkan Log</button>
+        </div>
+      </section>
+
+      <!-- Ringkasan -->
+      <section class="stats">
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Total Hari Sekolah</span><span class="stat-icon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span></div>
+          <div class="stat-value">22<small> Hari</small></div>
+          <div class="stat-note">Sesuai kalender akademik</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Total Hadir</span><span class="stat-icon green"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div>
+          <div class="stat-value">21<small> Hari</small></div>
+          <div class="stat-note"><span class="ok">95.5% Tingkat Kehadiran</span></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Izin / Sakit / Alfa</span><span class="stat-icon amber"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span></div>
+          <div class="stat-value">1<small> Hari</small></div>
+          <div class="stat-note"><span class="warn">1 Izin/Sakit</span> • <span class="danger">0 Alfa</span></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Akumulasi Jam Belajar</span><span class="stat-icon purple"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span></div>
+          <div class="stat-value">168.5<small> Jam</small></div>
+          <div class="stat-note">Rata-rata <span class="ok">8.0 jam</span> / hari</div>
+        </div>
+      </section>
+
+      <section class="d-grid">
+
+        <!-- Tabel log -->
+        <div class="card table-card">
+          <div class="table-head">
+            <div>
+              <h2 class="panel-title">Riwayat Log Kehadiran Harian</h2>
+              <p class="panel-sub">Data presensi tercatat otomatis berbasis GPS dan biometric stamp</p>
+            </div>
+            <span class="chip">Bulan Berjalan</span>
+          </div>
+          <div class="table-scroll">
+            <table class="log-table" id="log-table">
+              <thead><tr><th>Tanggal &amp; Hari</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Durasi</th><th>Lokasi &amp; Radius</th><th>Status</th></tr></thead>
+              <tbody>
+              <tr data-row="0" class="selected" data-status="hadir">
+                <td class="day">Senin, 14 Okt 2024</td><td><span class="t-ok">07:15 WIB</span></td><td>15:30 WIB</td><td>08j 15m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(12m)</span></span></td>
+                <td><span class="badge b-hadir">Hadir</span></td>
+              </tr>
+              <tr data-row="1" data-status="hadir">
+                <td class="day">Jumat, 11 Okt 2024</td><td><span class="t-ok">07:10 WIB</span></td><td>15:35 WIB</td><td>08j 25m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(10m)</span></span></td>
+                <td><span class="badge b-hadir">Hadir</span></td>
+              </tr>
+              <tr data-row="2" data-status="hadir">
+                <td class="day">Kamis, 10 Okt 2024</td><td><span class="t-ok">07:22 WIB</span></td><td>15:30 WIB</td><td>08j 08m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(15m)</span></span></td>
+                <td><span class="badge b-hadir">Hadir</span></td>
+              </tr>
+              <tr data-row="3" class="row-izin" data-status="izin">
+                <td class="day">Rabu, 09 Okt 2024</td><td><span class="t-none">-</span></td><td><span class="t-none">-</span></td><td><span class="t-none">-</span></td><td><span class="muted">Izin Lomba OSN / Luar Sekolah</span></td>
+                <td><span class="badge b-izin">Izin</span></td>
+              </tr>
+              <tr data-row="4" data-status="hadir">
+                <td class="day">Selasa, 08 Okt 2024</td><td><span class="t-ok">07:14 WIB</span></td><td>15:40 WIB</td><td>08j 26m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(14m)</span></span></td>
+                <td><span class="badge b-hadir">Hadir</span></td>
+              </tr>
+              <tr data-row="5" data-status="late">
+                <td class="day">Senin, 07 Okt 2024</td><td><span class="t-late">07:35 WIB</span></td><td>15:30 WIB</td><td>07j 55m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(11m)</span></span></td>
+                <td><span class="badge b-late">Terlambat</span></td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-foot">
+            <span>Menampilkan <b>1-6</b> dari <b>22</b> catatan presensi</span>
+            <div class="pager">
+              <button type="button" aria-label="Sebelumnya">Sebelumnya</button>
+              <button type="button" class="active" data-page="1">1</button>
+              <button type="button" data-page="2">2</button>
+              <button type="button" data-page="3">3</button>
+              <button type="button" aria-label="Berikutnya">Berikutnya</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel inspeksi -->
+        <div class="g-col">
+          <div class="card inspect">
+            <div class="inspect-head">
+              <div>
+                <h2 class="panel-title">Inspeksi Log Terpilih</h2>
+                <p class="panel-sub" id="ins-date">Senin, 14 Oktober 2024</p>
+              </div>
+              <span class="pill pill-valid"><i class="dot"></i>Valid Terverifikasi</span>
+            </div>
+
+            <div class="kv-box">
+              <div class="kv-row"><span>Metode Verifikasi</span><b>Biometrik Face + GPS</b></div>
+              <div class="kv-row"><span>Waktu Check-In</span><b class="ok">07:15:22 WIB</b></div>
+              <div class="kv-row"><span>Akurasi Penangkap</span><b>±5 meter (Optimal)</b></div>
+              <div class="kv-row"><span>IP Server Lokal</span><b class="mono">192.168.1.45</b></div>
+            </div>
+
+            <div class="kv-box">
+              <div class="kv-row"><span>Waktu Check-Out</span><b>15:30:14 WIB</b></div>
+              <div class="kv-row"><span>Zona Titik Presensi</span><b>Gedung Kelas XII</b></div>
+              <div class="kv-row"><span>Status Jam Belajar</span><b class="ok">Memenuhi Target (&gt;8 Jam)</b></div>
+            </div>
+
+            <div class="note-box">
+              <span class="eyebrow">Catatan Wali Kelas:</span>
+              <p>"Rizky hadir tepat waktu dan mengikuti seluruh pelajaran dengan baik."</p>
+            </div>
+
+            <button class="btn btn-outline btn-block" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Unduh Lembar Bukti (PDF)</button>
+          </div>
+
+          <div class="card sync-card">
+            <div class="sync-row"><span>Status Sinkronisasi GPS:</span><span class="ok"><i class="dot"></i>Tersinkron</span></div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SCRIPT: HAMBURGER SIDEBAR + TAB FILTER + ROW SELECT
+     ============================================================ -->
+<script>
+(function () {
+  // ===== Hamburger drawer =====
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebar-overlay');
+  const hamburger = document.getElementById('hamburger');
+  const closeBtn  = document.getElementById('sidebar-close');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+    document.body.classList.add('no-scroll');
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    document.body.classList.remove('no-scroll');
+  }
+  function toggleSidebar() {
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+  }
+
+  if (sidebar && overlay && hamburger) {
+    hamburger.addEventListener('click', toggleSidebar);
+    closeBtn.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
+
+    sidebar.querySelectorAll('.nav a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 640px)').matches) closeSidebar();
+      });
+    });
+
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 640) closeSidebar();
+    });
+  }
+
+  // ===== Tab filter status =====
+  const tabWrap = document.getElementById('tab-status');
+  const rows = document.querySelectorAll('#log-table tbody tr');
+
+  function applyFilter(filter) {
+    rows.forEach(function (row) {
+      const st = row.getAttribute('data-status');
+      let show = true;
+      if (filter !== 'all') show = (st === filter);
+      row.style.display = show ? '' : 'none';
+    });
+  }
+
+  if (tabWrap) {
+    tabWrap.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-filter]');
+      if (!btn) return;
+      tabWrap.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilter(btn.getAttribute('data-filter'));
+    });
+  }
+
+  // ===== Row select =====
+  rows.forEach(function (row) {
+    row.addEventListener('click', function () {
+      rows.forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+      const dayCell = row.querySelector('.day');
+      const insDate = document.getElementById('ins-date');
+      if (dayCell && insDate) insDate.textContent = dayCell.textContent;
+    });
+  });
+})();
+</script>
+
+<script src="/src/js/script-siswa.js"></script>
+
+</body>
+</html>

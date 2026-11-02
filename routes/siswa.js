@@ -4,6 +4,17 @@ const bcrypt  = require('bcryptjs');
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 
+function normalizeRfidUid(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const uid = String(value).trim().toUpperCase().replace(/[:\s]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (!/^[0-9A-F]{2}(?:-[0-9A-F]{2}){3,9}$/.test(uid)) {
+    const err = new Error('Format UID RFID tidak valid. Contoh: 08-AB-12-CD.');
+    err.statusCode = 400;
+    throw err;
+  }
+  return uid;
+}
+
 // GET /api/siswa
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -19,6 +30,7 @@ router.get('/', authenticate, async (req, res) => {
 router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
+    const rfidUid = normalizeRfidUid(req.body.rfid_uid);
     if (!nis || !name || !kelas) {
       return res.status(400).json({ success: false, message: 'NIS, Nama, dan Kelas wajib diisi.' });
     }
@@ -38,6 +50,13 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
       return res.status(400).json({ success: false, message: `NIS ${cleanNis} sudah terdaftar dalam sistem.` });
     }
 
+    if (rfidUid) {
+      const existingCard = await db.findSiswaByRfidUid(rfidUid);
+      if (existingCard) {
+        return res.status(400).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
+      }
+    }
+
     // Cek duplikat di tabel users
     const existingUser = await db.findUserByEmailOrNis(studentEmail, cleanNis);
     if (existingUser) {
@@ -52,7 +71,8 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
       kelas: cleanKelas,
       gender: gender || 'Laki-laki',
       phone: phone ? phone.trim() : '-',
-      email: studentEmail
+      email: studentEmail,
+      rfid_uid: rfidUid
     });
 
     // Hash kata sandi yang ditentukan guru
@@ -81,6 +101,7 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
       data: newStudent
     });
   } catch (err) {
+    if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
     console.error('addSiswa error:', err);
     res.status(500).json({ success: false, message: 'Gagal menambahkan data siswa ke database.' });
   }
@@ -90,6 +111,7 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
 router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
+    const rfidUid = normalizeRfidUid(req.body.rfid_uid);
     const existingStudent = await db.findSiswaByIdOrNis(req.params.id);
     if (!existingStudent) return res.status(404).json({ success: false, message: 'Data siswa tidak ditemukan.' });
 
@@ -99,13 +121,21 @@ router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) 
     const cleanEmail = email ? email.trim() : existingStudent.email;
     const cleanPhone = phone !== undefined ? phone.trim() : existingStudent.phone;
 
+    if (rfidUid) {
+      const existingCard = await db.findSiswaByRfidUid(rfidUid);
+      if (existingCard && existingCard.id !== existingStudent.id) {
+        return res.status(400).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
+      }
+    }
+
     const updated = await db.updateSiswa(existingStudent.id, {
       nis: cleanNis,
       name: cleanName,
       kelas: cleanKelas,
       gender: gender || existingStudent.gender,
       phone: cleanPhone,
-      email: cleanEmail
+      email: cleanEmail,
+      rfid_uid: rfidUid
     });
 
     // Cari user terkait siswa ini
@@ -149,6 +179,7 @@ router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) 
 
     res.json({ success: true, message: 'Data siswa dan akun berhasil diperbarui di database.', data: updated });
   } catch (err) {
+    if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
     console.error('updateSiswa error:', err);
     res.status(500).json({ success: false, message: 'Gagal memperbarui data siswa.' });
   }

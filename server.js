@@ -2,10 +2,12 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const fs = require('fs');
 
 const authRoutes = require('./routes/auth');
 const statsRoutes = require('./routes/stats');
 const siswaRoutes = require('./routes/siswa');
+const iotRoutes = require('./routes/iot');
 const guruRoutes = require('./routes/guru');
 const kelasRoutes = require('./routes/kelas');
 const absensiRoutes = require('./routes/absensi');
@@ -23,10 +25,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Static assets (CSS, JS, images, SVG, etc.) - serve public folder
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/src', express.static(path.join(__dirname, 'src')));
+app.use(express.static(path.join(__dirname))); // Fallback untuk kompatibilitas
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/siswa', siswaRoutes);
+app.use('/api/iot', iotRoutes);
 app.use('/api/guru', guruRoutes);
 app.use('/api/kelas', kelasRoutes);
 app.use('/api/absensi', absensiRoutes);
@@ -37,48 +45,74 @@ app.use('/api/notifikasi', notifikasiRoutes);
 app.get('/', optionalAuth, (req, res) => {
   if (req.user) {
     if (req.user.role === 'siswa') {
-      return res.redirect('/dashboard-siswa.html');
+      return res.redirect('/src/pages/student/dashboard.html');
     }
-    return res.redirect('/dashboard.html');
+    return res.redirect('/src/pages/admin/dashboard.html');
   }
-  return res.redirect('/login.html');
+  return res.redirect('/src/pages/auth/login.html');
 });
 
 // Direct logout route
 app.get('/logout', (req, res) => {
   res.clearCookie('sipresensi_token', { path: '/' });
-  res.redirect('/login.html');
+  res.redirect('/src/pages/auth/login.html');
 });
+
+// ==========================================
+// AUTH PAGES
+// ==========================================
 
 // Login page guard: if already logged in, redirect to appropriate dashboard
 app.get('/login.html', optionalAuth, (req, res, next) => {
   if (req.user) {
     if (req.user.role === 'siswa') {
-      return res.redirect('/dashboard-siswa.html');
+      return res.redirect('/src/pages/student/dashboard.html');
     }
-    return res.redirect('/dashboard.html');
+    return res.redirect('/src/pages/admin/dashboard.html');
   }
-  res.sendFile(path.join(__dirname, 'login.html'));
+  res.sendFile(path.join(__dirname, 'src/pages/auth/login.html'));
 });
 
-// Teacher / Admin protected page routes
-const fs = require('fs');
-const guruPages = [
-  '/dashboard.html',
-  '/data-siswa.html',
-  '/data-guru.html',
-  '/data-kelas.html',
-  '/absensi.html',
-  '/riwayat-absensi.html',
-  '/rekap-bulanan.html',
-  '/profil-sekolah.html',
-  '/pengaturan.html',
-  '/notifikasi.html'
+app.get('/src/pages/auth/login.html', optionalAuth, (req, res, next) => {
+  if (req.user) {
+    if (req.user.role === 'siswa') {
+      return res.redirect('/src/pages/student/dashboard.html');
+    }
+    return res.redirect('/src/pages/admin/dashboard.html');
+  }
+  res.sendFile(path.join(__dirname, 'src/pages/auth/login.html'));
+});
+
+// ==========================================
+// ADMIN / GURU PAGES
+// ==========================================
+const adminPages = [
+  { old: '/dashboard.html', new: '/src/pages/admin/dashboard.html' },
+  { old: '/data-siswa.html', new: '/src/pages/admin/data-siswa.html' },
+  { old: '/data-guru.html', new: '/src/pages/admin/data-guru.html' },
+  { old: '/data-kelas.html', new: '/src/pages/admin/data-kelas.html' },
+  { old: '/absensi.html', new: '/src/pages/admin/absensi.html' },
+  { old: '/riwayat-absensi.html', new: '/src/pages/admin/riwayat-absensi.html' },
+  { old: '/rekap-bulanan.html', new: '/src/pages/admin/rekap-bulanan.html' },
+  { old: '/profil-sekolah.html', new: '/src/pages/admin/profil-sekolah.html' },
+  { old: '/pengaturan.html', new: '/src/pages/admin/pengaturan.html' },
+  { old: '/notifikasi.html', new: '/src/pages/admin/notifikasi.html' }
 ];
 
-guruPages.forEach(page => {
-  app.get(page, pageAuthGuard(['guru', 'admin']), (req, res, next) => {
-    const filePath = path.join(__dirname, page);
+// Register both old and new paths for admin pages
+adminPages.forEach(page => {
+  // Old path (for backward compatibility)
+  app.get(page.old, pageAuthGuard(['guru', 'admin']), (req, res) => {
+    const filePath = path.join(__dirname, 'src/pages/admin', path.basename(page.old));
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Halaman tidak ditemukan');
+    }
+    res.sendFile(filePath);
+  });
+
+  // New path
+  app.get(page.new, pageAuthGuard(['guru', 'admin']), (req, res) => {
+    const filePath = path.join(__dirname, page.new);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Halaman tidak ditemukan');
     }
@@ -86,20 +120,34 @@ guruPages.forEach(page => {
   });
 });
 
-// Student protected page routes (accessible by siswa, and guru can view too)
-const siswaPages = [
-  '/dashboard-siswa.html',
-  '/detail-absensi.html'
+// ==========================================
+// STUDENT PAGES
+// ==========================================
+const studentPages = [
+  { old: '/dashboard-siswa.html', new: '/src/pages/student/dashboard.html' },
+  { old: '/detail-absensi.html', new: '/src/pages/student/detail-absensi.html' }
 ];
 
-siswaPages.forEach(page => {
-  app.get(page, pageAuthGuard(['siswa', 'guru', 'admin']), (req, res, next) => {
-    res.sendFile(path.join(__dirname, page));
+// Register both old and new paths for student pages
+studentPages.forEach(page => {
+  // Old path (for backward compatibility)
+  app.get(page.old, pageAuthGuard(['siswa', 'guru', 'admin']), (req, res) => {
+    const filePath = path.join(__dirname, 'src/pages/student', path.basename(page.old));
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Halaman tidak ditemukan');
+    }
+    res.sendFile(filePath);
+  });
+
+  // New path
+  app.get(page.new, pageAuthGuard(['siswa', 'guru', 'admin']), (req, res) => {
+    const filePath = path.join(__dirname, page.new);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Halaman tidak ditemukan');
+    }
+    res.sendFile(filePath);
   });
 });
-
-// Static assets (CSS, JS, images, SVG, etc.)
-app.use(express.static(path.join(__dirname)));
 
 // 404 fallback
 app.use((req, res) => {
@@ -108,6 +156,31 @@ app.use((req, res) => {
   }
   res.status(404).json({ success: false, message: 'Endpoint tidak ditemukan.' });
 });
+
+// Start Server with auto-fallback if port is in use
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`=================================================`);
+    console.log(`  SiPresensi Backend Server is running!`);
+    console.log(`  Local URL: http://localhost:${port}`);
+    console.log(`  Default Teacher Account: admin.endang@sman1jkt.sch.id / password123`);
+    console.log(`  Default Student Account: siswa@sman1jkt.sch.id / password123`);
+    console.log(`=================================================`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[Port ${port} sedang digunakan] Mencoba port ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+}
+
+startServer(Number(PORT));
+
+module.exports = app;
 
 // Start Server with auto-fallback if port is in use
 function startServer(port) {

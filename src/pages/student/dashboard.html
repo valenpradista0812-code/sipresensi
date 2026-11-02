@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       GLOBAL RESET & VARIABEL
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    :root {
+      --navy: #0f1e3d;
+      --navy-2: #1e293b;
+      --green: #10b981;
+      --green-soft: #d1fae5;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --card: #ffffff;
+      --sidebar-w: 240px;
+    }
+
+    .i {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       LAYOUT APP
+       ============================================================ */
+    .app {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* ============================================================
+       SIDEBAR (default desktop: selalu tampil)
+       ============================================================ */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--navy);
+      color: #cbd5e1;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 50;
+      transition: width .3s ease, transform .3s ease;
+      overflow: hidden;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 36px; height: 36px;
+      background: var(--green);
+      color: white;
+      border-radius: 10px;
+      display: grid; place-items: center;
+    }
+    .brand-name { color: #fff; font-weight: 800; font-size: 15px; }
+    .brand-sub { font-size: 11px; color: #94a3b8; }
+
+    .nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background .15s;
+    }
+    .nav a:hover { background: rgba(255,255,255,.06); }
+    .nav a.active { background: var(--green); color: #fff; font-weight: 700; }
+
+    .sidebar-foot {
+      font-size: 11px; color: #64748b; line-height: 1.5;
+      padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+     /* State sidebar collapsed - benar-benar hilang */
+     .sidebar.collapsed {
+       width: 0;
+       padding: 0;
+       overflow: hidden;
+     }
+     .sidebar.collapsed * {
+       display: none;
+     }
+
+     /* Tombol close di dalam sidebar (hanya muncul di mobile) */
+     .sidebar-close {
+       display: none;
+       position: absolute;
+       top: 12px; right: 12px;
+       width: 34px; height: 34px;
+       border-radius: 8px;
+       background: rgba(255,255,255,.08);
+       color: #cbd5e1;
+       border: none; cursor: pointer;
+       place-items: center;
+     }
+     .sidebar-close:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* Overlay gelap di belakang drawer mobile */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.5);
+      z-index: 40;
+      opacity: 0;
+      transition: opacity .25s ease;
+    }
+    .sidebar-overlay.show { display: block; opacity: 1; }
+
+    /* ============================================================
+       MAIN
+       ============================================================ */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ============================================================
+       TOPBAR
+       ============================================================ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 24px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-left {
+      display: flex; align-items: center; gap: 12px;
+      min-width: 0;
+    }
+    .page-title {
+      font-size: 18px; font-weight: 800; margin: 0;
+      color: var(--navy-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Tombol hamburger — tampil di desktop & mobile */
+    .hamburger {
+      display: grid;
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: var(--navy-2);
+      border: none; cursor: pointer;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .hamburger:hover { background: #e2e8f0; }
+    .hamburger:active { transform: scale(.96); }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .search {
+      display: flex; align-items: center; gap: 8px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: var(--muted);
+    }
+    .search input {
+      border: none; background: transparent; outline: none;
+      font-family: inherit; font-size: 13px;
+      width: 220px; color: var(--navy-2);
+    }
+    .bell {
+      width: 38px; height: 38px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      color: var(--muted);
+      background: #f1f5f9;
+      text-decoration: none;
+    }
+    .user { display: flex; align-items: center; gap: 10px; }
+    .user-name { font-size: 13px; font-weight: 700; color: var(--navy-2); }
+    .user-role { font-size: 11px; color: var(--muted); }
+     .avatar-initial {
+       width: 38px; height: 38px;
+       border-radius: 50%;
+       background: var(--green);
+       color: #fff;
+       display: grid; place-items: center;
+       font-weight: 700; font-size: 13px;
+     }
+
+     .btn-logout {
+       width: 38px; height: 38px;
+       display: grid; place-items: center;
+       border-radius: 50%;
+       color: var(--muted);
+       background: #f1f5f9;
+       border: none;
+       cursor: pointer;
+       transition: all .2s;
+       flex-shrink: 0;
+     }
+     .btn-logout:hover {
+       background: #e2e8f0;
+       color: var(--danger);
+     }
+     .btn-logout:active {
+       transform: scale(.95);
+     }
+
+    /* ============================================================
+       CONTENT
+       ============================================================ */
+    .content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .welcome h2 { font-size: 20px; margin: 0 0 6px; color: var(--navy-2); }
+    .welcome p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    /* ============================================================
+       CARD BASE
+       ============================================================ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.03);
+    }
+
+    /* ============================================================
+       STATS GRID
+       ============================================================ */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .stat-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .stat-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .stat-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+    }
+    .stat-icon.green  { background: var(--green-soft); color: var(--green); }
+    .stat-icon.blue   { background: #dbeafe; color: var(--blue); }
+    .stat-icon.purple { background: #ede9fe; color: var(--purple); }
+    .stat-value {
+      font-size: 24px; font-weight: 800; color: var(--navy-2);
+      line-height: 1.1; word-break: break-word;
+    }
+    .stat-value small { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .stat-note { margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .stat-note .ok     { color: var(--green); font-weight: 700; }
+    .stat-note .warn   { color: var(--warn); font-weight: 700; }
+    .stat-note .danger { color: var(--danger); font-weight: 700; }
+
+    /* ============================================================
+       G-GRID
+       ============================================================ */
+    .g-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    .g-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+    /* ============================================================
+       PANEL / TRACKER
+       ============================================================ */
+    .panel-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .eyebrow {
+      font-size: 10px; font-weight: 700; letter-spacing: .8px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .panel-title { font-size: 16px; margin: 4px 0 0; color: var(--navy-2); }
+    .panel-sub { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700;
+      padding: 6px 10px; border-radius: 999px;
+      background: #f1f5f9; color: var(--muted);
+      white-space: nowrap;
+    }
+    .pill-green { background: var(--green-soft); color: #047857; }
+    .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .clock-box {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center;
+      padding: 1.5rem 1rem;
+      min-height: 280px;
+    }
+    #tracker-display { cursor: pointer; user-select: none; margin: 1rem 0; width: 100%; }
+    .clock-time {
+      font-size: clamp(2.5rem, 14vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--navy-2);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color .2s;
+    }
+    #tracker-hint {
+      margin-top: 1rem;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+      line-height: 1.4;
+      padding: 0 8px;
+    }
+    .clock-loc {
+      display: flex; align-items: center; gap: 8px;
+      justify-content: center; flex-wrap: wrap;
+      margin: 1.25rem 0 1.5rem;
+      font-size: 12px; color: var(--muted);
+      text-align: center;
+    }
+    .clock-loc .valid { color: var(--green); font-weight: 700; }
+    .clock-loc .i { color: var(--green); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 13px; font-weight: 700;
+      border: none; cursor: pointer;
+      padding: 12px 24px;
+      border-radius: 999px;
+      transition: transform .1s, opacity .2s;
+      max-width: 100%;
+    }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-checkout { white-space: nowrap; }
+
+    /* ============================================================
+       GRAFIK MINGGUAN
+       ============================================================ */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      font-size: 11px; color: var(--muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.hadir { background: var(--green); }
+    .dot.izin  { background: var(--blue); }
+    .dot.sakit { background: var(--warn); }
+    .dot.alfa  { background: var(--danger); }
+
+    .week-bars {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 1.5rem 0.5rem 0.5rem;
+      min-height: 220px;
+      height: 220px;
+    }
+    .week-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      min-width: 0;
+    }
+    .week-track {
+      width: 100%;
+      max-width: 40px;
+      height: 80%;
+      display: flex;
+      flex-direction: column-reverse;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f1f5f9;
+    }
+    .week-track i { display: block; width: 100%; }
+    .week-track .h { background: var(--green); }
+    .week-track .z { background: var(--blue); }
+    .week-track .s { background: var(--warn); }
+    .week-track .a { background: var(--danger); }
+    .week-day {
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+    }
+    .chart-foot {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: space-between;
+      font-size: 11px; color: var(--muted);
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .chart-foot b { color: var(--navy-2); }
+
+    /* ============================================================
+       RESPONSIVE — TABLET (≤ 900px)
+       ============================================================ */
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .search input { width: 160px; }
+    }
+
+    /* ============================================================
+       RESPONSIVE — MOBILE (≤ 640px)
+       ============================================================ */
+    @media (max-width: 640px) {
+      /* Sidebar jadi drawer off-canvas */
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        box-shadow: 0 10px 30px rgba(15,23,42,.25);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-close { display: grid; }
+
+      /* Tampilkan hamburger */
+      .hamburger { display: grid; }
+
+      /* Topbar */
+      .topbar { padding: 12px 14px; flex-wrap: nowrap; gap: 8px; }
+      .topbar-left { gap: 10px; flex: 1; min-width: 0; }
+
+      /* FIX: sembunyikan judul halaman di mobile agar header lebih clean */
+      .page-title { display: none; }
+
+      .topbar-right { gap: 8px; flex-shrink: 0; }
+      .search { display: none; }
+
+      /* FIX: sembunyikan nama & role user di mobile, hanya avatar */
+      .user { gap: 0; }
+      .user > div:first-child { display: none; }
+
+      .avatar-initial { width: 34px; height: 34px; font-size: 12px; }
+      .bell { width: 34px; height: 34px; }
+
+      /* Content */
+      .content { padding: 14px; gap: 14px; }
+      .welcome h2 { font-size: 17px; }
+      .welcome p { font-size: 12px; }
+
+      .stats { grid-template-columns: 1fr; gap: 10px; }
+      .stat { padding: 14px; }
+      .stat-value { font-size: 22px; }
+
+      .panel-head { flex-direction: column; align-items: flex-start; }
+      .panel-title { font-size: 15px; }
+
+      .clock-box { min-height: 220px; padding: 1rem 0.5rem; }
+      .clock-time { font-size: clamp(2.25rem, 13vw, 3.5rem); }
+      #tracker-hint { font-size: 12px; }
+      .clock-loc { font-size: 11px; }
+
+      .week-bars {
+        min-height: 180px; height: 180px;
+        padding: 1rem 0 0.25rem; gap: 4px;
+      }
+      .week-track { max-width: 28px; }
+      .week-day { font-size: 10px; }
+      .legend { font-size: 10px; gap: 8px; }
+
+      .chart-foot {
+        flex-direction: column; align-items: flex-start; gap: 4px;
+      }
+    }
+
+    /* ============================================================
+       RESPONSIVE — VERY SMALL (≤ 380px)
+       ============================================================ */
+    @media (max-width: 380px) {
+      .stat-value { font-size: 20px; }
+      .week-track { max-width: 22px; }
+      .week-day { font-size: 9px; }
+      .btn { font-size: 12px; padding: 10px 18px; }
+    }
+
+    /* Cegah scroll body saat drawer terbuka */
+    body.no-scroll { overflow: hidden; }
+  </style>
+</head>
+<body class="siswa">
+<div class="app">
+
+  <!-- ===== SIDEBAR (drawer di mobile) ===== -->
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="sidebar-close" aria-label="Tutup menu">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="brand">
+      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+      <div>
+        <div class="brand-name">SiPresensi</div>
+        <div class="brand-sub">Sistem Absensi</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="/src/pages/student/dashboard.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></a>
+      <a href="/src/pages/student/detail-absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Absensi</span></a>
+    </nav>
+    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
+  </aside>
+
+  <!-- Overlay untuk drawer mobile -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div class="main">
+    <!-- ===== TOPBAR ===== -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger" aria-label="Buka menu">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="page-title">Dashboard SiPresensi</h1>
+      </div>
+       <div class="topbar-right">
+         <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari jadwal, riwayat presensi..."></label>
+         <a class="bell" href="#" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+         <button class="btn-logout" aria-label="Keluar" title="Logout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+         <div class="user">
+           <div>
+             <div class="user-name">Rizky Pratama</div>
+             <div class="user-role">Siswa &bull; XII IPA 1</div>
+           </div>
+           <div class="avatar-initial">RP</div>
+         </div>
+       </div>
+    </header>
+
+    <main class="content">
+
+      <!-- Banner sambutan -->
+      <section class="welcome">
+        <h2>Selamat Pagi, Rizky Pratama!</h2>
+        <p>Hari ini: Senin, 14 Oktober 2024. Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+      </section>
+
+      <!-- Kartu statistik -->
+      <section class="stats">
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Jam Masuk Hari Ini</span><span class="stat-icon green"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span></div>
+          <div class="stat-value">07:15<small> WIB</small></div>
+          <div class="stat-note"><span class="ok"><i class="dot hadir"></i>Tepat Waktu</span> (Batas 07:30)</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Target Jam Pulang</span><span class="stat-icon blue"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span></div>
+          <div class="stat-value">15:30<small> WIB</small></div>
+          <div class="stat-note">Jadwal Normal (8 Jam Pelajaran)</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Total Jam Belajar Minggu Ini</span><span class="stat-icon green"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span></div>
+          <div class="stat-value">32.5<small> Jam</small></div>
+          <div class="stat-note"><span class="ok">91%</span> dari target 40 Jam</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top"><span class="stat-label">Kehadiran Bulan Ini</span><span class="stat-icon purple"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div>
+          <div class="stat-value">98%</div>
+          <div class="stat-note"><span class="ok">21 Hadir</span> <span class="warn">1 Izin</span> <span class="danger">0 Alfa</span></div>
+        </div>
+      </section>
+
+      <section class="g-grid">
+        <div class="g-col">
+
+          <!-- Pencatat waktu / Tracker -->
+          <div class="card panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Live Time Tracker</span>
+                <h2 class="panel-title">Pencatat Waktu Sekolah Aktif</h2>
+              </div>
+              <span class="pill pill-green" id="status-pill"><i class="dot"></i><span id="status-text">Siap Memulai</span></span>
+            </div>
+
+            <div class="clock-box">
+              <span class="eyebrow">DURASI TERLACAT</span>
+
+              <div id="tracker-display">
+                <div class="clock-time" id="timer-count">00:00:00</div>
+                <div id="tracker-hint">
+                  👇 Ketuk di sini atau tombol di bawah untuk <b>Mulai</b>
+                </div>
+              </div>
+
+              <div class="clock-loc">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Lokasi: <b>SMA Negeri 1 Jakarta</b> <span class="valid">(Radius 12m - Valid)</span></span>
+              </div>
+
+              <button class="btn btn-primary btn-checkout" id="btn-toggle-tracker" type="button">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Mulai Tracker
+              </button>
+            </div>
+          </div>
+
+          <!-- Grafik mingguan -->
+          <div class="card panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">Grafik Kehadiran Mingguan</h2>
+                <p class="panel-sub">Statistik jam belajar per hari (14 - 18 Oktober)</p>
+              </div>
+              <div class="legend">
+                <span><i class="dot hadir"></i>Hadir</span>
+                <span><i class="dot izin"></i>Izin</span>
+                <span><i class="dot sakit"></i>Sakit</span>
+                <span><i class="dot alfa"></i>Alfa</span>
+              </div>
+            </div>
+            <div class="week-bars">
+              <div class="week-col"><div class="week-track"><i class="z" style="height:4%"></i><i class="h" style="height:96%"></i></div><span class="week-day">Senin</span></div>
+              <div class="week-col"><div class="week-track"></div><span class="week-day">Selasa</span></div>
+              <div class="week-col"><div class="week-track"><i class="z" style="height:4%"></i><i class="h" style="height:96%"></i></div><span class="week-day">Rabu</span></div>
+              <div class="week-col"><div class="week-track"><i class="a" style="height:6%"></i><i class="s" style="height:6%"></i></div><span class="week-day">Kamis</span></div>
+              <div class="week-col"><div class="week-track"><i class="a" style="height:6%"></i><i class="s" style="height:6%"></i></div><span class="week-day">Jumat</span></div>
+            </div>
+            <div class="chart-foot"><span>Jam Operasional: 07:00 - 15:30 WIB</span><span>Rata-rata kehadiran: <b>7.8 jam/hari</b></span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SCRIPT: HAMBURGER SIDEBAR
+     ============================================================ -->
+<script>
+(function () {
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebar-overlay');
+  const hamburger = document.getElementById('hamburger');
+  const closeBtn  = document.getElementById('sidebar-close');
+  if (!sidebar || !overlay || !hamburger) return;
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+    document.body.classList.add('no-scroll');
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    document.body.classList.remove('no-scroll');
+  }
+  function toggleSidebar() {
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+  }
+
+  hamburger.addEventListener('click', toggleSidebar);
+  closeBtn.addEventListener('click', closeSidebar);
+  overlay.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeSidebar();
+  });
+
+  sidebar.querySelectorAll('.nav a').forEach(function (link) {
+    link.addEventListener('click', function () {
+      if (window.matchMedia('(max-width: 640px)').matches) closeSidebar();
+    });
+  });
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 640) closeSidebar();
+  });
+})();
+</script>
+
+<script>
+  (async function() {
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    try {
+      const res = await fetch('/api/stats/siswa');
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        const statValues = document.querySelectorAll('.stat .stat-value');
+        if (statValues.length >= 4) {
+          statValues[0].innerHTML = escapeHtml(d.jamMasuk.split(' ')[0]) + '<small> WIB</small>';
+          statValues[1].innerHTML = escapeHtml(d.targetPulang.split(' ')[0]) + '<small> WIB</small>';
+          statValues[2].innerHTML = escapeHtml(d.jamBelajarMingguIni.split(' ')[0]) + '<small> Jam</small>';
+          statValues[3].innerHTML = escapeHtml(d.kehadiranBulanIni);
+        }
+
+        const statNotes = document.querySelectorAll('.stat .stat-note');
+        if (statNotes.length >= 4) {
+          statNotes[3].innerHTML = `<span class="ok">${d.hadirCount} Hadir</span> <span class="warn">${d.izinCount} Izin</span> <span class="danger">${d.alfaCount} Alfa</span>`;
+        }
+
+        const logContainer = document.getElementById('student-log-list');
+        if (logContainer) {
+          if (!d.logs || d.logs.length === 0) {
+            logContainer.innerHTML = '<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">Belum ada catatan absensi tersimpan.</div>';
+          } else {
+            logContainer.innerHTML = '';
+            d.logs.slice(0, 5).forEach(l => {
+              const item = document.createElement('div');
+              item.className = 'log-item';
+              item.innerHTML = `
+                <div>
+                  <div class="log-date">${escapeHtml(l.tgl || 'Hari Ini')}</div>
+                  <div class="log-meta">${escapeHtml(l.masuk || '-')} - ${escapeHtml(l.keluar || '-')} (${escapeHtml(l.durasi || '-')})</div>
+                </div>
+                <span class="badge b-${l.status || 'hadir'}">${escapeHtml((l.status || 'hadir').toUpperCase())}</span>
+              `;
+              logContainer.appendChild(item);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Gagal memuat stats siswa:', e);
+    }
+  })();
+</script>
+
+<script>
+/* Satu-satunya pengelola timer dashboard: status diambil dari backend RFID. */
+(function () {
+  const timer = document.getElementById('timer-count');
+  const pillText = document.getElementById('status-text');
+  const hint = document.getElementById('tracker-hint');
+  const button = document.getElementById('btn-toggle-tracker');
+  const display = document.getElementById('tracker-display');
+  const pill = document.getElementById('status-pill');
+  if (!timer || !pillText) return;
+
+  const state = { isRunning: false, startTime: null };
+  let syncInProgress = false;
+  let lastRendered = '';
+
+  function parseStartTime(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function formatDuration(seconds) {
+    seconds = Math.max(0, Math.floor(seconds));
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  function render() {
+    const seconds = state.isRunning && state.startTime
+      ? Math.floor(Math.max(0, Date.now() - state.startTime) / 1000)
+      : 0;
+    const text = formatDuration(seconds);
+
+    if (text !== lastRendered) {
+      timer.textContent = text;
+      lastRendered = text;
+    }
+
+    if (state.isRunning) {
+      pillText.textContent = 'Tracker Berjalan';
+      if (pill) pill.className = 'pill pill-green';
+      if (hint) hint.innerHTML = '✅ Tracker berjalan. Tap kartu RFID yang sama lagi setelah minimal 1 menit untuk menghentikan.';
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = 'Tracker Berjalan';
+        button.style.opacity = '0.7';
+        button.style.cursor = 'not-allowed';
+      }
+      if (display) display.style.cursor = 'default';
+      timer.style.color = '#10b981';
+    } else {
+      pillText.textContent = 'Siap Memulai';
+      if (pill) pill.className = 'pill';
+      if (hint) hint.innerHTML = 'Tempelkan kartu RFID untuk memulai tracker.';
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = 'Menunggu Kartu RFID';
+        button.style.opacity = '0.7';
+        button.style.cursor = 'not-allowed';
+      }
+      if (display) display.style.cursor = 'default';
+      timer.style.color = '#1e293b';
+    }
+  }
+
+  async function syncTracker() {
+    if (syncInProgress) return;
+    syncInProgress = true;
+    try {
+      const response = await fetch('/api/siswa/tracker', {
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        pillText.textContent = 'Login diperlukan';
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      if (data.isRunning && data.startTime) {
+        const serverStart = parseStartTime(data.startTime);
+        if (serverStart !== null) {
+          if (!state.isRunning || state.startTime !== serverStart) {
+            state.startTime = serverStart;
+          }
+          state.isRunning = true;
+        }
+      } else {
+        state.isRunning = false;
+        state.startTime = null;
+      }
+
+      render();
+    } catch (error) {
+      console.warn('Gagal sinkronisasi tracker:', error);
+    } finally {
+      syncInProgress = false;
+    }
+  }
+
+  render();
+  syncTracker();
+
+  setInterval(render, 250);
+  setInterval(syncTracker, 1000);
+})();
+</script>
+
+<script src="/src/js/script-siswa.js"></script>
+
+</body>
+</html>

@@ -71,7 +71,7 @@ body.siswa .welcome {
 /* ---------- Layout dashboard siswa ---------- */
 .g-grid {
   display: grid;
-  grid-template-columns: 1.75fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -81,6 +81,7 @@ body.siswa .welcome {
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  width: 100%;
 }
 
 /* ---------- Pencatat waktu live ---------- */
@@ -455,4 +456,163 @@ body.siswa th {
   .clock-time { font-size: 34px; }
   .clock-box { flex-direction: column; align-items: flex-start; }
   .btn-checkout { width: 100%; }
+}
+
+/* ---------- Mobile responsive (427px) ---------- */
+@media (max-width: 768px) {
+  /* Padding dan margin */
+  .app { gap: 0; }
+  .main { padding: 16px 12px; }
+  
+  /* Grid layout */
+  .g-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .g-col {
+    gap: 16px;
+  }
+  
+  /* Panel cards */
+  .card.panel {
+    border-radius: 12px;
+    padding: 12px;
+  }
+  
+  .panel-head {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .panel-head > div {
+    width: 100%;
+  }
+  
+  .panel-head .pill {
+    align-self: flex-start;
+  }
+  
+  /* Tracker */
+  .clock-box {
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  
+  .clock-time {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  
+  #tracker-hint {
+    font-size: 0.875rem !important;
+    margin-top: 0.75rem !important;
+  }
+  
+  .clock-loc {
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+  }
+  
+  .btn-checkout {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Week bars chart */
+  .week-bars {
+    gap: 0.75rem !important;
+    padding: 1.5rem 1rem !important;
+    min-height: 250px !important;
+  }
+  
+  .week-col {
+    flex: 1;
+  }
+  
+  .week-day {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  
+  .week-track {
+    min-width: 20px;
+    border-radius: 4px;
+  }
+  
+  .chart-foot {
+    padding: 12px;
+    font-size: 0.75rem;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+  
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  /* Panel sub */
+  .panel-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  
+  /* Eyebrow text */
+  .eyebrow {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Status pill */
+  .pill {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .pill .dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main { padding: 12px 8px; }
+  
+  .g-grid { gap: 12px; }
+  .g-col { gap: 12px; }
+  
+  .card.panel { padding: 10px; }
+  
+  .clock-time {
+    font-size: 2rem;
+  }
+  
+  .clock-box { padding: 1rem 0.75rem; }
+  
+  .week-bars {
+    gap: 0.5rem !important;
+    padding: 1rem 0.75rem !important;
+    min-height: 200px !important;
+  }
+  
+  .btn-checkout {
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+  }
 }

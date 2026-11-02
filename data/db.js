@@ -227,6 +227,20 @@ async function findSiswaByNis(nis) {
   return data || null;
 }
 
+async function findSiswaByRfidUid(uid) {
+  if (!uid) return null;
+  const { data, error } = await supabase
+    .from('siswa')
+    .select('*')
+    .eq('rfid_uid', String(uid).trim().toUpperCase())
+    .maybeSingle();
+  if (error) {
+    console.error('findSiswaByRfidUid error:', error.message);
+    throw error;
+  }
+  return data || null;
+}
+
 async function findSiswaByIdOrNis(idOrNis) {
   const clean = String(idOrNis).trim();
   const { data, error } = await supabase
@@ -249,7 +263,8 @@ async function addSiswa(data) {
     gender: data.gender || 'Laki-laki',
     phone: data.phone ? data.phone.trim() : '-',
     email: data.email || null,
-    status: data.status || 'Aktif'
+    status: data.status || 'Aktif',
+    rfid_uid: data.rfid_uid || null
   };
 
   const { data: created, error } = await supabase
@@ -273,7 +288,8 @@ async function updateSiswa(id, data) {
     gender: data.gender !== undefined ? data.gender : existing.gender,
     phone: data.phone !== undefined ? data.phone.trim() : existing.phone,
     email: data.email !== undefined ? data.email.trim() : existing.email,
-    status: data.status !== undefined ? data.status : existing.status
+    status: data.status !== undefined ? data.status : existing.status,
+    rfid_uid: data.rfid_uid !== undefined ? (data.rfid_uid || null) : (existing.rfid_uid || null)
   };
 
   const { data: updated, error } = await supabase
@@ -888,6 +904,7 @@ module.exports = {
   getSiswa,
   getSiswaLimit,
   findSiswaByNis,
+  findSiswaByRfidUid,
   findSiswaByIdOrNis,
   addSiswa,
   updateSiswa,
