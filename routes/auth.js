@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
     });
 
     const { password: pw, ...safeUser } = user;
-    const redirectUrl = user.role === 'siswa' ? '/dashboard-siswa.html' : '/dashboard.html';
+    const redirectUrl = user.role === 'siswa' ? '/dashboardsiswa.html' : '/dashboard.html';
 
     res.json({ success: true, message: `Selamat datang, ${user.name}!`, token, user: safeUser, redirectUrl });
   } catch (err) {

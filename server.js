@@ -124,7 +124,8 @@ adminPages.forEach(page => {
 // STUDENT PAGES
 // ==========================================
 const studentPages = [
-  { old: '/dashboard-siswa.html', new: '/src/pages/student/dashboard.html' },
+  { old: '/dashboard-siswa.html', new: '/src/pages/student/dashboardsiswa.html' },
+  { old: '/dashboardsiswa.html', new: '/src/pages/student/dashboardsiswa.html' },
   { old: '/detail-absensi.html', new: '/src/pages/student/detail-absensi.html' }
 ];
 

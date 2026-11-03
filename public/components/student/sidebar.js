@@ -6,8 +6,8 @@
 const StudentSidebar = {
   // Menu items untuk siswa
   menuItems: [
-    { href: 'dashboard.html', icon: 'home', label: 'Dashboard' },
-    { href: 'detail-absensi.html', icon: 'calendar', label: 'Riwayat Absensi' }
+    { href: 'dashboardsiswa.html', icon: 'home', label: 'Dashboard' },
+    { href: 'detail-absensi.html', icon: 'calendar', label: 'Absensi' }
   ],
 
   // Generate icon SVG berdasarkan tipe

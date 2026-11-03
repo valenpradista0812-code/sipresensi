@@ -530,28 +530,8 @@
 </head>
 <body class="siswa">
 <div class="app">
-
-  <!-- ===== SIDEBAR (drawer di mobile) ===== -->
-  <aside class="sidebar" id="sidebar">
-    <button class="sidebar-close" id="sidebar-close" aria-label="Tutup menu">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="brand">
-      <div class="brand-logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
-      <div>
-        <div class="brand-name">SiPresensi</div>
-        <div class="brand-sub">Sistem Absensi</div>
-      </div>
-    </div>
-    <nav class="nav">
-      <a href="/src/pages/student/dashboard.html" class="active"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></a>
-      <a href="/src/pages/student/detail-absensi.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Absensi</span></a>
-    </nav>
-    <div class="sidebar-foot">v2.4.1 Stable<br>SMA Negeri 1 Jakarta</div>
-  </aside>
-
-  <!-- Overlay untuk drawer mobile -->
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <!-- Sidebar loaded from sidebar-content.html -->
+  <div id="sidebar-container"></div>
 
   <div class="main">
     <!-- ===== TOPBAR ===== -->
@@ -674,50 +654,9 @@
 </div>
 
 <!-- ============================================================
-     SCRIPT: HAMBURGER SIDEBAR
+     SCRIPT: HAMBURGER SIDEBAR (di-replace oleh sidebar-loader.js)
      ============================================================ -->
-<script>
-(function () {
-  const sidebar   = document.getElementById('sidebar');
-  const overlay   = document.getElementById('sidebar-overlay');
-  const hamburger = document.getElementById('hamburger');
-  const closeBtn  = document.getElementById('sidebar-close');
-  if (!sidebar || !overlay || !hamburger) return;
 
-  function openSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('show');
-    document.body.classList.add('no-scroll');
-  }
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-    document.body.classList.remove('no-scroll');
-  }
-  function toggleSidebar() {
-    if (sidebar.classList.contains('open')) closeSidebar();
-    else openSidebar();
-  }
-
-  hamburger.addEventListener('click', toggleSidebar);
-  closeBtn.addEventListener('click', closeSidebar);
-  overlay.addEventListener('click', closeSidebar);
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeSidebar();
-  });
-
-  sidebar.querySelectorAll('.nav a').forEach(function (link) {
-    link.addEventListener('click', function () {
-      if (window.matchMedia('(max-width: 640px)').matches) closeSidebar();
-    });
-  });
-
-  window.addEventListener('resize', function () {
-    if (window.innerWidth > 640) closeSidebar();
-  });
-})();
-</script>
 
 <script>
   (async function() {
@@ -888,6 +827,7 @@
 })();
 </script>
 
+<script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script-siswa.js"></script>
 
 </body>
