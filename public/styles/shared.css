@@ -117,6 +117,39 @@ svg.i {
   z-index: 20;
 }
 
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-top-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.sidebar-top-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.sidebar-top-btn svg.i {
+  width: 18px;
+  height: 18px;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -1814,6 +1847,16 @@ label.label {
     padding: 12px;
   }
 
+  .sidebar-top {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .sidebar-top-btn {
+    width: 40px;
+    height: 40px;
+  }
+
   .topbar {
     padding: 0 16px;
   }
@@ -1860,5 +1903,551 @@ label.label {
 
   .page-title {
     font-size: 17px;
+  }
+}
+
+@property --admin-shine-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: -60deg;
+}
+
+/* Admin glass navigation uses the same floating layout as the student dashboard. */
+.admin-glass-filters {
+  position: absolute;
+}
+
+.admin-glass-group-wrapper {
+  --admin-glass-icon: #22c55e;
+  --admin-glass-action: #0052f5;
+  --admin-glass-size: 46px;
+  --admin-glass-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.1),
+    inset 1.8px 3px 0 -2px rgba(255,255,255,.9),
+    inset -2px -2px 0 -2px rgba(255,255,255,.8),
+    inset -3px -8px 1px -6px rgba(255,255,255,.6),
+    inset -.3px -1px 4px rgba(0,0,0,.12),
+    inset -1.5px 2.5px 0 -2px rgba(0,0,0,.2),
+    inset 0 3px 4px -2px rgba(0,0,0,.2),
+    0 1px 5px rgba(0,0,0,.1),
+    0 6px 16px rgba(0,0,0,.08);
+  --admin-glass-shadow-soft:
+    inset 0 0 0 1px rgba(255,255,255,.1),
+    inset 2px 1px 0 -1px rgba(255,255,255,.9),
+    inset -1.5px -1px 0 -1px rgba(255,255,255,.8),
+    inset -2px -6px 1px -5px rgba(255,255,255,.6),
+    inset -1px 2px 3px -1px rgba(0,0,0,.2),
+    inset 0 -4px 1px -2px rgba(0,0,0,.1),
+    0 3px 6px rgba(0,0,0,.08);
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 65;
+}
+
+.admin-glass-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-glass-circle {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  color: var(--admin-glass-icon);
+  background-color: color-mix(in srgb, #bbbbbc 18%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: url(#admin-liquid-circle) blur(10px) saturate(150%);
+  box-shadow: var(--admin-glass-shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 500ms cubic-bezier(.34, 1.56, .64, 1),
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.admin-glass-circle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--admin-shine-angle), rgba(255,255,255,.1), rgba(255,255,255,.9) 10%, rgba(255,255,255,.1) 25%, rgba(255,255,255,.1));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  transition: --shine-angle 700ms ease;
+  z-index: 0;
+}
+
+.admin-glass-circle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), transparent 55%);
+  opacity: .8;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-glass-circle:hover {
+  transform: scale(1.06);
+  background-color: color-mix(in srgb, #bbbbbc 28%, transparent);
+}
+
+.admin-glass-circle:hover::before { --admin-shine-angle: 120deg; }
+.admin-glass-circle:active { transform: scale(.92); transition-duration: 120ms; }
+.admin-glass-circle:focus-visible { outline: 2px solid var(--admin-glass-action); outline-offset: 3px; }
+
+.admin-glass-circle svg {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 500ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.admin-glass-circle:hover svg { transform: rotate(-12deg) scale(1.1); }
+
+.admin-glass-sidebar {
+  position: relative;
+  width: 56px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 999px;
+  isolation: isolate;
+  background: rgba(187,187,188,.18);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: url(#admin-liquid-side) blur(10px) saturate(150%);
+  box-shadow: var(--admin-glass-shadow);
+}
+
+.admin-glass-nav {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-glass-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--admin-glass-size);
+  height: var(--admin-glass-size);
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(187,187,188,.4);
+  box-shadow: var(--admin-glass-shadow-soft);
+  transform: translate3d(-3px, -3px, 0);
+  will-change: transform;
+}
+
+.admin-glass-nav-item {
+  position: relative;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--admin-glass-icon);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 200ms ease;
+}
+
+.admin-glass-nav-item:hover { background: rgba(187,187,188,.2); }
+.admin-glass-nav-item:focus-visible { outline: 2px solid var(--admin-glass-action); outline-offset: 2px; }
+
+.admin-glass-nav-item svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: scale 200ms cubic-bezier(.5, 0, 0, 1);
+}
+
+.admin-glass-nav-item:hover svg { scale: 1.12; }
+.admin-glass-nav-item:active svg { scale: .92; }
+
+.admin-mobile-morph { display: none; }
+
+@media (max-width: 900px) and (min-width: 641px) {
+  .admin-glass-group-wrapper { left: 16px; }
+  .admin-glass-actions { gap: 9px; }
+  .admin-glass-circle { width: 48px; height: 48px; }
+  .admin-glass-circle svg { width: 20px; height: 20px; }
+  .admin-glass-sidebar { width: 52px; padding: 10px 6px; }
+}
+
+@media (max-height: 640px) and (min-width: 641px) {
+  .admin-glass-group-wrapper {
+    top: 12px;
+    bottom: 12px;
+    transform: none;
+    justify-content: center;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .admin-glass-group-wrapper::-webkit-scrollbar { display: none; }
+  .admin-glass-actions,
+  .admin-glass-sidebar { flex-shrink: 0; }
+}
+
+@media (max-width: 640px) {
+  .admin-glass-group-wrapper { display: none; }
+
+  .admin-mobile-morph {
+    position: fixed;
+    right: 16px;
+    bottom: 24px;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    display: block;
+    z-index: 100;
+    transform-origin: bottom right;
+    will-change: transform, width, height;
+  }
+
+  .admin-mobile-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: color-mix(in srgb, #bbbbbc 12%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: url(#admin-liquid-morph) blur(10px) saturate(150%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.1),
+      inset 1.8px 3px 0 -2px rgba(255,255,255,.9),
+      inset -2px -2px 0 -2px rgba(255,255,255,.8),
+      inset -3px -8px 1px -6px rgba(255,255,255,.6),
+      inset -.3px -1px 4px rgba(0,0,0,.12),
+      inset -1.5px 2.5px 0 -2px rgba(0,0,0,.2),
+      inset 0 3px 4px -2px rgba(0,0,0,.2),
+      inset 2px -6.5px 1px -4px rgba(0,0,0,.1),
+      0 1px 5px rgba(0,0,0,.1),
+      0 6px 16px rgba(0,0,0,.08);
+    transition: background-color 400ms cubic-bezier(1, 0, .4, 1), box-shadow 400ms cubic-bezier(1, 0, .4, 1);
+  }
+
+  .admin-mobile-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,.5), transparent 45%);
+    pointer-events: none;
+  }
+
+  .admin-mobile-trigger {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 64px;
+    height: 64px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    z-index: 2;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .admin-mobile-trigger span {
+    position: absolute;
+    left: 50%;
+    width: 22px;
+    height: 2px;
+    margin-left: -11px;
+    border-radius: 2px;
+    background: #1e293b;
+    transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), opacity .2s ease, top .5s cubic-bezier(.34, 1.56, .64, 1);
+  }
+
+  .admin-mobile-trigger span:nth-child(1) { top: 22px; }
+  .admin-mobile-trigger span:nth-child(2) { top: 30px; }
+  .admin-mobile-trigger span:nth-child(3) { top: 38px; }
+  .admin-mobile-trigger.active span:nth-child(1) { top: 30px; transform: rotate(45deg); }
+  .admin-mobile-trigger.active span:nth-child(2) { opacity: 0; }
+  .admin-mobile-trigger.active span:nth-child(3) { top: 30px; transform: rotate(-45deg); }
+
+  .admin-mobile-panel {
+    position: absolute;
+    right: 0;
+    bottom: 72px;
+    width: 212px;
+    max-height: calc(100dvh - 112px);
+    overflow-y: auto;
+    padding: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px) scale(.94);
+    transform-origin: bottom right;
+    transition: opacity .16s ease, transform .4s cubic-bezier(.32, .72, 0, 1), visibility 0s linear .2s;
+    z-index: 1;
+    scrollbar-width: thin;
+  }
+
+  .admin-mobile-morph.open .admin-mobile-panel {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: opacity .3s ease .14s, transform .65s cubic-bezier(.34, 1.56, .64, 1) .06s, visibility 0s;
+  }
+
+  .admin-mobile-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: #334155;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .12s ease, transform .3s cubic-bezier(.32, .72, 0, 1), background .15s ease;
+  }
+
+  .admin-mobile-morph.open .admin-mobile-item {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity .25s ease, transform .6s cubic-bezier(.34, 1.56, .64, 1), background .15s ease;
+  }
+
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(1) { transition-delay: .18s, .18s, 0s; }
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(2) { transition-delay: .22s, .22s, 0s; }
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(3) { transition-delay: .26s, .26s, 0s; }
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(4) { transition-delay: .3s, .3s, 0s; }
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(5) { transition-delay: .34s, .34s, 0s; }
+  .admin-mobile-morph.open .admin-mobile-item:nth-of-type(6) { transition-delay: .38s, .38s, 0s; }
+  .admin-mobile-morph.open a.admin-mobile-item:nth-of-type(7) { transition-delay: .42s, .42s, 0s; }
+  .admin-mobile-morph.open a.admin-mobile-item:nth-of-type(8) { transition-delay: .46s, .46s, 0s; }
+  .admin-mobile-morph.open a.admin-mobile-item:nth-of-type(9) { transition-delay: .5s, .5s, 0s; }
+  .admin-mobile-morph.open button.admin-mobile-item:nth-of-type(1) { transition-delay: .54s, .54s, 0s; }
+  .admin-mobile-item:hover { background: color-mix(in srgb, #bbbbbc 20%, transparent); }
+  .admin-mobile-item:active { background: color-mix(in srgb, #bbbbbc 36%, transparent); }
+  .admin-mobile-item.active { background: color-mix(in srgb, #bbbbbc 36%, transparent); color: #1e293b; }
+  .admin-mobile-item.active svg { stroke: #1e293b; }
+
+  .admin-mobile-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: #64748b;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .admin-mobile-divider {
+    height: 1px;
+    margin: 4px 12px;
+    background: color-mix(in srgb, #000 10%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-glass-circle,
+  .admin-glass-circle::before,
+  .admin-glass-circle svg,
+  .admin-glass-nav-item,
+  .admin-glass-nav-item svg,
+  .admin-mobile-trigger span,
+  .admin-mobile-panel,
+  .admin-mobile-item {
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* Admin page layout: keep every page aligned to the floating glass sidebar. */
+body.admin {
+  width: 100%;
+  min-width: 320px;
+  overflow-x: clip;
+}
+
+body.admin .main {
+  width: calc(100% - 88px);
+  min-width: 0;
+  margin-left: 88px;
+  overflow-x: clip;
+}
+
+body.admin .topbar,
+body.admin .content {
+  width: 100%;
+  max-width: 1480px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  left: -44px;
+}
+
+body.admin .topbar {
+  min-height: 64px;
+  height: auto;
+  padding: 18px 32px 10px;
+  justify-content: flex-start;
+  background: transparent;
+  border-bottom: 0;
+  position: relative;
+  top: auto;
+  z-index: 1;
+}
+
+body.admin .topbar-right {
+  display: none;
+}
+
+body.admin .page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+body.admin .content {
+  min-width: 0;
+  padding: 14px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+body.admin .content > *,
+body.admin .content .card,
+body.admin .content .toolbar,
+body.admin .content .table-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.admin .stats,
+body.admin .grid-main,
+body.admin .rekap-top,
+body.admin .profile-grid,
+body.admin .class-grid,
+body.admin .mini-grid,
+body.admin .settings,
+body.admin .form-grid {
+  gap: 16px;
+}
+
+body.admin .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1200px) {
+  body.admin .topbar,
+  body.admin .content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  body.admin .content {
+    gap: 18px;
+    padding-top: 12px;
+  }
+
+  body.admin .stats,
+  body.admin .grid-main,
+  body.admin .rekap-top,
+  body.admin .profile-grid,
+  body.admin .class-grid,
+  body.admin .mini-grid,
+  body.admin .settings,
+  body.admin .form-grid {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  body.admin .main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  body.admin .topbar,
+  body.admin .content {
+    max-width: none;
+    left: 0;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  body.admin .topbar {
+    min-height: 56px;
+    padding-top: 14px;
+    padding-bottom: 8px;
+  }
+
+  body.admin .page-title {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  body.admin .content {
+    gap: 16px;
+    padding-top: 10px;
+    padding-bottom: 28px;
+  }
+
+  body.admin .toolbar {
+    gap: 12px;
+  }
+
+  body.admin .toolbar-left,
+  body.admin .toolbar-right {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 380px) {
+  body.admin .topbar,
+  body.admin .content {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }

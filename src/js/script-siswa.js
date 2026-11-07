@@ -1,146 +1,29 @@
 
 /* Timer dashboard dikelola satu kali oleh sinkronisasi RFID di dashboard-siswa.html. */
 
-// 0) Modal Dialog HTML Injection
+// 1.5) Sidebar top buttons handler (Notifikasi, Profile, Keluar)
 (function () {
-  if (document.getElementById('sipresensi-modal-container')) return;
+  const sidebarTopBtns = document.querySelectorAll('.sidebar-top-btn, .glass-top-item');
   
-  const modalHTML = `
-    <div id="sipresensi-modal-container" style="
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    ">
-      <div style="
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        max-width: 400px;
-        width: 90%;
-        box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
-        animation: slideUp 0.3s ease;
-      ">
-        <div style="margin-bottom: 16px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #0f172a;">
-            Konfirmasi Logout
-          </h3>
-          <p style="margin: 0; font-size: 14px; color: #64748b;">
-            Apakah Anda yakin ingin keluar dari sistem?
-          </p>
-        </div>
-        
-        <div style="display: flex; gap: 12px; margin-top: 24px;">
-          <button id="modal-cancel-btn" style="
-            flex: 1;
-            padding: 10px 16px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            color: #0f172a;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-          " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">
-            Batal
-          </button>
-          <button id="modal-logout-btn" style="
-            flex: 1;
-            padding: 10px 16px;
-            border: none;
-            background: #ef4444;
-            color: white;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-          " onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-    <style>
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
-  `;
+  if (sidebarTopBtns.length === 0) return;
   
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-})();
-
-// 1) Logout handler
-(function () {
-  const logoutBtn = document.querySelector('.btn-logout');
-  const modalContainer = document.getElementById('sipresensi-modal-container');
-  const modalCancelBtn = document.getElementById('modal-cancel-btn');
-  const modalLogoutBtn = document.getElementById('modal-logout-btn');
-  
-  if (!logoutBtn) return;
-  
-  function showModal() {
-    if (modalContainer) {
-      modalContainer.style.display = 'flex';
-    }
-  }
-  
-  function hideModal() {
-    if (modalContainer) {
-      modalContainer.style.display = 'none';
-    }
-  }
-  
-  function performLogout() {
-    hideModal();
-    fetch('/api/auth/logout', { method: 'POST' })
-      .then(function (response) {
-        // Clear cookie dan redirect ke login
-        window.location.href = '/login.html';
-      })
-      .catch(function (error) {
-        console.error('Logout error:', error);
-        // Jika ada error, tetap redirect ke login
-        window.location.href = '/login.html';
-      });
-  }
-  
-  // Logout button click handler
-  logoutBtn.addEventListener('click', function (e) {
-    e.preventDefault();
-    showModal();
-  });
-  
-  // Cancel button click handler
-  if (modalCancelBtn) {
-    modalCancelBtn.addEventListener('click', hideModal);
-  }
-  
-  // Logout confirmation button click handler
-  if (modalLogoutBtn) {
-    modalLogoutBtn.addEventListener('click', performLogout);
-  }
-  
-  // Close modal when clicking outside (backdrop)
-  if (modalContainer) {
-    modalContainer.addEventListener('click', function (e) {
-      if (e.target === modalContainer) {
-        hideModal();
+  sidebarTopBtns.forEach(function (btn, index) {
+    // Skip jika tombol sudah punya class btn-logout (sudah di-handle di atas)
+    if (btn.classList.contains('btn-logout')) return;
+    
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const title = btn.getAttribute('title') || btn.getAttribute('aria-label');
+      
+      if (title === 'Notifikasi') {
+        // Navigasi ke halaman notifikasi (sesuaikan path jika ada)
+        window.location.href = '/src/pages/student/notifikasi.html';
+      } else if (title === 'Profile') {
+        // Navigasi ke halaman profile/pengaturan (sesuaikan path jika ada)
+        window.location.href = '/src/pages/student/profil.html';
       }
     });
-  }
+  });
 })();
 
 // 2) Sidebar toggle handler (Desktop & Mobile)
@@ -270,6 +153,34 @@
 
   var currentLogs = [];
 
+  tbody.addEventListener("click", function (e) {
+    var editBtn = e.target.closest(".btn-edit-izin");
+    var cancelBtn = e.target.closest(".btn-cancel-izin");
+
+    if (editBtn) {
+      e.stopPropagation();
+      var idx = editBtn.dataset.idx;
+      var logItem = currentLogs[idx];
+      var openBtn = document.getElementById("btn-ajukan-izin");
+      if (openBtn) openBtn.click();
+      var alasanEl = document.getElementById("alasan");
+      if (alasanEl && logItem) {
+        alasanEl.value = logItem.zona || logItem.keterangan || "Edit pengajuan izin";
+      }
+      return;
+    }
+
+    if (cancelBtn) {
+      e.stopPropagation();
+      var idx = cancelBtn.dataset.idx;
+      if (confirm("Apakah Anda yakin ingin membatalkan pengajuan izin ini?")) {
+        currentLogs.splice(idx, 1);
+        renderTable(currentLogs);
+      }
+      return;
+    }
+  });
+
   function escapeHtml(str) {
     if (!str) return "";
 
@@ -315,21 +226,34 @@
         d.status === "alfa" ? "b-alfa" :
         "b-hadir";
 
+      var actionButtons = "";
+      if (d.status === "izin" || d.status === "sakit") {
+        actionButtons = `
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <button type="button" class="btn-edit-izin" data-idx="${idx}" style="background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">Edit</button>
+            <button type="button" class="btn-cancel-izin" data-idx="${idx}" style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">Batalkan</button>
+          </div>
+        `;
+      }
+
+      var ketKehadiran = '<span style="color: #10b981; font-weight: 700;"><i class="dot" style="background:#10b981; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px;"></i>Tepat Waktu</span>';
+      if (d.status === "late" || d.status === "terlambat") {
+        ketKehadiran = '<span style="color: #f59e0b; font-weight: 700;"><i class="dot" style="background:#f59e0b; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px;"></i>Terlambat</span>';
+      } else if (d.status === "izin" || d.status === "sakit") {
+        ketKehadiran = '<span style="color: #64748b; font-style: italic;">Izin / Diluar Sekolah</span>';
+      }
+
       tr.innerHTML = `
         <td class="day">${escapeHtml(d.tgl || "-")}</td>
         <td><span class="t-ok">${escapeHtml(d.masuk || "-")}</span></td>
         <td>${escapeHtml(d.keluar || "-")}</td>
         <td>${escapeHtml(d.durasi || "-")}</td>
-        <td>
-          <span class="loc">
-            <i class="dot"></i>
-            ${escapeHtml(d.zona || "Gedung Sekolah")}
-          </span>
-        </td>
+        <td>${ketKehadiran}</td>
         <td>
           <span class="badge ${badgeClass}">
             ${escapeHtml((d.status || "Hadir").toUpperCase())}
           </span>
+          ${actionButtons}
         </td>
       `;
 
@@ -347,6 +271,25 @@
 
     if (currentLogs.length > 0) {
       selectRow(currentLogs[0]);
+    }
+
+    // Pad with empty rows if less than 10 rows to maintain vertical height
+    var minRows = 10;
+    if (currentLogs.length < minRows) {
+      var diff = minRows - currentLogs.length;
+      for (var i = 0; i < diff; i++) {
+        var emptyTr = document.createElement("tr");
+        emptyTr.dataset.status = "empty";
+        emptyTr.innerHTML = `
+          <td class="muted">-</td>
+          <td><span class="t-none">-</span></td>
+          <td><span class="t-none">-</span></td>
+          <td><span class="t-none">-</span></td>
+          <td><span class="t-none">-</span></td>
+          <td><span class="badge" style="background:#f1f5f9; color:#94a3b8;">Kosong</span></td>
+        `;
+        tbody.appendChild(emptyTr);
+      }
     }
   }
 

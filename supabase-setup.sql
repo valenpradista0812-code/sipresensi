@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS siswa (
   gender VARCHAR(20) DEFAULT 'Laki-laki',
   phone VARCHAR(25) DEFAULT '-',
   email VARCHAR(100),
+  rfid_uid VARCHAR(50) UNIQUE,
   status VARCHAR(30) DEFAULT 'Aktif',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -74,7 +75,8 @@ CREATE TABLE IF NOT EXISTS absensi (
   check_in VARCHAR(20) DEFAULT '-',
   check_out VARCHAR(20) DEFAULT '-',
   note VARCHAR(200),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (nis, date, kelas)
 );
 
 CREATE TABLE IF NOT EXISTS student_logs (
@@ -123,6 +125,30 @@ CREATE TABLE IF NOT EXISTS notifikasi (
   unread INT DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS pengajuan_izin (
+  id VARCHAR(50) PRIMARY KEY,
+  nis VARCHAR(20) NOT NULL,
+  student_name VARCHAR(100) NOT NULL,
+  kelas VARCHAR(30) NOT NULL,
+  type VARCHAR(60) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  reason VARCHAR(300) NOT NULL,
+  proof_data TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'Menunggu'
+    CHECK (status IN ('Menunggu', 'Disetujui', 'Ditolak')),
+  reviewed_by VARCHAR(100),
+  reviewed_at TIMESTAMPTZ,
+  review_note VARCHAR(300),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date),
+  CHECK (end_date - start_date < 90)
+);
+ALTER TABLE pengajuan_izin ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE pengajuan_izin FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pengajuan_izin TO service_role;
 
 -- 3. Data Awal (Seed Data)
 -- Password semua akun awal: password123

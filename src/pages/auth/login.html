@@ -56,33 +56,24 @@
       <h1>Selamat Datang</h1>
       <p class="lead">Silakan masuk menggunakan akun presensi Anda.</p>
       
-      <!-- Role Quick Switcher -->
-      <div style="display:flex; gap:8px; margin-bottom:18px; padding:4px; background:#f1f5f9; border-radius:8px;">
-        <button type="button" id="role-btn-guru" class="btn" style="flex:1; padding:8px 12px; font-size:13px; font-weight:600; border-radius:6px; background:#10b981; color:#fff; border:none; cursor:pointer;">Guru / Admin</button>
-        <button type="button" id="role-btn-siswa" class="btn" style="flex:1; padding:8px 12px; font-size:13px; font-weight:600; border-radius:6px; background:transparent; color:#64748b; border:none; cursor:pointer;">Siswa / Murid</button>
-      </div>
-
       <div id="login-alert" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
 
       <div class="form-group">
         <label class="label" for="email" style="margin-bottom:8px">Alamat E-mail / NIS / NIP</label>
-        <input class="input" id="email" type="text" value="admin.endang@sman1jkt.sch.id" placeholder="Masukkan email, NIS, atau NIP" required>
+        <input class="input" id="email" type="text" placeholder="Masukkan email, NIS, atau NIP" autocomplete="username" required>
       </div>
       <div class="form-group">
         <div class="label-row">
           <label class="label" for="password">Kata Sandi</label>
-          <a class="link-green" href="javascript:alert('Gunakan kata sandi default: password123')">Lupa Password?</a>
+          <span class="link-green">Hubungi administrator sekolah jika lupa</span>
         </div>
         <div class="input-wrap">
-          <input class="input" id="password" type="password" value="password123" placeholder="Masukkan kata sandi" required>
+          <input class="input" id="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required>
           <button class="eye" type="button" data-toggle-pass="password" aria-label="Tampilkan kata sandi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
       <button class="btn btn-primary btn-block" id="btn-submit" type="submit">Masuk Ke Sistem</button>
 
-      <div style="margin-top:16px; text-align:center; font-size:12px; color:#94a3b8;">
-        Akun Demo: <b>admin.endang@sman1jkt.sch.id</b> (Guru) | <b>siswa@sman1jkt.sch.id</b> (Siswa)
-      </div>
     </form>
   </section>
 </div>
@@ -95,8 +86,6 @@
     const passInput = document.getElementById('password');
     const btnSubmit = document.getElementById('btn-submit');
     const alertBox = document.getElementById('login-alert');
-    const btnGuru = document.getElementById('role-btn-guru');
-    const btnSiswa = document.getElementById('role-btn-siswa');
 
     function showAlert(msg, isSuccess) {
       alertBox.textContent = msg;
@@ -110,28 +99,6 @@
         alertBox.style.color = '#b91c1c';
         alertBox.style.border = '1px solid #fca5a5';
       }
-    }
-
-    if (btnGuru && btnSiswa) {
-      btnGuru.addEventListener('click', function() {
-        btnGuru.style.background = '#10b981';
-        btnGuru.style.color = '#ffffff';
-        btnSiswa.style.background = 'transparent';
-        btnSiswa.style.color = '#64748b';
-        emailInput.value = 'admin.endang@sman1jkt.sch.id';
-        passInput.value = 'password123';
-        alertBox.style.display = 'none';
-      });
-
-      btnSiswa.addEventListener('click', function() {
-        btnSiswa.style.background = '#10b981';
-        btnSiswa.style.color = '#ffffff';
-        btnGuru.style.background = 'transparent';
-        btnGuru.style.color = '#64748b';
-        emailInput.value = 'siswa@sman1jkt.sch.id';
-        passInput.value = 'password123';
-        alertBox.style.display = 'none';
-      });
     }
 
     if (form) {

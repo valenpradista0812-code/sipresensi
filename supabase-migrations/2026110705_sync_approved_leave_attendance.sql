@@ -1,0 +1,107 @@
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public.review_pengajuan_izin(
+  p_id VARCHAR,
+  p_status VARCHAR,
+  p_reviewer VARCHAR,
+  p_review_note VARCHAR DEFAULT NULL
+)
+RETURNS SETOF public.pengajuan_izin
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_application public.pengajuan_izin%ROWTYPE;
+  v_date DATE;
+  v_duration_days INTEGER;
+  v_rows_affected INTEGER;
+  v_attendance_status public.absensi.status%TYPE;
+BEGIN
+  IF p_status NOT IN ('Disetujui', 'Ditolak') THEN
+    RAISE EXCEPTION 'INVALID_REVIEW_STATUS';
+  END IF;
+
+  UPDATE public.pengajuan_izin
+  SET status = p_status,
+      reviewed_by = p_reviewer,
+      reviewed_at = NOW(),
+      review_note = p_review_note,
+      updated_at = NOW()
+  WHERE id = p_id AND status = 'Menunggu'
+  RETURNING * INTO v_application;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'APPLICATION_ALREADY_REVIEWED_OR_NOT_FOUND';
+  END IF;
+
+  v_duration_days := v_application.end_date - v_application.start_date + 1;
+  IF v_duration_days > 90 THEN
+    RAISE EXCEPTION 'APPLICATION_DURATION_EXCEEDS_LIMIT';
+  END IF;
+
+  IF p_status = 'Disetujui' THEN
+    v_attendance_status := CASE
+      WHEN LOWER(v_application.type) = 'sakit' THEN 'sakit'
+      ELSE 'izin'
+    END;
+
+    FOR v_date IN
+      SELECT day_value::DATE
+      FROM generate_series(
+        v_application.start_date::TIMESTAMP,
+        v_application.end_date::TIMESTAMP,
+        INTERVAL '1 day'
+      ) AS days(day_value)
+    LOOP
+      INSERT INTO public.absensi (
+        id, date, kelas, mapel, nis, student_name, status, check_in, check_out, note
+      )
+      VALUES (
+        'izin-' || MD5(v_application.id || v_date::TEXT),
+        v_date,
+        v_application.kelas,
+        NULL,
+        v_application.nis,
+        v_application.student_name,
+        v_attendance_status,
+        '-',
+        '-',
+        LEFT(
+          FORMAT(
+            '%s (%s hari, %s s.d. %s): %s',
+            v_application.type,
+            v_duration_days,
+            v_application.start_date,
+            v_application.end_date,
+            v_application.reason
+          ),
+          200
+        )
+      )
+      ON CONFLICT (nis, date, kelas) DO UPDATE
+      SET status = EXCLUDED.status,
+          student_name = EXCLUDED.student_name,
+          note = EXCLUDED.note
+      WHERE public.absensi.status IN ('izin', 'sakit', 'alfa');
+
+      GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+      IF v_rows_affected = 0 THEN
+        RAISE EXCEPTION 'ATTENDANCE_ALREADY_RECORDED_AS_PRESENT';
+      END IF;
+    END LOOP;
+  END IF;
+
+  RETURN NEXT v_application;
+  RETURN;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.review_pengajuan_izin(VARCHAR, VARCHAR, VARCHAR, VARCHAR)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.review_pengajuan_izin(VARCHAR, VARCHAR, VARCHAR, VARCHAR)
+  TO service_role;
+
+NOTIFY pgrst, 'reload schema';
+
+COMMIT;

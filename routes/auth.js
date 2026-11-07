@@ -30,7 +30,8 @@ router.post('/login', async (req, res) => {
     );
 
     res.cookie('sipresensi_token', token, {
-      httpOnly: false,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       sameSite: 'lax',
       path: '/'
@@ -39,7 +40,7 @@ router.post('/login', async (req, res) => {
     const { password: pw, ...safeUser } = user;
     const redirectUrl = user.role === 'siswa' ? '/dashboardsiswa.html' : '/dashboard.html';
 
-    res.json({ success: true, message: `Selamat datang, ${user.name}!`, token, user: safeUser, redirectUrl });
+    res.json({ success: true, message: `Selamat datang, ${user.name}!`, user: safeUser, redirectUrl });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ success: false, message: 'Terjadi kesalahan server saat login.' });
@@ -74,37 +75,6 @@ router.post('/profile', authenticate, async (req, res) => {
   } catch (err) {
     console.error('update profile error:', err);
     res.status(500).json({ success: false, message: 'Gagal memperbarui profil.' });
-  }
-});
-
-// POST /api/auth/quick-login (demo switcher)
-router.post('/quick-login', async (req, res) => {
-  try {
-    const user = await db.findUserByRole(role);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Akun peran tersebut tidak ditemukan.' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.cookie('sipresensi_token', token, {
-      httpOnly: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-      path: '/'
-    });
-
-    const { password: pw, ...safeUser } = user;
-    const redirectUrl = user.role === 'siswa' ? '/dashboard-siswa.html' : '/dashboard.html';
-    res.json({ success: true, token, user: safeUser, redirectUrl });
-  } catch (err) {
-    console.error('Quick login error:', err);
-    res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
   }
 });
 

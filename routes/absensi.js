@@ -6,6 +6,15 @@ const { authenticate, optionalAuth, requireRole } = require('../middleware/auth'
 // GET /api/absensi - Daftar siswa di kelas beserta status absensi hari ini
 router.get('/', authenticate, async (req, res) => {
   try {
+    if (req.user.role === 'siswa') {
+      if (!req.user.nis) {
+        return res.status(403).json({ success: false, message: 'Akun siswa belum terhubung dengan NIS.' });
+      }
+
+      const records = await db.getAbsensiByNis(req.user.nis);
+      return res.json({ success: true, count: records.length, data: records });
+    }
+
     const kelas   = req.query.kelas   || 'XII IPA 1';
     const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
     const mapel   = req.query.mapel   || 'Matematika';
@@ -31,6 +40,18 @@ router.get('/', authenticate, async (req, res) => {
         status: existing ? existing.status : 'hadir',
         note:   existing ? (existing.note || '') : ''
       };
+    });
+    const studentNis = new Set(result.map(student => String(student.nis)));
+    existingRecords.forEach(record => {
+      if (studentNis.has(String(record.nis))) return;
+      result.push({
+        no: result.length + 1,
+        nis: record.nis,
+        name: record.student_name || 'Siswa',
+        kelas: record.kelas,
+        status: record.status,
+        note: record.note || ''
+      });
     });
 
     res.json({ success: true, filter: { kelas, tanggal, mapel }, count: result.length, data: result });
@@ -135,7 +156,10 @@ router.get('/riwayat', authenticate, async (req, res) => {
 });
 
 // GET /api/absensi/rekap-bulanan - Rekap bulanan siswa
-router.get('/rekap-bulanan', optionalAuth, async (req, res) => {
+router.get('/rekap-bulanan', authenticate, async (req, res) => {
+  if (!['admin', 'guru'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Akses rekap bulanan hanya untuk guru dan admin.' });
+  }
   try {
     const { kelas, bulan, q } = req.query;
 

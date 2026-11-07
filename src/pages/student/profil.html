@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil Siswa - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles/shared.css">
+  <link rel="stylesheet" href="/public/styles/student-glass-sidebar.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+  </style>
+</head>
+<body class="siswa student-glass-page">
+<div class="app">
+  <div id="sidebar-container"></div>
+
+  <div class="main">
+    <main class="content">
+      <header class="student-page-header">
+        <h2 id="greeting-title">Selamat Pagi, Rizky Pratama!</h2>
+        <p id="greeting-subtitle">Hari ini: Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+      </header>
+      <h1 class="student-page-title">Profil Pengguna</h1>
+      <section class="profile-grid">
+        <aside class="card profile-card">
+          <div class="avatar-lg" id="profile-avatar-initial">--</div>
+          <div class="profile-name" id="profile-card-name">Memuat profil...</div>
+          <div class="profile-role" id="profile-role">Siswa</div>
+          <div class="profile-kv">
+            <div><span>NIS</span><b id="profile-nis-val">—</b></div>
+            <div><span>Kelas</span><b id="profile-class-val">—</b></div>
+            <div><span>Sekolah</span><b>SMA Negeri 1 Jakarta</b></div>
+          </div>
+        </aside>
+        <div>
+          <section class="card form-card">
+            <h2 class="form-title">Informasi Pribadi Siswa</h2>
+            <div class="form-grid">
+              <div><label class="label" for="nama">Nama Lengkap</label><input class="input sm" id="nama" type="text" required></div>
+              <div><label class="label" for="mail">Alamat E-mail</label><input class="input sm" id="mail" type="email"></div>
+              <div><label class="label" for="tel">No. Telepon / WA</label><input class="input sm" id="tel" type="text"></div>
+              <div><label class="label" for="kelas">Kelas</label><input class="input sm" id="kelas" type="text" readonly aria-readonly="true"></div>
+            </div>
+          </section>
+          <section class="card form-card">
+            <h2 class="form-title">Keamanan Akun</h2>
+            <div class="form-grid">
+              <div><label class="label" for="lama">Kata Sandi Lama</label><input class="input sm white" id="lama" type="password" placeholder="Masukkan kata sandi lama"></div>
+              <div><label class="label" for="baru">Kata Sandi Baru</label><input class="input sm white" id="baru" type="password" placeholder="Minimal 5 karakter" minlength="5"></div>
+            </div>
+          </section>
+          <div class="form-actions">
+            <button class="btn btn-outline" id="btn-cancel-profile" type="button">Batal</button>
+            <button class="btn btn-primary" id="btn-save-profile" type="button">Simpan Perubahan</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<script src="/src/js/student-glass-sidebar.js"></script>
+<script src="/public/components/student/greeting.js"></script>
+<script src="/src/js/script.js"></script>
+<script src="/src/js/app-core.js"></script>
+<script src="/src/js/script-siswa.js"></script>
+<script>
+  (async function() {
+    const formFields = {
+      name: document.getElementById('nama'),
+      email: document.getElementById('mail'),
+      phone: document.getElementById('tel'),
+      kelas: document.getElementById('kelas')
+    };
+    const saveButton = document.getElementById('btn-save-profile');
+
+    function renderProfile(user) {
+      const name = user.name || '';
+      formFields.name.value = name;
+      formFields.email.value = user.email || '';
+      formFields.phone.value = user.phone || '';
+      formFields.kelas.value = user.kelas || '';
+      document.getElementById('profile-card-name').textContent = name || 'Nama belum diatur';
+      document.getElementById('profile-avatar-initial').textContent =
+        name.split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || '--';
+      document.getElementById('profile-nis-val').textContent = user.nis || '—';
+      document.getElementById('profile-class-val').textContent = user.kelas || '—';
+      document.getElementById('profile-role').textContent = user.role || 'Siswa';
+      StudentGreeting.init({ name: name || 'Siswa' });
+    }
+
+    async function loadProfile() {
+      const res = await fetch('/api/auth/me');
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.user) {
+        throw new Error(json.message || 'Gagal memuat data profil.');
+      }
+      renderProfile(json.user);
+      return json.user;
+    }
+
+    document.getElementById('btn-save-profile').addEventListener('click', async () => {
+      const name = formFields.name.value.trim();
+      const email = formFields.email.value.trim();
+      const phone = formFields.phone.value.trim();
+      const oldPassword = document.getElementById('lama').value;
+      const newPassword = document.getElementById('baru').value;
+
+      if (!name) {
+        SiPresensi.showToast('Nama lengkap wajib diisi.', 'error');
+        return;
+      }
+      if (!formFields.email.checkValidity()) {
+        SiPresensi.showToast('Format alamat e-mail tidak valid.', 'error');
+        return;
+      }
+      if (newPassword && !oldPassword) {
+        SiPresensi.showToast('Masukkan kata sandi lama untuk mengubah kata sandi.', 'error');
+        return;
+      }
+      if (newPassword && newPassword.length < 5) {
+        SiPresensi.showToast('Kata sandi baru minimal 5 karakter.', 'error');
+        return;
+      }
+
+      saveButton.disabled = true;
+      try {
+        const profileRes = await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone })
+        });
+        const profileJson = await profileRes.json();
+        if (!profileRes.ok || !profileJson.success) {
+          throw new Error(profileJson.message || 'Gagal menyimpan profil.');
+        }
+
+        if (newPassword) {
+          const passwordRes = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              oldPassword,
+              newPassword,
+              confirmPassword: newPassword
+            })
+          });
+          const passwordJson = await passwordRes.json();
+          if (!passwordRes.ok || !passwordJson.success) {
+            await loadProfile();
+            throw new Error(`Profil tersimpan, tetapi kata sandi gagal diubah: ${passwordJson.message || 'periksa kata sandi lama.'}`);
+          }
+        }
+
+        if (profileJson.user && profileJson.user.name) {
+          sessionStorage.setItem('student_name', profileJson.user.name);
+        }
+        document.getElementById('lama').value = '';
+        document.getElementById('baru').value = '';
+        await loadProfile();
+        SiPresensi.showToast('Perubahan profil berhasil disimpan.', 'success');
+      } catch (error) {
+        SiPresensi.showToast(error.message || 'Gagal terhubung ke server backend.', 'error');
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-cancel-profile').addEventListener('click', async () => {
+      document.getElementById('lama').value = '';
+      document.getElementById('baru').value = '';
+      try {
+        await loadProfile();
+      } catch (error) {
+        SiPresensi.showToast(error.message || 'Gagal memuat data profil.', 'error');
+      }
+    });
+
+    try {
+      await loadProfile();
+    } catch (error) {
+      SiPresensi.showToast(error.message || 'Gagal memuat data profil.', 'error');
+    }
+  })();
+</script>
+</body>
+</html>

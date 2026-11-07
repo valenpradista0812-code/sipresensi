@@ -3,21 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Absensi - SiPresensi</title>
+  <title>Absensi & Konfirmasi Izin - SiPresensi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    /* ============================================================
+       TABLE STYLING (Sesuai detail-absensi.html)
+       ============================================================ */
+    .table-card { padding: 18px; overflow: hidden; margin-bottom: 24px; background: var(--card, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 16px; box-shadow: 0 1px 2px rgba(15,23,42,.03); }
+    .table-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .panel-title { font-size: 16px; margin: 0; color: #0f1e3d; font-weight: 700; }
+    .panel-sub { margin: 4px 0 0; font-size: 12px; color: #64748b; }
+    .table-scroll { width: 100%; max-height: 215px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .log-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 13px; }
+    .log-table thead th { position: sticky; top: 0; z-index: 2; text-align: left; padding: 12px 14px; background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #64748b; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    .log-table tbody td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #0f172a; }
+    .log-table tbody tr:last-child td { border-bottom: none; }
+    .log-table tbody tr:hover { background: #f8fafc; }
+    .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; }
+
+    .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+    .b-hadir { background: #d1fae5; color: #047857; }
+    .b-izin  { background: #dbeafe; color: #1d4ed8; }
+    .b-sakit { background: #fef3c7; color: #b45309; }
+    .b-alfa  { background: #fee2e2; color: #b91c1c; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 13px; font-weight: 700; border: none; cursor: pointer; padding: 10px 18px; border-radius: 10px; transition: transform .1s, opacity .2s, background .15s; text-decoration: none; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+
+    .log-table th:last-child,
+    .log-table td:last-child {
+      text-align: left;
+    }
+    .day { font-weight: 600; white-space: nowrap; }
+
+    .leave-table { min-width: 1100px; }
+    .leave-table th,
+    .leave-table td { vertical-align: middle; }
+    .leave-table .leave-status-heading,
+    .leave-table .leave-status-cell,
+    .leave-table .leave-confirmation-heading,
+    .leave-table .leave-confirmation-cell,
+    .leave-table .leave-action-heading,
+    .leave-table .leave-action-cell { text-align: center; }
+    .leave-table .leave-status-heading,
+    .leave-table .leave-status-cell { text-align: center !important; }
+    .leave-table .leave-action-heading,
+    .leave-table .leave-action-cell { text-align: center !important; }
+    .leave-table .leave-confirmation-heading,
+    .leave-table .leave-confirmation-cell { width: 210px; }
+    .leave-table .leave-status-cell { width: 132px; }
+    .leave-table .leave-action-cell { width: 72px; }
+    .leave-table .leave-status-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 86px; margin-inline: auto; }
+    .leave-table .leave-status-pending { background: #fef3c7; color: #b45309; }
+    .leave-table .leave-status-approved { background: #d1fae5; color: #047857; }
+    .leave-table .leave-status-rejected { background: #fee2e2; color: #b91c1c; }
+    .leave-student { display: block; font-weight: 700; }
+    .leave-student-id { display: block; margin-top: 3px; color: #64748b; font-size: 11px; }
+    .leave-description { display: block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .leave-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+    .leave-icon-button { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; padding: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #475569; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+    .leave-icon-button:hover { border-color: #93c5fd; background: #eff6ff; color: #2563eb; }
+    .leave-icon-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .leave-review-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+    .leave-review-actions .btn { padding: 6px 10px; }
+
+    .leave-detail-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .55); }
+    .leave-detail-overlay.is-open { display: flex; }
+    .leave-detail-dialog { width: min(100%, 560px); max-height: min(90vh, 760px); overflow-y: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; box-shadow: 0 24px 70px rgba(15, 23, 42, .24); }
+    .leave-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .leave-detail-heading h2 { margin: 0; color: #0f1e3d; font-size: 18px; }
+    .leave-detail-heading p { margin: 5px 0 0; color: #64748b; font-size: 13px; }
+    .leave-detail-close { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; flex: 0 0 auto; border: 0; border-radius: 9px; background: #f1f5f9; color: #475569; font-size: 22px; cursor: pointer; }
+    .leave-detail-close:hover { background: #e2e8f0; }
+    .leave-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .leave-detail-item { min-width: 0; padding: 13px 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+    .leave-detail-label { display: block; margin-bottom: 6px; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .leave-detail-value { color: #0f172a; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .leave-detail-item--wide { grid-column: 1 / -1; }
+    .leave-proof { display: flex; min-height: 120px; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; color: #64748b; font-size: 13px; text-align: center; }
+    .leave-proof img { display: block; width: 100%; max-height: 320px; object-fit: contain; }
+
+    @media (max-width: 640px) {
+      .leave-detail-overlay { padding: 12px; }
+      .leave-detail-dialog { padding: 18px; border-radius: 14px; }
+      .leave-detail-grid { grid-template-columns: 1fr; gap: 10px; }
+      .leave-detail-item--wide { grid-column: auto; }
+    }
+  </style>
 </head>
 <body class="admin">
 <div class="app">
 
   <div id="sidebar-container"></div>
 
-
   <div class="main">
     <header class="topbar">
-      <h1 class="page-title">Input Absensi Hari Ini</h1>
+      <h1 class="page-title">Riwayat Log Kehadiran & Konfirmasi Izin</h1>
       <div class="topbar-right">
         <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari siswa, guru, kelas..."></label>
         <a class="bell" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
@@ -32,7 +120,8 @@
     </header>
 
     <main class="content">
-      <section class="card filter-card">
+      <!-- Filter Card -->
+      <section class="card filter-card" style="margin-bottom: 24px;">
         <div class="filter-field">
           <span class="label">Kelas</span>
           <div class="field-select">
@@ -64,23 +153,117 @@
           </div>
         </div>
       </section>
-      <section class="card table-card">
+
+      <!-- Table 1: Riwayat Log Kehadiran Harian Siswa (Tanpa Pilih Status / Tombol Simpan) -->
+      <section class="table-card">
+        <div class="table-head">
+          <div>
+            <h2 class="panel-title">Riwayat Log Kehadiran Harian Siswa</h2>
+            <p class="panel-sub">Data presensi tercatat otomatis berbasis GPS dan biometric stamp</p>
+          </div>
+          <span class="badge b-hadir">Bulan Berjalan</span>
+        </div>
         <div class="table-scroll">
-          <table>
-            <thead><tr><th>No</th><th>NIS</th><th>Nama Siswa</th><th class="right" style="padding-right:56px">Pilih Status Absensi</th></tr></thead>
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>NIS & Nama Siswa</th>
+                <th>Tanggal & Hari</th>
+                <th>Jam Masuk</th>
+                <th>Jam Pulang</th>
+                <th>Durasi</th>
+                <th>Keterangan Kehadiran</th>
+                <th>Status</th>
+              </tr>
+            </thead>
             <tbody id="absensi-tbody">
-              <tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Memuat data siswa...</td></tr>
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Memuat data siswa...</td></tr>
             </tbody>
           </table>
         </div>
         <div class="table-foot">
-          <span id="save-status-hint">Pilih status absensi lalu klik tombol Simpan Absensi.</span>
-          <button class="btn btn-primary" id="btn-save-absensi" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Absensi</button>
+          <span>Menampilkan catatan log presensi harian siswa</span>
+        </div>
+      </section>
+
+      <!-- Table 2: Konfirmasi Pengajuan Izin dari Siswa -->
+      <section class="table-card">
+        <div class="table-head">
+          <div>
+            <h2 class="panel-title">Konfirmasi Pengajuan Izin Siswa</h2>
+            <p class="panel-sub">Daftar pengajuan izin/sakit yang dikirimkan oleh siswa dari halaman user</p>
+          </div>
+          <span class="badge b-izin" id="izin-pending-badge">Memuat...</span>
+        </div>
+        <div class="table-scroll">
+          <table class="log-table leave-table">
+            <thead>
+              <tr>
+                <th>Tanggal Pengajuan</th>
+                <th>Nama Siswa</th>
+                <th>Kelas</th>
+                <th>Jenis Izin</th>
+                <th>Durasi</th>
+                <th>Keterangan</th>
+                <th class="leave-confirmation-heading">Konfirmasi</th>
+                <th class="leave-status-heading">Status</th>
+                <th class="leave-action-heading">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="izin-tbody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Memuat pengajuan izin...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="izin-count">Menampilkan pengajuan izin siswa</span>
         </div>
       </section>
     </main>
   </div>
 
+</div>
+<div class="leave-detail-overlay" id="leave-detail-overlay" aria-hidden="true">
+  <section class="leave-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="leave-detail-title" tabindex="-1">
+    <div class="leave-detail-heading">
+      <div>
+        <h2 id="leave-detail-title">Detail Pengajuan Izin</h2>
+        <p>Informasi pengajuan izin siswa</p>
+      </div>
+      <button class="leave-detail-close" type="button" aria-label="Tutup detail">&times;</button>
+    </div>
+    <div class="leave-detail-grid">
+      <div class="leave-detail-item">
+        <span class="leave-detail-label">Nama Siswa</span>
+        <div class="leave-detail-value" id="leave-detail-student">-</div>
+      </div>
+      <div class="leave-detail-item">
+        <span class="leave-detail-label">Kelas</span>
+        <div class="leave-detail-value" id="leave-detail-class">-</div>
+      </div>
+      <div class="leave-detail-item">
+        <span class="leave-detail-label">Tanggal Pengajuan</span>
+        <div class="leave-detail-value" id="leave-detail-date">-</div>
+      </div>
+      <div class="leave-detail-item">
+        <span class="leave-detail-label">Jenis Izin</span>
+        <div class="leave-detail-value" id="leave-detail-type">-</div>
+      </div>
+      <div class="leave-detail-item leave-detail-item--wide">
+        <span class="leave-detail-label">Durasi Izin</span>
+        <div class="leave-detail-value" id="leave-detail-duration">-</div>
+      </div>
+      <div class="leave-detail-item leave-detail-item--wide">
+        <span class="leave-detail-label">Keterangan</span>
+        <div class="leave-detail-value" id="leave-detail-description">-</div>
+      </div>
+      <div class="leave-detail-item leave-detail-item--wide">
+        <span class="leave-detail-label">Foto Bukti</span>
+        <div class="leave-proof" id="leave-detail-proof">Tidak ada foto bukti yang dilampirkan.</div>
+      </div>
+    </div>
+  </section>
 </div>
 <script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script.js"></script>
@@ -91,16 +274,307 @@
     const filterKelas = document.getElementById('filter-kelas');
     const filterMapel = document.getElementById('filter-mapel');
     const filterDate = document.getElementById('filter-date');
+    const izinTbody = document.getElementById('izin-tbody');
+    const izinCount = document.getElementById('izin-count');
+    const izinPendingBadge = document.getElementById('izin-pending-badge');
+    const detailOverlay = document.getElementById('leave-detail-overlay');
+    const detailDialog = detailOverlay.querySelector('.leave-detail-dialog');
+    const detailClose = detailOverlay.querySelector('.leave-detail-close');
+    let lastDetailTrigger = null;
     if (filterDate && !filterDate.value) {
-      filterDate.value = new Date().toLocaleDateString('en-CA');
+      filterDate.value = sessionStorage.getItem('adminAbsensiDate') || new Date().toLocaleDateString('en-CA');
     }
-    const btnSave = document.getElementById('btn-save-absensi');
-    const statusHint = document.getElementById('save-status-hint');
+    const savedClass = sessionStorage.getItem('adminAbsensiClass');
+    if (savedClass && filterKelas && !Array.from(filterKelas.options).some(option => option.value === savedClass)) {
+      filterKelas.add(new Option(savedClass, savedClass));
+    }
+    if (savedClass && filterKelas) filterKelas.value = savedClass;
+
+    let leaveApplications = [];
+
+    function formatLeaveDate(value) {
+      if (!value) return '-';
+      const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+      return Number.isNaN(date.getTime())
+        ? String(value)
+        : date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function normalizeLeaveApplication(item) {
+      const startDate = formatLeaveDate(item.start_date);
+      const endDate = formatLeaveDate(item.end_date);
+      return {
+        id: item.id,
+        nis: item.nis || '-',
+        startDateRaw: String(item.start_date || '').slice(0, 10),
+        endDateRaw: String(item.end_date || '').slice(0, 10),
+        date: item.created_at
+          ? new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+          : '-',
+        name: item.student_name || '-',
+        kelas: item.kelas || '-',
+        type: item.type || '-',
+        duration: startDate === endDate ? startDate : `${startDate} - ${endDate}`,
+        description: item.reason || '-',
+        status: item.status || 'Menunggu',
+        sameDay: item.same_day === true,
+        durationMinutes: item.duration_minutes,
+        startedAt: item.started_at,
+        proof: item.proof_data || ''
+      };
+    }
+
+    async function loadLeaveApplications() {
+      izinTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Memuat pengajuan izin...</td></tr>';
+      try {
+        const response = await fetch('/api/izin');
+        const result = await response.json();
+        if (!response.ok || !result.success || !Array.isArray(result.data)) {
+          throw new Error(result.message || 'Gagal memuat pengajuan izin.');
+        }
+        leaveApplications = result.data.map(normalizeLeaveApplication);
+        renderLeaveApplications();
+      } catch (error) {
+        izinTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:#ef4444;">${escapeHtml(error.message || 'Gagal memuat pengajuan izin.')}</td></tr>`;
+        izinCount.textContent = 'Daftar pengajuan izin tidak dapat dimuat.';
+        izinPendingBadge.textContent = 'Gagal memuat';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
+
+    function renderLeaveApplications() {
+      izinTbody.replaceChildren();
+      const pendingCount = leaveApplications.filter(item => item.status === 'Menunggu').length;
+      const awaitingTapCount = leaveApplications.filter(item => item.status === 'Disetujui - Menunggu Tap').length;
+      izinPendingBadge.textContent = `${pendingCount} Menunggu Konfirmasi${awaitingTapCount ? ` · ${awaitingTapCount} Menunggu Tap` : ''}`;
+      if (leaveApplications.length === 0) {
+        izinTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Belum ada pengajuan izin siswa.</td></tr>';
+        izinCount.textContent = 'Belum ada pengajuan izin siswa.';
+        return;
+      }
+
+      leaveApplications.forEach(application => {
+        const row = document.createElement('tr');
+        row.dataset.id = application.id;
+        const values = [
+          application.date,
+          application.name,
+          application.kelas,
+          application.type,
+          application.duration,
+          application.description
+        ];
+
+        values.forEach((value, index) => {
+          const cell = document.createElement('td');
+          if (index === 1) {
+            const studentName = document.createElement('span');
+            studentName.className = 'leave-student';
+            studentName.textContent = value;
+            cell.appendChild(studentName);
+          } else if (index === 3) {
+            const badge = document.createElement('span');
+            badge.className = `badge ${application.type.toLowerCase() === 'sakit' ? 'b-sakit' : 'b-izin'}`;
+            badge.textContent = value;
+            cell.appendChild(badge);
+          } else if (index === 5) {
+            const description = document.createElement('span');
+            description.className = 'leave-description';
+            description.textContent = value;
+            description.title = value;
+            cell.appendChild(description);
+          } else {
+            cell.textContent = value;
+          }
+          row.appendChild(cell);
+        });
+
+        const confirmationCell = document.createElement('td');
+        confirmationCell.className = 'leave-confirmation-cell';
+        if (application.status === 'Menunggu') {
+          const reviewActions = document.createElement('div');
+          reviewActions.className = 'leave-review-actions';
+          [
+            { action: 'approve', label: 'Setujui', className: 'btn-success' },
+            { action: 'reject', label: 'Tolak', className: 'btn-danger' }
+          ].forEach(({ action, label, className }) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn btn-sm ${className} btn-${action}-izin`;
+            button.dataset.id = application.id;
+            button.textContent = label;
+            reviewActions.appendChild(button);
+          });
+          confirmationCell.appendChild(reviewActions);
+        } else if (application.status === 'Disetujui - Menunggu Tap') {
+          confirmationCell.textContent = 'Menunggu tap RFID siswa';
+        }
+        row.appendChild(confirmationCell);
+
+        const statusCell = document.createElement('td');
+        statusCell.className = 'leave-status-cell';
+        const statusBadge = document.createElement('span');
+        statusBadge.className = `badge leave-status-badge ${
+          application.status === 'Disetujui'
+            ? 'leave-status-approved'
+            : application.status === 'Disetujui - Menunggu Tap'
+              ? 'leave-status-approved'
+            : application.status === 'Ditolak'
+              ? 'leave-status-rejected'
+              : 'leave-status-pending'
+        }`;
+        statusBadge.textContent = application.status === 'Menunggu' ? 'Menunggu Konfirmasi' : application.status;
+        statusCell.appendChild(statusBadge);
+        row.appendChild(statusCell);
+
+        const actionCell = document.createElement('td');
+        actionCell.className = 'leave-action-cell';
+        const actions = document.createElement('div');
+        actions.className = 'leave-actions';
+        const viewButton = document.createElement('button');
+        viewButton.type = 'button';
+        viewButton.className = 'leave-icon-button btn-view-izin';
+        viewButton.dataset.id = application.id;
+        viewButton.setAttribute('aria-label', `Lihat detail pengajuan ${application.name}`);
+        viewButton.title = 'Lihat detail';
+        viewButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        actions.appendChild(viewButton);
+
+        actionCell.appendChild(actions);
+        row.appendChild(actionCell);
+        izinTbody.appendChild(row);
+      });
+
+      izinCount.innerHTML = `Menampilkan <b>${leaveApplications.length}</b> pengajuan izin siswa`;
+    }
+
+    async function openLeaveDetails(application, trigger) {
+      lastDetailTrigger = trigger;
+      document.getElementById('leave-detail-student').textContent = application.name;
+      document.getElementById('leave-detail-class').textContent = application.kelas;
+      document.getElementById('leave-detail-date').textContent = application.date;
+      document.getElementById('leave-detail-type').textContent = application.type;
+      document.getElementById('leave-detail-duration').textContent = application.duration;
+      document.getElementById('leave-detail-description').textContent = application.description;
+
+      const proof = document.getElementById('leave-detail-proof');
+      proof.textContent = 'Memuat foto bukti...';
+      detailOverlay.classList.add('is-open');
+      detailOverlay.setAttribute('aria-hidden', 'false');
+      detailDialog.focus({ preventScroll: true });
+
+      try {
+        const response = await fetch(`/api/izin/${encodeURIComponent(application.id)}`);
+        const result = await response.json();
+        if (!response.ok || !result.success || !result.data) {
+          throw new Error(result.message || 'Gagal memuat detail pengajuan.');
+        }
+        proof.replaceChildren();
+        if (result.data.proof_data) {
+          const image = document.createElement('img');
+          image.src = result.data.proof_data;
+          image.alt = `Foto bukti izin ${application.name}`;
+          image.addEventListener('error', () => {
+            proof.textContent = 'Foto bukti tidak dapat ditampilkan.';
+          }, { once: true });
+          proof.appendChild(image);
+        } else {
+          proof.textContent = 'Tidak ada foto bukti yang dilampirkan.';
+        }
+      } catch (error) {
+        proof.textContent = error.message || 'Foto bukti tidak dapat dimuat.';
+      }
+
+    }
+
+    function closeLeaveDetails() {
+      detailOverlay.classList.remove('is-open');
+      detailOverlay.setAttribute('aria-hidden', 'true');
+      if (lastDetailTrigger && lastDetailTrigger.isConnected) {
+        lastDetailTrigger.focus({ preventScroll: true });
+      }
+    }
+
+    izinTbody.addEventListener('click', event => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      const application = leaveApplications.find(item => item.id === button.dataset.id);
+      if (!application) return;
+
+      if (button.classList.contains('btn-view-izin')) {
+        void openLeaveDetails(application, button);
+        return;
+      }
+
+      if (button.classList.contains('btn-approve-izin') || button.classList.contains('btn-reject-izin')) {
+        const status = button.classList.contains('btn-approve-izin') ? 'Disetujui' : 'Ditolak';
+        button.disabled = true;
+        fetch(`/api/izin/${encodeURIComponent(application.id)}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        })
+          .then(async response => {
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+              throw new Error(result.message || 'Gagal mengonfirmasi pengajuan.');
+            }
+            SiPresensi.showToast(result.message, 'success');
+            if (status === 'Disetujui') {
+              const applicationClass = result.data.kelas || application.kelas;
+              if (applicationClass && !Array.from(filterKelas.options).some(option => option.value === applicationClass)) {
+                filterKelas.add(new Option(applicationClass, applicationClass));
+              }
+              if (applicationClass) {
+                filterKelas.value = applicationClass;
+                sessionStorage.setItem('adminAbsensiClass', applicationClass);
+              }
+
+              const firstSchoolDay = new Date(`${application.startDateRaw}T00:00:00`);
+              const lastLeaveDay = new Date(`${application.endDateRaw}T00:00:00`);
+              while (firstSchoolDay <= lastLeaveDay && [0, 6].includes(firstSchoolDay.getDay())) {
+                firstSchoolDay.setDate(firstSchoolDay.getDate() + 1);
+              }
+              if (firstSchoolDay <= lastLeaveDay) {
+                const attendanceDate = [
+                  firstSchoolDay.getFullYear(),
+                  String(firstSchoolDay.getMonth() + 1).padStart(2, '0'),
+                  String(firstSchoolDay.getDate()).padStart(2, '0')
+                ].join('-');
+                filterDate.value = attendanceDate;
+                sessionStorage.setItem('adminAbsensiDate', attendanceDate);
+              }
+            }
+            await Promise.all([loadLeaveApplications(), loadAbsensi()]);
+          })
+          .catch(error => {
+            button.disabled = false;
+            SiPresensi.showToast(error.message || 'Gagal mengonfirmasi pengajuan.', 'error');
+          });
+      }
+    });
+
+    detailClose.addEventListener('click', closeLeaveDetails);
+    detailOverlay.addEventListener('click', event => {
+      if (event.target === detailOverlay) closeLeaveDetails();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && detailOverlay.classList.contains('is-open')) {
+        closeLeaveDetails();
+      }
+    });
+
+    loadLeaveApplications();
 
     let currentRecords = [];
 
     async function loadAbsensi() {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Memuat data absensi...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Memuat data absensi...</td></tr>';
       try {
         const res = await fetch(`/api/absensi?kelas=${encodeURIComponent(filterKelas.value)}&tanggal=${filterDate.value}&mapel=${encodeURIComponent(filterMapel.value)}`);
         const json = await res.json();
@@ -108,10 +582,10 @@
           currentRecords = json.data;
           renderTable();
         } else {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Tidak ada data siswa untuk kelas ini.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Tidak ada data siswa untuk kelas ini.</td></tr>';
         }
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat data dari server.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat data dari server.</td></tr>';
       }
     }
 
@@ -120,68 +594,52 @@
       currentRecords.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.dataset.nis = item.nis;
+        const status = String(item.status || 'hadir').toLowerCase();
+        const isLeave = ['izin', 'sakit', 'dispensasi'].includes(status);
+        const statusLabels = { hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat' };
+        const badgeClass = status === 'izin' ? 'b-izin' : status === 'sakit' ? 'b-sakit' : status === 'dispensasi' ? 'b-izin' : status === 'alfa' ? 'b-alfa' : status === 'terlambat' ? 'b-late' : 'b-hadir';
+        const statusLabel = statusLabels[status] || status;
+        const requestedMinutesMatch = status === 'dispensasi' && String(item.note || '').match(/durasi:\s*(\d+)\s+menit/i);
+        const actualMinutesMatch = String(item.note || '').match(/aktual:\s*(\d+)\s+menit/i);
+        const durationMatch = isLeave && String(item.note || '').match(/\((\d+)\s+hari,/i);
+        const durationText = status === 'dispensasi' && requestedMinutesMatch
+          ? `${requestedMinutesMatch[1]} menit`
+          : actualMinutesMatch
+            ? `${actualMinutesMatch[1]} menit aktual`
+            : isLeave
+              ? (durationMatch ? `${durationMatch[1]} hari` : '-')
+          : (item.durasi || '08j 15m');
+        const ketText = item.note || (isLeave ? statusLabel : 'Tepat Waktu');
+        const timeIn = isLeave ? '-' : (item.masuk || '07:15 WIB');
+        const timeOut = isLeave ? '-' : (item.keluar || '15:30 WIB');
+
         tr.innerHTML = `
           <td>${index + 1}</td>
-          <td class="bold">${item.nis}</td>
-          <td>${item.name}</td>
-          <td class="right">
-            <div class="status-group" data-nis="${item.nis}">
-              <button type="button" class="st-btn ${item.status === 'hadir' ? 'on-hadir' : ''}" data-status="hadir">Hadir</button>
-              <button type="button" class="st-btn ${item.status === 'izin' ? 'on-izin' : ''}" data-status="izin">Izin</button>
-              <button type="button" class="st-btn ${item.status === 'sakit' ? 'on-sakit' : ''}" data-status="sakit">Sakit</button>
-              <button type="button" class="st-btn ${item.status === 'alfa' ? 'on-alfa' : ''}" data-status="alfa">Alfa</button>
-            </div>
+          <td><b>${escapeHtml(item.name)}</b><br><small style="color:#64748b">NIS: ${escapeHtml(item.nis)}</small></td>
+          <td class="day">${escapeHtml(filterDate.value || '-')}</td>
+          <td>${isLeave ? '-' : `<span class="t-ok">${escapeHtml(timeIn)}</span>`}</td>
+          <td>${escapeHtml(timeOut)}</td>
+          <td>${escapeHtml(durationText)}</td>
+          <td><span style="color: ${isLeave ? '#64748b' : '#10b981'}; font-weight: 700;">${escapeHtml(ketText)}</span></td>
+          <td>
+            <span class="badge ${badgeClass}">
+              ${escapeHtml(statusLabel)}
+            </span>
           </td>
         `;
-
-        // Bind status buttons
-        tr.querySelectorAll('.st-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            tr.querySelectorAll('.st-btn').forEach(b => b.className = 'st-btn');
-            btn.classList.add('on-' + btn.dataset.status);
-            item.status = btn.dataset.status;
-            statusHint.textContent = 'Ada perubahan yang belum disimpan.';
-            statusHint.style.color = '#eab308';
-          });
-        });
 
         tbody.appendChild(tr);
       });
     }
 
-    filterKelas.addEventListener('change', loadAbsensi);
+    filterKelas.addEventListener('change', () => {
+      sessionStorage.setItem('adminAbsensiClass', filterKelas.value);
+      loadAbsensi();
+    });
     filterMapel.addEventListener('change', loadAbsensi);
-    filterDate.addEventListener('change', loadAbsensi);
-
-    btnSave.addEventListener('click', async () => {
-      btnSave.disabled = true;
-      btnSave.textContent = 'Menyimpan...';
-
-      try {
-        const res = await fetch('/api/absensi/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: filterDate.value,
-            kelas: filterKelas.value,
-            mapel: filterMapel.value,
-            records: currentRecords
-          })
-        });
-        const result = await res.json();
-        if (result.success) {
-          SiPresensi.showToast(result.message || 'Absensi berhasil disimpan!', 'success');
-          statusHint.textContent = 'Semua perubahan berhasil disimpan ke database.';
-          statusHint.style.color = '#10b981';
-        } else {
-          SiPresensi.showToast(result.message || 'Gagal menyimpan.', 'error');
-        }
-      } catch (err) {
-        SiPresensi.showToast('Gagal terhubung ke backend server.', 'error');
-      } finally {
-        btnSave.disabled = false;
-        btnSave.innerHTML = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Absensi`;
-      }
+    filterDate.addEventListener('change', () => {
+      sessionStorage.setItem('adminAbsensiDate', filterDate.value);
+      loadAbsensi();
     });
 
     loadAbsensi();

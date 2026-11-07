@@ -1,96 +1,92 @@
-<aside class="sidebar">
-  <div class="brand">
-    <div class="brand-logo">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="4" y="2" width="16" height="20" rx="2"/>
-        <path d="M9 22v-4h6v4"/>
-        <path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>
-      </svg>
-    </div>
-    <div>
-      <div class="brand-name">SiPresensi</div>
-      <div class="brand-sub">Sistem Absensi</div>
-    </div>
-  </div>
-  <nav class="nav">
-    <a href="/src/pages/admin/dashboard.html" data-page="dashboard.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-      <span>Dashboard</span>
-    </a>
-    <a href="/src/pages/admin/data-siswa.html" data-page="data-siswa.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-      <span>Data Siswa</span>
-    </a>
-    <a href="/src/pages/admin/data-guru.html" data-page="data-guru.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>Data Guru</span>
-    </a>
-    <a href="/src/pages/admin/data-kelas.html" data-page="data-kelas.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-        <polyline points="2 17 12 22 22 17"/>
-        <polyline points="2 12 12 17 22 12"/>
-      </svg>
-      <span>Data Kelas</span>
-    </a>
-    <a href="/src/pages/admin/absensi.html" data-page="absensi.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-        <polyline points="22 4 12 14.01 9 11.01"/>
-      </svg>
-      <span>Absensi</span>
-    </a>
-    <a href="/src/pages/admin/riwayat-absensi.html" data-page="riwayat-absensi.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"/>
-        <polyline points="12 6 12 12 16 14"/>
-      </svg>
-      <span>Riwayat Absensi</span>
-    </a>
-    <a href="/src/pages/admin/rekap-bulanan.html" data-page="rekap-bulanan.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <line x1="12" y1="20" x2="12" y2="10"/>
-        <line x1="18" y1="20" x2="18" y2="4"/>
-        <line x1="6" y1="20" x2="6" y2="16"/>
-      </svg>
-      <span>Rekap Bulanan</span>
-    </a>
-    <a href="/src/pages/admin/notifikasi.html" data-page="notifikasi.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      <span>Notifikasi</span>
-    </a>
-    <a href="/src/pages/admin/profil-sekolah.html" data-page="profil-sekolah.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="4" y="2" width="16" height="20" rx="2"/>
-        <path d="M9 22v-4h6v4"/>
-        <path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>
-      </svg>
-      <span>Profil Sekolah</span>
-    </a>
-    <a href="/src/pages/admin/pengaturan.html" data-page="pengaturan.html">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+<svg class="admin-glass-filters" width="0" height="0" aria-hidden="true">
+  <defs>
+    <filter id="admin-liquid-side" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="7" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
+      <feDisplacementMap in="SourceGraphic" in2="smooth" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="admin-liquid-circle" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="5" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
+      <feDisplacementMap in="SourceGraphic" in2="smooth" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="admin-liquid-morph" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" result="noise"/>
+      <feDisplacementMap id="admin-morph-disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="admin-glass-group-wrapper">
+  <div class="admin-glass-actions" aria-label="Aksi admin">
+    <a class="admin-glass-circle" href="/src/pages/admin/pengaturan.html" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
-      <span>Pengaturan</span>
     </a>
-  </nav>
-  <div class="sidebar-foot">
-    v2.4.1 Stable<br>
-    SMA Negeri 1 Jakarta
+    <a class="admin-glass-circle" href="/src/pages/admin/profil-sekolah.html" aria-label="Profile" title="Profile">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+    </a>
+    <a class="admin-glass-circle" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi" title="Notifikasi">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/>
+        <path d="M10 20a2 2 0 0 0 4 0"/>
+      </svg>
+    </a>
+    <button class="admin-glass-circle admin-glass-logout" type="button" aria-label="Keluar" title="Keluar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <path d="M16 17l5-5-5-5"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
   </div>
-</aside>
+
+  <aside class="admin-glass-sidebar" aria-label="Navigasi Admin">
+    <nav class="admin-glass-nav" aria-label="Menu utama">
+      <span class="admin-glass-indicator" aria-hidden="true"></span>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/dashboard.html" data-page="dashboard.html" aria-label="Dashboard" title="Dashboard">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+      </a>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/data-siswa.html" data-page="data-siswa.html" aria-label="Data Siswa" title="Data Siswa">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 4.5a4 4 0 0 1 0 7.5M18 15a5 5 0 0 1 3 4.5V21"/></svg>
+      </a>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/data-guru.html" data-page="data-guru.html" aria-label="Data Guru" title="Data Guru">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
+      </a>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/absensi.html" data-page="absensi.html" aria-label="Absensi" title="Absensi">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </a>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/riwayat-absensi.html" data-page="riwayat-absensi.html" aria-label="Riwayat Absensi" title="Riwayat Absensi">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+      </a>
+      <a class="admin-glass-nav-item" href="/src/pages/admin/rekap-bulanan.html" data-page="rekap-bulanan.html" aria-label="Rekap Bulanan" title="Rekap Bulanan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      </a>
+    </nav>
+  </aside>
+</div>
+
+<div class="admin-mobile-morph" aria-label="Menu Admin">
+  <div class="admin-mobile-glass"></div>
+  <nav class="admin-mobile-panel" aria-label="Menu Admin">
+    <a class="admin-mobile-item" href="/src/pages/admin/dashboard.html" data-page="dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg><span>Dashboard</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/data-siswa.html" data-page="data-siswa.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 4.5a4 4 0 0 1 0 7.5M18 15a5 5 0 0 1 3 4.5V21"/></svg><span>Data Siswa</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/data-guru.html" data-page="data-guru.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>Data Guru</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/absensi.html" data-page="absensi.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Absensi</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/riwayat-absensi.html" data-page="riwayat-absensi.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg><span>Riwayat Absensi</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/rekap-bulanan.html" data-page="rekap-bulanan.html"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Rekap Bulanan</span></a>
+    <div class="admin-mobile-divider"></div>
+    <a class="admin-mobile-item" href="/src/pages/admin/pengaturan.html" data-page="pengaturan.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3.23 14H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33A1.65 1.65 0 0 0 10 3.17V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82A1.65 1.65 0 0 0 20.83 10H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/profil-sekolah.html" data-page="profil-sekolah.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profile</span></a>
+    <a class="admin-mobile-item" href="/src/pages/admin/notifikasi.html" data-page="notifikasi.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>Notifikasi</span></a>
+    <button class="admin-mobile-item admin-glass-logout" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Keluar</span></button>
+  </nav>
+  <button class="admin-mobile-trigger" type="button" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</div>

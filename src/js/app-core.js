@@ -79,213 +79,24 @@ window.SiPresensi = (function () {
     }
   }
 
-  // Update Topbar and User Elements
+  // Update User UI elements on pages
   function updateUserUI(user) {
-    // User name
-    document.querySelectorAll('.user-name').forEach(el => {
-      el.textContent = user.name;
-    });
-
-    // User role / title
-    document.querySelectorAll('.user-role').forEach(el => {
-      el.textContent = user.title || (user.role === 'guru' ? 'Guru / Pengajar' : 'Siswa • ' + (user.kelas || ''));
-    });
-
-    // Welcome banner name
-    document.querySelectorAll('.welcome h2').forEach(el => {
-      if (user.role === 'guru') {
-        el.textContent = `Selamat Pagi, ${user.name.split(',')[0]}!`;
-      } else {
-        el.textContent = `Selamat Pagi, ${user.name}!`;
+    const nameEls = document.querySelectorAll('.user-name');
+    nameEls.forEach(el => {
+      if (el && user.name && el.textContent.trim() === '-') {
+        el.textContent = user.name;
       }
     });
 
-    // Avatar initial if exists
-    document.querySelectorAll('.avatar-initial').forEach(el => {
-      el.textContent = user.avatar || user.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+    const roleEls = document.querySelectorAll('.user-role');
+    roleEls.forEach(el => {
+      if (el && user.role && el.textContent.trim() === '-') {
+        el.textContent = user.role === 'admin' ? 'Admin Kepegawaian' : (user.role === 'guru' ? 'Guru / Pengajar' : 'Siswa');
+      }
     });
 
-    // Setup User Dropdown with Logout
-    setupUserDropdown(user);
-
-    // Add Logout to Sidebar
-    setupSidebarLogout();
-  }
-
-  function setupUserDropdown(user) {
-    const userContainer = document.querySelector('.topbar-right .user');
-    if (!userContainer) return;
-
-    userContainer.style.cursor = 'pointer';
-    userContainer.style.position = 'relative';
-    userContainer.setAttribute('title', 'Klik untuk menu profil / keluar');
-
-    // Create dropdown menu if not exists
-    let menu = document.getElementById('user-profile-menu');
-    if (!menu) {
-      menu = document.createElement('div');
-      menu.id = 'user-profile-menu';
-      menu.style.cssText = `
-        display: none;
-        position: absolute;
-        top: 100%;
-        right: 0;
-        margin-top: 10px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        min-width: 200px;
-        z-index: 1000;
-        padding: 6px 0;
-      `;
-      menu.innerHTML = `
-        <div style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-          <div style="font-weight: 600; font-size: 13px; color: #1e293b;">${user.name}</div>
-          <div style="font-size: 12px; color: #64748b;">${user.email}</div>
-          <div style="font-size: 11px; color: #10b981; font-weight: 600; margin-top: 2px;">Peran: ${user.role.toUpperCase()}</div>
-        </div>
-        ${user.role === 'guru' ? '<a href="/dashboard-siswa.html" style="display:block; padding: 8px 14px; font-size: 13px; color:#475569; text-decoration:none;">Lihat Tampilan Siswa &rarr;</a>' : '<a href="/detail-absensi.html" style="display:block; padding: 8px 14px; font-size: 13px; color:#475569; text-decoration:none;">Detail Absensi Saya</a>'}
-        <button id="btn-open-change-pw" style="width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; color: #334155; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg style="width:14px;height:14px;color:#2563eb;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Ganti Kata Sandi
-        </button>
-        <div style="border-top: 1px solid #f1f5f9; margin-top: 4px;"></div>
-        <button id="btn-do-logout" style="width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; color: #ef4444; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Keluar (Logout)
-        </button>
-      `;
-
-      userContainer.appendChild(menu);
-
-      userContainer.addEventListener('click', (e) => {
-        e.stopPropagation();
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-      });
-
-      document.addEventListener('click', () => {
-        menu.style.display = 'none';
-      });
-
-      const btnChangePw = menu.querySelector('#btn-open-change-pw');
-      if (btnChangePw) {
-        btnChangePw.addEventListener('click', (e) => {
-          e.stopPropagation();
-          menu.style.display = 'none';
-          openChangePasswordModal();
-        });
-      }
-
-      const btnLogout = menu.querySelector('#btn-do-logout');
-      if (btnLogout) {
-        btnLogout.addEventListener('click', logout);
-      }
-    }
-  }
-
-  // Modal Ganti Kata Sandi Global
-  function openChangePasswordModal() {
-    let modal = document.getElementById('sipresensi-change-pw-modal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'sipresensi-change-pw-modal';
-      modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.65);
-        backdrop-filter: blur(4px);
-        z-index: 100000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        box-sizing: border-box;
-      `;
-      modal.innerHTML = `
-        <div style="background:#ffffff; width:100%; max-width:420px; border-radius:12px; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0; font-family:'Plus Jakarta Sans',sans-serif;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-            <h3 style="margin:0; font-size:18px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px;">
-              <svg style="width:20px;height:20px;color:#2563eb;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Ganti Kata Sandi
-            </h3>
-            <button type="button" id="cpw-btn-close" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
-          </div>
-          <p style="font-size:13px; color:#64748b; margin:0 0 16px 0;">Perbarui kata sandi akun Anda untuk keamanan sistem.</p>
-          <form id="cpw-form">
-            <div style="margin-bottom:12px;">
-              <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:4px;">Kata Sandi Lama Saat Ini</label>
-              <input type="password" id="cpw-old" required placeholder="Masukkan kata sandi lama..." style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:4px;">Kata Sandi Baru</label>
-              <input type="password" id="cpw-new" required minlength="5" placeholder="Minimal 5 karakter..." style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;">
-            </div>
-            <div style="margin-bottom:20px;">
-              <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:4px;">Konfirmasi Kata Sandi Baru</label>
-              <input type="password" id="cpw-confirm" required minlength="5" placeholder="Ulangi kata sandi baru..." style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;">
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-              <button type="button" id="cpw-btn-cancel" style="padding:9px 18px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; font-weight:600; border-radius:8px; cursor:pointer; font-size:14px;">Batal</button>
-              <button type="submit" id="cpw-btn-submit" style="padding:9px 20px; border:none; background:#2563eb; color:#ffffff; font-weight:600; border-radius:8px; cursor:pointer; font-size:14px;">Simpan Sandi</button>
-            </div>
-          </form>
-        </div>
-      `;
-      document.body.appendChild(modal);
-
-      const close = () => {
-        modal.style.display = 'none';
-        document.getElementById('cpw-form').reset();
-      };
-
-      modal.querySelector('#cpw-btn-close').onclick = close;
-      modal.querySelector('#cpw-btn-cancel').onclick = close;
-
-      modal.querySelector('#cpw-form').onsubmit = async (e) => {
-        e.preventDefault();
-        const oldPassword = document.getElementById('cpw-old').value;
-        const newPassword = document.getElementById('cpw-new').value;
-        const confirmPassword = document.getElementById('cpw-confirm').value;
-
-        if (newPassword !== confirmPassword) {
-          showToast('Konfirmasi kata sandi baru tidak cocok!', 'error');
-          return;
-        }
-
-        const btnSubmit = document.getElementById('cpw-btn-submit');
-        btnSubmit.disabled = true;
-        btnSubmit.textContent = 'Menyimpan...';
-
-        try {
-          const res = await fetch('/api/auth/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ oldPassword, newPassword, confirmPassword })
-          });
-          const json = await res.json();
-          if (json.success) {
-            showToast(json.message || 'Kata sandi berhasil diperbarui!', 'success');
-            close();
-          } else {
-            showToast(json.message || 'Gagal mengubah kata sandi.', 'error');
-          }
-        } catch (err) {
-          showToast('Gagal terhubung ke server.', 'error');
-        } finally {
-          btnSubmit.disabled = false;
-          btnSubmit.textContent = 'Simpan Sandi';
-        }
-      };
-    }
-    modal.style.display = 'flex';
-  }
-
-  function setupSidebarLogout() {
-    const nav = document.querySelector('.sidebar .nav');
+    // Add sidebar logout link if sidebar exists
+    const nav = document.querySelector('.sidebar-nav, .glass-nav');
     if (!nav || document.getElementById('sidebar-logout-link')) return;
 
     const logoutLink = document.createElement('a');
@@ -300,7 +111,11 @@ window.SiPresensi = (function () {
 
     logoutLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (confirm('Apakah Anda yakin ingin keluar dari SiPresensi?')) {
+      if (window._openLogoutConfirm) {
+        window._openLogoutConfirm(() => {
+          logout();
+        }, logoutLink);
+      } else {
         logout();
       }
     });
@@ -316,9 +131,148 @@ window.SiPresensi = (function () {
     window.location.href = '/login.html';
   }
 
-  // Initialize on page load
+  // Initialize Liquid Glass Logout Modal on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     syncCurrentUser();
+
+    if (!document.getElementById('lg-overlay')) {
+      const modalHTML = `
+        <!-- Popup konfirmasi logout (Liquid Glass) -->
+        <div class="lg-overlay" id="lg-overlay" aria-hidden="true">
+          <div class="lg-dialog" role="alertdialog" aria-modal="true" aria-labelledby="lg-title" aria-describedby="lg-desc">
+            <div class="lg-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <path d="M16 17l5-5-5-5"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+            <h2 class="lg-title" id="lg-title">Keluar dari akun?</h2>
+            <p class="lg-desc" id="lg-desc">Kamu harus login kembali untuk mengakses sistem SiPresensi.</p>
+            <div class="lg-actions">
+              <button class="lg-btn lg-btn--cancel" id="lg-cancel" type="button">Batal</button>
+              <button class="lg-btn lg-btn--confirm" id="lg-confirm" type="button">Keluar</button>
+            </div>
+          </div>
+        </div>
+        <style>
+          .lg-overlay {
+            position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; padding: 20px;
+            background: rgba(15,23,42,.14); -webkit-backdrop-filter: blur(8px) saturate(140%); backdrop-filter: blur(8px) saturate(140%);
+            opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s;
+          }
+          .lg-overlay.show { opacity: 1; visibility: visible; transition: opacity .3s ease, visibility 0s; }
+          .lg-dialog {
+            position: relative; width: min(380px, 100%); padding: 28px 24px 24px; border-radius: 28px; text-align: center;
+            background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.46)); border: 1px solid rgba(255,255,255,.8);
+            -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), inset 1.8px 3px 0 -2px rgba(255,255,255,.9), inset -2px -2px 0 -2px rgba(255,255,255,.8), inset -3px -8px 1px -6px rgba(255,255,255,.6), inset -0.3px -1px 4px 0 rgba(0,0,0,.12), inset -1.5px 2.5px 0 -2px rgba(0,0,0,.2), inset 0 3px 4px -2px rgba(0,0,0,.2), 0 1px 5px rgba(0,0,0,.1), 0 20px 50px rgba(15,23,42,.18);
+            transform: translateY(18px) scale(.92); opacity: 0; transition: transform .45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s ease; overflow: hidden;
+          }
+          .lg-dialog::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(160deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 40%); pointer-events: none; }
+          .lg-overlay.show .lg-dialog { transform: none; opacity: 1; transition: transform .55s cubic-bezier(0.34, 1.56, 0.64, 1) .04s, opacity .3s ease .04s; }
+          .lg-icon {
+            position: relative; z-index: 1; width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center;
+            background: rgba(239,68,68,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 6px 16px rgba(239,68,68,.15); color: #ef4444;
+          }
+          .lg-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+          .lg-title { position: relative; z-index: 1; margin: 0 0 8px; font-size: 20px; font-weight: 800; color: #1e293b; }
+          .lg-desc { position: relative; z-index: 1; margin: 0 0 24px; font-size: 14px; line-height: 1.55; color: #64748b; }
+          .lg-actions { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+          .lg-btn { height: 50px; border: none; border-radius: 999px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease; }
+          .lg-btn:hover { transform: translateY(-1px); }
+          .lg-btn:active { transform: scale(.96); }
+          .lg-btn:focus-visible { outline: 2px solid #0052f5; outline-offset: 3px; }
+          .lg-btn--cancel { color: #1e293b; background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.9); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.06); }
+          .lg-btn--cancel:hover { background: rgba(255,255,255,.85); }
+          .lg-btn--confirm { color: #fff; background: linear-gradient(180deg, #f87171, #ef4444); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(239,68,68,.3); }
+          .lg-btn--confirm:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 10px 22px rgba(239,68,68,.36); }
+        </style>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      const overlay = document.getElementById('lg-overlay');
+      const cancelBtn = document.getElementById('lg-cancel');
+      const confirmBtn = document.getElementById('lg-confirm');
+      let lastFocus = null;
+      let confirmAction = null;
+
+      window._openLogoutConfirm = function(onConfirm, trigger) {
+        lastFocus = trigger || document.activeElement;
+        confirmAction = onConfirm;
+        if (overlay) {
+          overlay.classList.add('show');
+          overlay.setAttribute('aria-hidden', 'false');
+          requestAnimationFrame(() => cancelBtn && cancelBtn.focus({ preventScroll: true }));
+        }
+      };
+
+      function closeLogoutConfirm() {
+        if (!overlay || !overlay.classList.contains('show')) return;
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus({ preventScroll: true });
+      }
+
+      if (cancelBtn) cancelBtn.addEventListener('click', closeLogoutConfirm);
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+          const action = confirmAction;
+          closeLogoutConfirm();
+          if (typeof action === 'function') action();
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', e => {
+          if (e.target === overlay) closeLogoutConfirm();
+        });
+      }
+
+      document.addEventListener('keydown', e => {
+        if (!overlay || !overlay.classList.contains('show')) return;
+        if (e.key === 'Escape') {
+          closeLogoutConfirm();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          if (cancelBtn && confirmBtn) {
+            (document.activeElement === cancelBtn ? confirmBtn : cancelBtn).focus();
+          }
+        }
+      });
+    }
+
+    // Global capture-phase click delegation for logout buttons
+    document.addEventListener('click', function(e) {
+      const logoutBtn = e.target.closest('.btn-logout, [aria-label="Logout"], [aria-label="Keluar"], [title="Logout"], [title="Keluar"], #sidebar-logout-link');
+      if (logoutBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window._openLogoutConfirm) {
+          window._openLogoutConfirm(() => {
+            logout();
+          }, logoutBtn);
+        } else {
+          logout();
+        }
+        return;
+      }
+
+      const el = e.target.closest('.menu-item, button, a');
+      if (el) {
+        const text = el.textContent.trim().toLowerCase();
+        if (text === 'keluar' || text === 'logout') {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window._openLogoutConfirm) {
+            window._openLogoutConfirm(() => {
+              logout();
+            }, el);
+          } else {
+            logout();
+          }
+        }
+      }
+    }, true);
   });
 
   return {

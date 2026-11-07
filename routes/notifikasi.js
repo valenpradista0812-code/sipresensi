@@ -19,7 +19,7 @@ router.post('/read-all', authenticate, async (req, res) => {
   try {
     const { error } = await db.supabase
       .from('notifikasi')
-      .update({ unread: false })
+      .update({ unread: 0 })
       .neq('id', '');
 
     if (error) throw error;

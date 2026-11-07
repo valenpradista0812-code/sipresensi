@@ -1,7 +1,15 @@
 const jwt = require('jsonwebtoken');
 const db = require('../data/db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sipresensi_jwt_secret_super_2024';
+const JWT_SECRET = process.env.JWT_SECRET || (
+  process.env.NODE_ENV === 'production'
+    ? null
+    : require('crypto').randomBytes(32).toString('hex')
+);
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET harus disetel di environment production.');
+}
 
 function extractToken(req) {
   // Check cookies first
@@ -23,19 +31,27 @@ async function authenticate(req, res, next) {
     return res.status(401).json({ success: false, message: 'Silakan login terlebih dahulu.' });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await db.findUserById(decoded.id);
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Pengguna tidak ditemukan.' });
-    }
-    // Remove password hash from req.user
-    const { password, ...safeUser } = user;
-    req.user = safeUser;
-    next();
-  } catch (err) {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch {
     return res.status(401).json({ success: false, message: 'Sesi telah kedaluwarsa, silakan login kembali.' });
   }
+
+  let user;
+  try {
+    user = await db.findUserById(decoded.id);
+  } catch (err) {
+    console.error('Authentication user lookup failed:', err);
+    return res.status(503).json({ success: false, message: 'Layanan autentikasi sementara tidak tersedia.' });
+  }
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+  }
+
+  const { password, ...safeUser } = user;
+  req.user = safeUser;
+  return next();
 }
 
 // Optional Auth (doesn't fail if no token)

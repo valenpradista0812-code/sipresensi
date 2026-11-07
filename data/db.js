@@ -530,6 +530,17 @@ async function getAbsensi({ kelas, tanggal, q } = {}) {
   return data || [];
 }
 
+async function getAbsensiByNis(nis) {
+  const { data, error } = await supabase
+    .from('absensi')
+    .select('*')
+    .eq('nis', nis)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 async function getAbsensiRiwayat({ kelas, tanggal, startDate, endDate } = {}) {
   let query = supabase.from('absensi').select('*');
 
@@ -569,54 +580,27 @@ async function getAbsensiByNisRange(nis, startDate, endDate) {
 async function upsertAbsensi(data) {
   const { id, date, kelas, mapel, nis, studentName, status, checkIn, checkOut, note } = data;
 
-  const { data: existing } = await supabase
+  const payload = {
+    id: id || ('abs-' + Date.now() + '-' + nis),
+    date,
+    kelas,
+    mapel: mapel || null,
+    nis,
+    student_name: studentName || null,
+    status,
+    check_in: checkIn || '-',
+    check_out: checkOut || '-',
+    note: note || null
+  };
+  const { data: saved, error } = await supabase
     .from('absensi')
-    .select('id')
-    .eq('nis', nis)
-    .eq('date', date)
-    .eq('kelas', kelas)
+    .upsert(payload, { onConflict: 'nis,date,kelas' })
+    .select()
     .maybeSingle();
 
-  if (existing) {
-    const payload = {
-      status,
-      check_in: checkIn || '-',
-      check_out: checkOut || '-',
-      note: note || null,
-      mapel: mapel || null,
-      student_name: studentName || null
-    };
-    const { data: updated, error } = await supabase
-      .from('absensi')
-      .update(payload)
-      .eq('id', existing.id)
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-    return updated;
-  } else {
-    const payload = {
-      id: id || ('abs-' + Date.now() + '-' + nis),
-      date,
-      kelas,
-      mapel: mapel || null,
-      nis,
-      student_name: studentName || null,
-      status,
-      check_in: checkIn || '-',
-      check_out: checkOut || '-',
-      note: note || null
-    };
-    const { data: created, error } = await supabase
-      .from('absensi')
-      .insert(payload)
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-    return created;
-  }
+  if (error) throw error;
+  if (!saved) throw new Error('Absensi tersimpan tanpa data hasil.');
+  return saved;
 }
 
 // ─── STUDENT LOGS ─────────────────────────────────────────────────
@@ -635,16 +619,16 @@ async function getStudentLogs(nis) {
   return data || [];
 }
 
-async function findStudentLogByNisAndDate(nis, dateMatch) {
+async function findStudentLogByNisAndDate(nis, dateLabel) {
   const { data, error } = await supabase
     .from('student_logs')
     .select('*')
     .eq('nis', nis)
-    .ilike('tgl', `%${dateMatch}%`)
+    .eq('tgl', dateLabel)
     .limit(1)
     .maybeSingle();
 
-  if (error) return null;
+  if (error) throw error;
   return data || null;
 }
 
@@ -732,6 +716,35 @@ async function getActiveStudentTracker(nis) {
   return data || null;
 }
 
+async function getActiveDispensation(nis) {
+  const { data, error } = await supabase
+    .from('pengajuan_izin')
+    .select('id,type,reason,duration_minutes,started_at,target_end_at')
+    .eq('nis', nis)
+    .eq('same_day', true)
+    .eq('status', 'Disetujui')
+    .not('started_at', 'is', null)
+    .is('returned_at', null)
+    .order('started_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function processDispensationRfid(nis, kelas, studentName, eventId = null) {
+  const { data, error } = await supabase.rpc('process_dispensasi_rfid', {
+    p_nis: nis,
+    p_kelas: kelas,
+    p_student_name: studentName,
+    p_event_id: eventId
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 async function stopStudentTracker(nis, keluarTime, durasi) {
   const active = await getActiveStudentTracker(nis);
   if (active) {
@@ -785,11 +798,12 @@ async function getPengaturan() {
 }
 
 async function savePengaturan(data) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from('pengaturan')
     .select('id')
     .limit(1)
     .maybeSingle();
+  if (selectError) throw selectError;
 
   const payload = {
     sekolah: data.sekolah || 'SMA Negeri 1 Jakarta',
@@ -802,9 +816,11 @@ async function savePengaturan(data) {
   };
 
   if (existing) {
-    await supabase.from('pengaturan').update(payload).eq('id', existing.id);
+    const { error } = await supabase.from('pengaturan').update(payload).eq('id', existing.id);
+    if (error) throw error;
   } else {
-    await supabase.from('pengaturan').insert(payload);
+    const { error } = await supabase.from('pengaturan').insert(payload);
+    if (error) throw error;
   }
   return getPengaturan();
 }
@@ -846,11 +862,12 @@ async function getProfilSekolah() {
 }
 
 async function saveProfilSekolah(data) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from('profil_sekolah')
     .select('id')
     .limit(1)
     .maybeSingle();
+  if (selectError) throw selectError;
 
   const payload = {
     nama: data.nama,
@@ -865,9 +882,11 @@ async function saveProfilSekolah(data) {
   };
 
   if (existing) {
-    await supabase.from('profil_sekolah').update(payload).eq('id', existing.id);
+    const { error } = await supabase.from('profil_sekolah').update(payload).eq('id', existing.id);
+    if (error) throw error;
   } else {
-    await supabase.from('profil_sekolah').insert(payload);
+    const { error } = await supabase.from('profil_sekolah').insert(payload);
+    if (error) throw error;
   }
   return getProfilSekolah();
 }
@@ -887,8 +906,61 @@ async function getNotifikasi() {
   return data || [];
 }
 
+// ─── LEAVE APPLICATIONS ──────────────────────────────────────────
+
+async function getIzinApplications(nis, { excludeApproved = false } = {}) {
+  let query = supabase
+    .from('pengajuan_izin')
+    .select('id,nis,student_name,kelas,type,start_date,end_date,reason,status,review_note,created_at,reviewed_at,reviewed_by,same_day,duration_minutes,started_at,target_end_at,returned_at,actual_seconds')
+    .order('created_at', { ascending: false });
+
+  if (nis) query = query.eq('nis', nis);
+  if (excludeApproved) query = query.neq('status', 'Disetujui');
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+async function getIzinApplicationById(id) {
+  const { data, error } = await supabase
+    .from('pengajuan_izin')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function createIzinApplication(application) {
+  const { data, error } = await supabase
+    .from('pengajuan_izin')
+    .insert(application)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function reviewIzinApplication(id, status, reviewer, reviewNote) {
+  const { data, error } = await supabase.rpc('review_pengajuan_izin', {
+    p_id: id,
+    p_status: status,
+    p_reviewer: reviewer,
+    p_review_note: reviewNote || null
+  });
+
+  if (error) throw error;
+  const application = Array.isArray(data) ? data[0] : data;
+  if (!application) throw new Error('Review pengajuan tidak menghasilkan data.');
+  return application;
+}
+
 module.exports = {
   supabase,
+  hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   // Auth & User Management
   findUserByEmail,
   findUserById,
@@ -927,6 +999,7 @@ module.exports = {
   deleteKelas,
   // Absensi
   getAbsensi,
+  getAbsensiByNis,
   getAbsensiRiwayat,
   getAbsensiByNisRange,
   upsertAbsensi,
@@ -938,6 +1011,8 @@ module.exports = {
   addStudentLog,
   updateStudentLogCheckOut,
   getActiveStudentTracker,
+  getActiveDispensation,
+  processDispensationRfid,
   stopStudentTracker,
   // Pengaturan
   getPengaturan,
@@ -946,5 +1021,10 @@ module.exports = {
   getProfilSekolah,
   saveProfilSekolah,
   // Notifikasi
-  getNotifikasi
+  getNotifikasi,
+  // Leave Applications
+  getIzinApplications,
+  getIzinApplicationById,
+  createIzinApplication,
+  reviewIzinApplication
 };

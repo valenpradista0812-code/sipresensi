@@ -1,4 +1,4 @@
-/* SiPresensi - interaksi ringan (tidak mengubah tampilan default desain) */
+/* SiPresensi - interaksi ringan */
 
 // Pilih status absensi (Hadir / Izin / Sakit / Alfa)
 document.querySelectorAll(".status-group").forEach(function (group) {

@@ -65,6 +65,11 @@ router.post('/rfid', async (req, res) => {
 
   const uid = normalizeUid(req.body && req.body.uid);
   if (!uid) return res.status(400).json({ success: false, message: 'UID RFID tidak valid.' });
+  const eventId = req.body && req.body.event_id;
+  if (eventId !== undefined && eventId !== null
+      && (typeof eventId !== 'string' || !eventId.trim() || eventId.length > 100)) {
+    return res.status(400).json({ success: false, message: 'ID event RFID tidak valid.' });
+  }
 
   try {
     expireScanIfNeeded();
@@ -78,7 +83,7 @@ router.post('/rfid', async (req, res) => {
     // Debounce API: mencegah pembacaan kartu yang sama mencatat absensi berulang dalam 10 detik.
     const nowMs = Date.now();
     const lastScan = recentScans.get(uid) || 0;
-    if (nowMs - lastScan < 10000) {
+    if (!eventId && nowMs - lastScan < 10000) {
       return res.status(429).json({ success: false, mode: 'attendance', message: 'Kartu baru saja dipindai. Tunggu sebentar.' });
     }
 
@@ -88,9 +93,56 @@ router.post('/rfid', async (req, res) => {
       return res.status(403).json({ success: false, mode: 'attendance', message: 'Status siswa tidak aktif.' });
     }
 
+    let dispensationEvent = null;
+    try {
+      dispensationEvent = await db.processDispensationRfid(
+        student.nis,
+        student.kelas,
+        student.name,
+        eventId ? eventId.trim() : null
+      );
+    } catch (error) {
+      if (!['PGRST202', '42703'].includes(error.code)) throw error;
+      console.error('Dispensation RFID workflow is unavailable; apply migrations 2026110707 and 2026110708.', error);
+      return res.status(503).json({
+        success: false,
+        message: 'Workflow dispensasi RFID belum tersedia di database. Admin perlu menjalankan migrasi 2026110707 dan 2026110708.'
+      });
+    }
+    if (dispensationEvent) {
+      if (dispensationEvent.action === 'debounced') {
+        recentScans.set(uid, nowMs);
+        return res.status(429).json({
+          success: false,
+          mode: 'dispensasi',
+          action: 'debounced',
+          message: 'Tap RFID baru saja diproses. Tunggu sebentar sebelum mencoba lagi.'
+        });
+      }
+      if (dispensationEvent.action === 'duplicate') {
+        return res.json({
+          success: true,
+          mode: 'dispensasi',
+          action: 'duplicate',
+          duplicate: true,
+          message: 'Event RFID ini sudah diproses sebelumnya.'
+        });
+      }
+      recentScans.set(uid, nowMs);
+      for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+      return res.json({
+        success: true,
+        mode: 'dispensasi',
+        ...dispensationEvent,
+        message: dispensationEvent.action === 'started'
+          ? `Dispensasi ${student.name} dimulai. Timer reguler tetap berjalan.`
+          : `Dispensasi ${student.name} selesai dan kehadiran diperbarui.`
+      });
+    }
+
     const { date, time } = jakartaDateTime();
     const now = new Date();
-    const startMs = Date.now();
+    const startMs = nowMs;
     const timeStr = `${time} WIB`;
     const dateStr = new Intl.DateTimeFormat('id-ID', {
       timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric',
@@ -190,6 +242,19 @@ router.post('/rfid', async (req, res) => {
     });
   } catch (err) {
     console.error('RFID endpoint error:', err);
+    if (err.message && err.message.includes('DISPENSATION_DURATION_EXCEEDS_REMAINING_DAY')) {
+      return res.status(409).json({
+        success: false,
+        mode: 'dispensasi',
+        message: 'Durasi dispensasi yang disetujui melewati batas akhir hari. Hubungi guru agar durasinya disesuaikan.'
+      });
+    }
+    if (err.code === 'PGRST202' || err.code === '42703') {
+      return res.status(503).json({
+        success: false,
+        message: 'Fitur dispensasi RFID belum aktif di database. Jalankan migrasi 2026110707 dan 2026110708.'
+      });
+    }
     return res.status(500).json({ success: false, message: 'Gagal memproses kartu RFID.' });
   }
 });

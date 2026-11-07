@@ -34,6 +34,39 @@
       --border: #e2e8f0;
       --card: #ffffff;
       --sidebar-w: 240px;
+      --glass-icon: #22c55e;
+      --glass-action: #0052f5;
+      --glass-slider-size: 46px;
+      --glass-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.1),
+        inset 1.8px 3px 0 -2px rgba(255,255,255,.9),
+        inset -2px -2px 0 -2px rgba(255,255,255,.8),
+        inset -3px -8px 1px -6px rgba(255,255,255,.6),
+        inset -0.3px -1px 4px rgba(0,0,0,.12),
+        inset -1.5px 2.5px 0 -2px rgba(0,0,0,.2),
+        inset 0 3px 4px -2px rgba(0,0,0,.2),
+        0 1px 5px rgba(0,0,0,.1),
+        0 6px 16px rgba(0,0,0,.08);
+      --glass-shadow-soft:
+        inset 0 0 0 1px rgba(255,255,255,.1),
+        inset 2px 1px 0 -1px rgba(255,255,255,.9),
+        inset -1.5px -1px 0 -1px rgba(255,255,255,.8),
+        inset -2px -6px 1px -5px rgba(255,255,255,.6),
+        inset -1px 2px 3px -1px rgba(0,0,0,.2),
+        inset 0 -4px 1px -2px rgba(0,0,0,.1),
+        0 3px 6px rgba(0,0,0,.08);
+    }
+
+    @property --shine-angle {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: -60deg;
+    }
+
+    :root {
+      --c-glass: #bbbbbc;
+      --c-action: #0052f5;
+      --icon: #22c55e;
     }
 
     .i {
@@ -216,6 +249,7 @@
     .main {
       flex: 1;
       min-width: 0;
+      margin-left: 88px;
       display: flex;
       flex-direction: column;
     }
@@ -452,16 +486,470 @@
     .stat-note .warn   { color: var(--warn); font-weight: 700; }
     .stat-note .danger { color: var(--danger); font-weight: 700; }
 
-    /* ============================================================
-       D-GRID
-       ============================================================ */
-    .d-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
-    }
-    .g-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+     /* ============================================================
+        CONTENT
+        ============================================================ */
+     .content {
+       padding: 24px;
+       display: flex;
+       flex-direction: column;
+       gap: 20px;
+     }
+
+     .welcome h2 { font-size: 20px; margin: 0 0 6px; color: var(--navy-2); }
+     .welcome p { margin: 0; color: var(--muted); font-size: 13px; }
+
+     /* ============================================================
+        CARD BASE
+        ============================================================ */
+     .card {
+       background: var(--card);
+       border: 1px solid var(--border);
+       border-radius: 16px;
+       padding: 18px;
+       box-shadow: 0 1px 2px rgba(15,23,42,.03);
+     }
+
+      /* ============================================================
+         CONTENT LAYOUT - NEW (Desktop/Tablet)
+         ============================================================ */
+      .content-layout {
+        display: grid;
+        grid-template-columns: minmax(300px, 0.42fr) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .layout-left {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .layout-right {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .layout-left .stats {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        order: 1;
+      }
+
+      .layout-left .stat {
+        padding: 18px;
+      }
+
+      .layout-left #btn-ajukan-izin {
+        order: 2;
+      }
+
+       /* ===== Liquid Glass Button ===== */
+       .glass-btn {
+         position: relative;
+         isolation: isolate;
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         gap: 10px;
+         height: 52px;
+         width: 100%;
+         padding: 0 26px;
+         border: none;
+         border-radius: 999px;
+         font: inherit;
+         font-size: 15px;
+         font-weight: 600;
+         letter-spacing: -0.01em;
+         color: var(--ink, #1e293b);
+         cursor: pointer;
+         overflow: hidden;
+         background-color: color-mix(in srgb, var(--c-glass, #bbbbbc) 18%, transparent);
+         -webkit-backdrop-filter: blur(10px) saturate(150%);
+         backdrop-filter: url(#liquid-btn) blur(10px) saturate(150%);
+         box-shadow: var(--glass-shadow);
+         -webkit-tap-highlight-color: transparent;
+         transform: scale(1);
+         transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 300ms ease, box-shadow 300ms ease;
+       }
+       .glass-btn::before {
+         content: "";
+         position: absolute;
+         inset: 0;
+         border-radius: inherit;
+         padding: 1px;
+         background: conic-gradient(from var(--shine-angle), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.9) 10%, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.1));
+         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+         -webkit-mask-composite: xor;
+         mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+         pointer-events: none;
+         transition: --shine-angle 700ms ease;
+         z-index: 0;
+       }
+       .glass-btn:hover::before { --shine-angle: 120deg; }
+       .glass-btn::after {
+         content: "";
+         position: absolute;
+         inset: 0;
+         border-radius: inherit;
+         background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%);
+         opacity: 0.8;
+         pointer-events: none;
+         z-index: 0;
+       }
+       .glass-btn > * { position: relative; z-index: 1; }
+       .glass-btn:hover {
+         transform: scale(1.02);
+         background-color: color-mix(in srgb, var(--c-glass, #bbbbbc) 28%, transparent);
+       }
+       .glass-btn:active {
+         transform: scale(0.96);
+         transition-duration: 120ms;
+       }
+       .glass-btn svg {
+         width: 20px;
+         height: 20px;
+         flex-shrink: 0;
+         fill: none;
+         stroke: var(--icon, #22c55e);
+         stroke-width: 2;
+         stroke-linecap: round;
+         stroke-linejoin: round;
+         transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+       }
+       .glass-btn:hover svg { transform: rotate(-12deg) scale(1.1); }
+
+       /* ============================================================
+          LIQUID GLASS LOGOUT MODAL
+          ============================================================ */
+       .lg-overlay {
+         position: fixed;
+         inset: 0;
+         z-index: 200;
+         display: grid;
+         place-items: center;
+         padding: 20px;
+         background: rgba(15,23,42,.14);
+         -webkit-backdrop-filter: blur(8px) saturate(140%);
+         backdrop-filter: blur(8px) saturate(140%);
+         opacity: 0;
+         visibility: hidden;
+         transition: opacity .3s ease, visibility 0s linear .3s;
+       }
+       .lg-overlay.show {
+         opacity: 1;
+         visibility: visible;
+         transition: opacity .3s ease, visibility 0s;
+       }
+
+       .lg-dialog {
+         position: relative;
+         width: min(380px, 100%);
+         padding: 28px 24px 24px;
+         border-radius: 28px;
+         text-align: center;
+         background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.46));
+         border: 1px solid rgba(255,255,255,.8);
+         -webkit-backdrop-filter: blur(20px) saturate(160%);
+         backdrop-filter: blur(20px) saturate(160%);
+         box-shadow: 
+           inset 0 0 0 1px rgba(255,255,255,.12),
+           inset 1.8px 3px 0 -2px rgba(255,255,255,.9),
+           inset -2px -2px 0 -2px rgba(255,255,255,.8),
+           inset -3px -8px 1px -6px rgba(255,255,255,.6),
+           inset -0.3px -1px 4px 0 rgba(0,0,0,.12),
+           inset -1.5px 2.5px 0 -2px rgba(0,0,0,.2),
+           inset 0 3px 4px -2px rgba(0,0,0,.2),
+           0 1px 5px rgba(0,0,0,.1),
+           0 20px 50px rgba(15,23,42,.18);
+         transform: translateY(18px) scale(.92);
+         opacity: 0;
+         transition: transform .45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s ease;
+         overflow: hidden;
+       }
+       .lg-dialog::after {
+         content: "";
+         position: absolute;
+         inset: 0;
+         border-radius: inherit;
+         background: linear-gradient(160deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 40%);
+         pointer-events: none;
+       }
+       .lg-overlay.show .lg-dialog {
+         transform: none;
+         opacity: 1;
+         transition: transform .55s cubic-bezier(0.34, 1.56, 0.64, 1) .04s, opacity .3s ease .04s;
+       }
+
+       .lg-icon {
+         position: relative;
+         z-index: 1;
+         width: 64px;
+         height: 64px;
+         margin: 0 auto 18px;
+         border-radius: 50%;
+         display: grid;
+         place-items: center;
+         background: rgba(239,68,68,.12);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 6px 16px rgba(239,68,68,.15);
+         color: #ef4444;
+       }
+       .lg-icon svg {
+         width: 28px;
+         height: 28px;
+         fill: none;
+         stroke: currentColor;
+         stroke-width: 2;
+         stroke-linecap: round;
+         stroke-linejoin: round;
+       }
+
+       .lg-title {
+         position: relative;
+         z-index: 1;
+         margin: 0 0 8px;
+         font-size: 20px;
+         font-weight: 800;
+         color: #1e293b;
+       }
+       .lg-desc {
+         position: relative;
+         z-index: 1;
+         margin: 0 0 24px;
+         font-size: 14px;
+         line-height: 1.55;
+         color: #64748b;
+       }
+
+       .lg-actions {
+         position: relative;
+         z-index: 1;
+         display: grid;
+         grid-template-columns: 1fr 1fr;
+         gap: 12px;
+       }
+       .lg-btn {
+         height: 50px;
+         border: none;
+         border-radius: 999px;
+         font: inherit;
+         font-size: 15px;
+         font-weight: 700;
+         cursor: pointer;
+         transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease;
+       }
+       .lg-btn:hover { transform: translateY(-1px); }
+       .lg-btn:active { transform: scale(.96); }
+       .lg-btn:focus-visible { outline: 2px solid #0052f5; outline-offset: 3px; }
+
+       .lg-btn--cancel {
+         color: #1e293b;
+         background: rgba(255,255,255,.6);
+         border: 1px solid rgba(255,255,255,.9);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.06);
+       }
+       .lg-btn--cancel:hover { background: rgba(255,255,255,.85); }
+
+       .lg-btn--confirm {
+         color: #fff;
+         background: linear-gradient(180deg, #f87171, #ef4444);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(239,68,68,.3);
+       }
+        .lg-btn--confirm:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 10px 22px rgba(239,68,68,.36); }
+
+       /* ============================================================
+          LIQUID GLASS PERMISSION FORM MODAL (AJUKAN IZIN)
+          ============================================================ */
+       .fi-overlay {
+         position: fixed;
+         inset: 0;
+         z-index: 200;
+         display: grid;
+         place-items: center;
+         padding: 20px;
+         background: rgba(15,23,42,.14);
+         -webkit-backdrop-filter: blur(8px) saturate(140%);
+         backdrop-filter: blur(8px) saturate(140%);
+         opacity: 0;
+         visibility: hidden;
+         transition: opacity .3s ease, visibility 0s linear .3s;
+       }
+       .fi-overlay.show {
+         opacity: 1;
+         visibility: visible;
+         transition: opacity .3s ease, visibility 0s;
+       }
+
+       .fi-dialog {
+         position: relative;
+         width: min(480px, 100%);
+         max-height: calc(100vh - 40px);
+         overflow-y: auto;
+         padding: 28px 26px 24px;
+         border-radius: 28px;
+         background: linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.5));
+         border: 1px solid rgba(255,255,255,.8);
+         -webkit-backdrop-filter: blur(20px) saturate(160%);
+         backdrop-filter: blur(20px) saturate(160%);
+         box-shadow: var(--glass-shadow);
+         transform: translateY(18px) scale(.92);
+         opacity: 0;
+         transition: transform .45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s ease;
+         scrollbar-width: thin;
+       }
+       .fi-dialog::after {
+         content: "";
+         position: absolute;
+         inset: 0;
+         border-radius: inherit;
+         background: linear-gradient(160deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 40%);
+         pointer-events: none;
+       }
+       .fi-overlay.show .fi-dialog {
+         transform: none;
+         opacity: 1;
+         transition: transform .55s cubic-bezier(0.34, 1.56, 0.64, 1) .04s, opacity .3s ease .04s;
+       }
+
+       .fi-head { position: relative; z-index: 1; margin-bottom: 20px; }
+       .fi-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; color: #1e293b; }
+       .fi-head p { margin: 0; font-size: 13px; color: #64748b; }
+
+       .fi-field { position: relative; z-index: 1; margin-bottom: 18px; }
+       .fi-label {
+         display: block;
+         margin-bottom: 8px;
+         font-size: 12px;
+         font-weight: 700;
+         letter-spacing: .4px;
+         text-transform: uppercase;
+         color: #64748b;
+       }
+
+       .fi-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+       .fi-chip { position: relative; }
+       .fi-chip input { position: absolute; opacity: 0; pointer-events: none; }
+       .fi-chip span {
+         display: inline-flex;
+         align-items: center;
+         gap: 6px;
+         padding: 9px 14px;
+         border-radius: 999px;
+         font-size: 13px;
+         font-weight: 700;
+         color: #1e293b;
+         cursor: pointer;
+         background: rgba(255,255,255,.55);
+         border: 1px solid rgba(255,255,255,.9);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.05);
+         transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease;
+         user-select: none;
+       }
+       .fi-chip span:hover { background: rgba(255,255,255,.85); transform: translateY(-1px); }
+       .fi-chip input:checked + span {
+         color: #fff;
+         background: linear-gradient(180deg, #34d399, #10b981);
+         border-color: rgba(255,255,255,.4);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(16,185,129,.28);
+       }
+       .fi-chip input:focus-visible + span { outline: 2px solid #0052f5; outline-offset: 2px; }
+       .fi-chip input[type="checkbox"] { position: static; opacity: 1; pointer-events: auto; accent-color: #10b981; }
+
+       .fi-input, .fi-textarea, .fi-date {
+         width: 100%;
+         font: inherit;
+         font-size: 14px;
+         color: #1e293b;
+         padding: 12px 16px;
+         border-radius: 16px;
+         border: 1px solid rgba(255,255,255,.9);
+         background: rgba(255,255,255,.55);
+         box-shadow: inset 0 1px 2px rgba(15,23,42,.05);
+         outline: none;
+         transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+       }
+       .fi-textarea { min-height: 84px; resize: vertical; }
+       .fi-input:focus, .fi-textarea:focus, .fi-date:focus {
+         background: rgba(255,255,255,.8);
+         border-color: rgba(16,185,129,.5);
+         box-shadow: 0 0 0 4px rgba(16,185,129,.15);
+       }
+
+       .fi-hidden { display: none; }
+       .fi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+       .fi-upload {
+         position: relative;
+         display: flex;
+         align-items: center;
+         gap: 14px;
+         padding: 14px;
+         border-radius: 18px;
+         border: 1.5px dashed rgba(16,185,129,.45);
+         background: rgba(255,255,255,.4);
+         cursor: pointer;
+         transition: background-color .2s ease, border-color .2s ease;
+       }
+       .fi-upload:hover { background: rgba(255,255,255,.7); border-color: rgba(16,185,129,.7); }
+       .fi-upload input {
+         position: absolute; inset: 0; width: 100%; height: 100%;
+         opacity: 0; cursor: pointer;
+       }
+       .fi-thumb {
+         width: 56px; height: 56px; flex-shrink: 0;
+         border-radius: 14px;
+         background: rgba(16,185,129,.12) center/cover no-repeat;
+         display: grid; place-items: center;
+         color: #10b981;
+       }
+       .fi-thumb svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+       .fi-upload-text { font-size: 13px; color: #1e293b; font-weight: 600; }
+       .fi-upload-text small { display: block; margin-top: 2px; font-size: 12px; color: #64748b; font-weight: 500; }
+       .fi-error { display: none; margin-top: 6px; font-size: 12px; color: #ef4444; font-weight: 600; }
+       .fi-error.show { display: block; }
+
+       .fi-actions { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+       .fi-btn {
+         height: 50px;
+         border: none;
+         border-radius: 999px;
+         font: inherit;
+         font-size: 15px;
+         font-weight: 700;
+         cursor: pointer;
+         transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease, opacity .2s;
+       }
+       .fi-btn:hover { transform: translateY(-1px); }
+       .fi-btn:active { transform: scale(.96); }
+       .fi-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+       .fi-btn:focus-visible { outline: 2px solid #0052f5; outline-offset: 3px; }
+
+       .fi-btn--cancel {
+         color: #1e293b;
+         background: rgba(255,255,255,.6);
+         border: 1px solid rgba(255,255,255,.9);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.06);
+       }
+       .fi-btn--cancel:hover { background: rgba(255,255,255,.85); }
+       .fi-btn--submit {
+         color: #fff;
+         background: linear-gradient(180deg, #34d399, #10b981);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(16,185,129,.3);
+       }
+
+      /* ============================================================
+         GREETING SECTION
+         ============================================================ */
+      .d-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      .g-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 
     /* ============================================================
        TABLE CARD
@@ -515,7 +1003,7 @@
       white-space: nowrap;
     }
     .log-table tbody td {
-      padding: 12px;
+      padding: 13px 12px;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
       color: var(--navy-2);
@@ -660,242 +1148,237 @@
       background: var(--green);
     }
 
-    /* ============================================================
-       RESPONSIVE — TABLET (≤ 900px)
-       ============================================================ */
-    @media (max-width: 900px) {
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .search input { width: 160px; }
-      .d-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ============================================================
-        RESPONSIVE — MOBILE (≤ 640px)
+     /* ============================================================
+        RESPONSIVE — TABLET (≤ 900px)
         ============================================================ */
-    @media (max-width: 640px) {
-      /* Sidebar jadi drawer off-canvas */
-      .sidebar {
-        position: fixed;
-        top: 0; left: 0;
-        height: 100vh;
-        transform: translateX(-100%);
-        box-shadow: 0 10px 30px rgba(15,23,42,.25);
-      }
-      .sidebar.open { transform: translateX(0); }
-      .sidebar-close { display: grid; }
-      .hamburger { display: grid; }
+     @media (max-width: 900px) {
+       .content-layout {
+         grid-template-columns: 1fr;
+       }
+       .layout-left .stats {
+         grid-template-columns: repeat(2, minmax(0, 1fr));
+       }
+       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+       .search input { width: 160px; }
+       .d-grid { grid-template-columns: 1fr; }
+     }
 
-      /* Topbar clean: sembunyikan judul + nama user */
-      .topbar { padding: 12px 14px; flex-wrap: nowrap; gap: 8px; }
-      .topbar-left { gap: 10px; flex: 1; min-width: 0; }
-      .topbar-left > div { display: none; }   /* sembunyikan title & sub */
+     /* ============================================================
+         RESPONSIVE — MOBILE (≤ 640px)
+         ============================================================ */
+     @media (max-width: 640px) {
+       .content-layout {
+         display: flex;
+         flex-direction: column;
+         gap: 14px;
+       }
+       .layout-left,
+       .layout-right {
+         width: 100%;
+         display: flex;
+         flex-direction: column;
+         gap: 14px;
+       }
+       .layout-left .stats {
+         grid-template-columns: 1fr;
+         gap: 12px;
+         padding: 0;
+         margin: 0;
+         order: 1;
+       }
 
-      .topbar-right { gap: 8px; flex-shrink: 0; }
-      .search { display: none; }
-      .user { gap: 0; }
-      .user > div:first-child { display: none; } /* sembunyikan nama + role */
-      .avatar-initial { width: 34px; height: 34px; font-size: 12px; }
-      .bell { width: 34px; height: 34px; }
+       .layout-left #btn-ajukan-izin {
+         order: 2;
+       }
 
-      /* Content - flex column untuk urusan vertikal dengan order */
-      .content { 
-        padding: 0; 
-        gap: 0;
-        display: flex;
-        flex-direction: column;
-      }
+       /* Sidebar jadi drawer off-canvas */
+       .sidebar {
+         position: fixed;
+         top: 0; left: 0;
+         height: 100vh;
+         transform: translateX(-100%);
+         box-shadow: 0 10px 30px rgba(15,23,42,.25);
+       }
+       .sidebar.open { transform: translateX(0); }
+       .sidebar-close { display: grid; }
+       .hamburger { display: grid; }
 
-      /* ===== 1. FILTER BAR: Periode + Filter Status ===== */
-      .filter-bar {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 14px;
-        background: var(--card);
-        border: none;
-        border-bottom: 1px solid var(--border);
-        border-radius: 0;
-        order: 1;
-      }
-      .filter-bar .left {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
-      }
-      .filter-bar .right {
-        display: none; /* Disembunyikan di sini, akan ditampilkan setelah tabel */
-      }
-      
-      .period { 
-        width: 100%; 
-        display: inline-flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 14px;
-        background: #f1f5f9;
-        border-radius: 10px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .period b { color: var(--navy-2); }
-      .period .i { width: 16px; height: 16px; }
-      
-      .tabs { 
-        width: 100%; 
-        display: flex;
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        gap: 6px;
-        padding: 0;
-        -webkit-overflow-scrolling: touch;
-      }
-      .tabs::-webkit-scrollbar { display: none; }
-      .tabs { -ms-overflow-style: none; scrollbar-width: none; }
-      .tabs button { 
-        flex-shrink: 0;
-        padding: 8px 14px;
-        background: #f8fafc;
-        border: 1px solid var(--border);
-        font-size: 12px;
-        font-weight: 600;
-        border-radius: 999px;
-        color: var(--muted);
-        cursor: pointer;
-        transition: all .15s;
-      }
-      .tabs button:hover { background: #f1f5f9; }
-      .tabs button.active {
-        background: var(--navy);
-        border-color: var(--navy);
-        color: #fff;
-      }
+       /* Topbar clean: sembunyikan judul + nama user */
+       .topbar { padding: 12px 14px; flex-wrap: nowrap; gap: 8px; }
+       .topbar-left { gap: 10px; flex: 1; min-width: 0; }
+       .topbar-left > div { display: none; }   /* sembunyikan title & sub */
 
-      /* ===== 2. STATS ===== */
-      .stats { 
-        grid-template-columns: 1fr; 
-        gap: 10px;
-        padding: 14px;
-        margin: 0;
-        order: 2;
-      }
-      .stat { 
-        padding: 14px;
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-      }
-      .stat-value { font-size: 22px; }
+       .topbar-right { gap: 8px; flex-shrink: 0; }
+       .search { display: none; }
+       .user { gap: 0; }
+       .user > div:first-child { display: none; } /* sembunyikan nama + role */
+       .avatar-initial { width: 34px; height: 34px; font-size: 12px; }
+       .bell { width: 34px; height: 34px; }
 
-      /* ===== 3. D-GRID: Transform to flex untuk mobile ===== */
-      .d-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        grid-template-columns: none;
-        order: 3;
-        align-items: stretch;
-      }
+       /* Content - padding simetris */
+       .content { 
+         padding: 14px; 
+         gap: 14px;
+         display: flex;
+         flex-direction: column;
+       }
 
-      .g-col {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        min-width: 0;
-      }
+       /* ===== 1. FILTER BAR: Periode + Filter Status ===== */
+       .filter-bar {
+         display: flex;
+         flex-direction: column;
+         gap: 12px;
+         padding: 16px;
+         background: var(--card);
+         border: 1px solid var(--border);
+         border-radius: 16px;
+         margin: 0;
+       }
+       .filter-bar .left {
+         display: flex;
+         flex-direction: column;
+         width: 100%;
+         gap: 12px;
+       }
+        .filter-bar .right {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+        }
+        .filter-bar .right .btn {
+          width: 100%;
+          justify-content: center;
+        }
+       
+       .period { 
+         width: 100%; 
+         display: inline-flex;
+         align-items: center;
+         justify-content: space-between;
+         padding: 10px 14px;
+         background: #f1f5f9;
+         border-radius: 10px;
+         font-size: 12px;
+         color: var(--muted);
+       }
+       .period b { color: var(--navy-2); }
+       .period .i { width: 16px; height: 16px; }
+       
+       .tabs { 
+         width: 100%; 
+         display: flex;
+         overflow-x: auto;
+         flex-wrap: nowrap;
+         gap: 6px;
+         padding: 0;
+         -webkit-overflow-scrolling: touch;
+       }
+       .tabs::-webkit-scrollbar { display: none; }
+       .tabs { -ms-overflow-style: none; scrollbar-width: none; }
+       .tabs button { 
+         flex-shrink: 0;
+         padding: 8px 14px;
+         background: #f8fafc;
+         border: 1px solid var(--border);
+         font-size: 12px;
+         font-weight: 600;
+         border-radius: 999px;
+         color: var(--muted);
+         cursor: pointer;
+         transition: all .15s;
+       }
+       .tabs button:hover { background: #f1f5f9; }
+       .tabs button.active {
+         background: var(--navy);
+         border-color: var(--navy);
+         color: #fff;
+       }
 
-      /* ===== 3a. TABLE CARD ===== */
-      .table-card {
-        padding: 0;
-        border: none;
-        border-bottom: 1px solid var(--border);
-        border-radius: 0;
-        background: transparent;
-        box-shadow: none;
-        order: 1;
-      }
+       /* ===== 2. STATS ===== */
+       .stats { 
+         grid-template-columns: 1fr; 
+         gap: 10px;
+         padding: 14px;
+         margin: 0;
+         order: 2;
+       }
+       .stat { 
+         padding: 14px;
+         background: var(--card);
+         border: 1px solid var(--border);
+         border-radius: 12px;
+       }
+       .stat-value { font-size: 22px; }
 
-      .table-head { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 10px;
-        margin-bottom: 0;
-        padding: 14px;
-        background: var(--card);
-        border-bottom: 1px solid var(--border);
-      }
-      .panel-title { font-size: 15px; }
+       /* ===== 3. D-GRID: Transform to flex untuk mobile ===== */
+       .d-grid {
+         display: flex;
+         flex-direction: column;
+         gap: 0;
+         grid-template-columns: none;
+         order: 3;
+         align-items: stretch;
+       }
 
-      .table-scroll {
-        box-shadow: inset -10px 0 8px -8px rgba(15,23,42,.08);
-        background: var(--card);
-        border: none;
-        border-radius: 0;
-      }
-      .log-table { min-width: 680px; font-size: 11px; }
-      .log-table thead th { padding: 8px 10px; font-size: 11px; }
-      .log-table tbody td { padding: 10px; }
+       .g-col {
+         display: flex;
+         flex-direction: column;
+         gap: 0;
+         min-width: 0;
+       }
 
-      .table-foot { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 10px;
-        padding: 14px;
-        background: var(--card);
-        border-bottom: 1px solid var(--border);
-        margin: 0;
-        font-size: 12px;
-      }
-      .pager { width: 100%; justify-content: center; }
+       /* ===== 3a. TABLE CARD ===== */
+       .table-card {
+         padding: 0;
+         border: 1px solid var(--border);
+         border-radius: 16px;
+         background: var(--card);
+         box-shadow: 0 1px 2px rgba(15,23,42,.03);
+         overflow: hidden;
+       }
 
-      /* ===== 3b. EXPORT & SYNC BUTTONS ===== */
-      /* Reposition .filter-bar .right setelah tabel dengan CSS grid/flex hack */
-      .d-grid::after {
-        content: '';
-        display: block;
-        order: 2;
-        background: var(--card);
-      }
+       .table-head { 
+         flex-direction: column; 
+         align-items: flex-start; 
+         gap: 10px;
+         margin-bottom: 0;
+         padding: 14px;
+         background: var(--card);
+         border-bottom: 1px solid var(--border);
+       }
+       .panel-title { font-size: 15px; }
 
-      /* Tampilkan .right button section setelah tabel */
-      .content > .filter-bar .right {
-        display: flex !important;
-        flex-direction: column;
-        width: 100%;
-        gap: 8px;
-        padding: 14px;
-        background: var(--card);
-        border: none;
-        border-bottom: 1px solid var(--border);
-        margin: 0;
-        border-radius: 0;
-        order: 4;
-        position: static;
-      }
+       .table-scroll {
+         box-shadow: inset -10px 0 8px -8px rgba(15,23,42,.08);
+         background: var(--card);
+         border: none;
+         border-radius: 0;
+       }
+       .log-table { min-width: 680px; font-size: 11px; }
+       .log-table thead th { padding: 8px 10px; font-size: 11px; }
+       .log-table tbody td { padding: 10px; }
 
-      .filter-bar .right .btn {
-        width: 100%;
-        padding: 12px;
-      }
+       .table-foot { 
+         flex-direction: column; 
+         align-items: flex-start; 
+         gap: 10px;
+         padding: 14px;
+         background: var(--card);
+         border-bottom: 1px solid var(--border);
+         margin: 0;
+         font-size: 12px;
+       }
+       .pager { width: 100%; justify-content: center; }
 
-      /* ===== 3c. INSPECT PANEL ===== */
-      .g-col > .card {
-        background: var(--card);
-        border: none;
-        border-bottom: 1px solid var(--border);
-        border-radius: 0;
-        padding: 14px;
-        order: 5;
-      }
-
-      .g-col > .card:last-child {
-        border-bottom: none;
-      }
-
-      .inspect-head { flex-direction: column; align-items: flex-start; }
-      .kv-row { flex-direction: column; align-items: flex-start; gap: 2px; }
-      .kv-row b { text-align: left; }
-    }
+       /* Status Sinkronisasi GPS di bawah tabel */
+       .sync-card {
+         padding: 16px;
+         border-radius: 16px;
+         border: 1px solid var(--border);
+         background: var(--card);
+       }
+     }
 
     /* ============================================================
        RESPONSIVE — VERY SMALL (≤ 380px)
@@ -906,171 +1389,572 @@
       .tabs button { font-size: 11px; padding: 7px 10px; }
     }
 
+    /* ============================================================
+       SIDEBAR KACA — selaras dengan dashboard siswa
+       ============================================================ */
+    .glass-nav {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .glass-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--glass-slider-size);
+      height: var(--glass-slider-size);
+      border-radius: 999px;
+      pointer-events: none;
+      background: rgba(187,187,188,.4);
+      box-shadow: var(--glass-shadow-soft);
+      transform: translate3d(-3px, -3px, 0);
+      will-change: transform;
+      transition: transform 450ms cubic-bezier(.34, 1.56, .64, 1);
+    }
+    .glass-nav-item {
+      position: relative;
+      z-index: 1;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--glass-icon);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 200ms ease;
+    }
+    .glass-nav-item:hover { background: rgba(187,187,188,.2); }
+    .glass-nav-item:focus-visible {
+      outline: 2px solid var(--glass-action);
+      outline-offset: 2px;
+    }
+    .glass-nav-item svg {
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: scale 200ms cubic-bezier(.5, 0, 0, 1);
+    }
+    .glass-nav-item:hover svg { scale: 1.12; }
+    .glass-nav-item:active svg { scale: .92; }
+
+    .glass-group-wrapper {
+      position: fixed;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      z-index: 65;
+    }
+    .glass-buttons-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .glass-circle {
+      position: relative;
+      isolation: isolate;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      overflow: hidden;
+      background-color: color-mix(in srgb, var(--c-glass) 18%, transparent);
+      -webkit-backdrop-filter: blur(10px) saturate(150%);
+      backdrop-filter: url(#liquid-circle) blur(10px) saturate(150%);
+      box-shadow: var(--glass-shadow);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 500ms cubic-bezier(.34, 1.56, .64, 1), background-color 300ms ease;
+    }
+    .glass-circle::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: conic-gradient(from var(--shine-angle), rgba(255,255,255,.1), rgba(255,255,255,.9) 10%, rgba(255,255,255,.1) 25%, rgba(255,255,255,.1));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+      pointer-events: none;
+      transition: --shine-angle 700ms ease;
+    }
+    .glass-circle::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgba(255,255,255,.55), transparent 55%);
+      pointer-events: none;
+    }
+    .glass-circle:hover {
+      transform: scale(1.06);
+      background-color: color-mix(in srgb, var(--c-glass) 28%, transparent);
+    }
+    .glass-circle:hover::before { --shine-angle: 120deg; }
+    .glass-circle:active { transform: scale(.92); }
+    .glass-circle:focus-visible { outline: 2px solid var(--c-action); outline-offset: 3px; }
+    .glass-circle svg {
+      position: relative;
+      z-index: 1;
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: var(--icon);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .glass-sidebar {
+      position: relative;
+      width: 56px;
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 999px;
+      isolation: isolate;
+      background: rgba(187,187,188,.18);
+      -webkit-backdrop-filter: blur(10px) saturate(150%);
+      backdrop-filter: url(#liquid-side) blur(10px) saturate(150%);
+      box-shadow: var(--glass-shadow);
+    }
+    .morph { display: none; }
+
+    .content {
+      width: 100%;
+      max-width: 1480px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 24px 32px;
+    }
+    @media (min-width: 901px) {
+      .content {
+        position: relative;
+        left: -44px;
+      }
+    }
+    @media (max-width: 900px) {
+      .glass-buttons-container { gap: 9px; }
+      .glass-circle { width: 48px; height: 48px; }
+      .glass-circle svg { width: 20px; height: 20px; }
+      .glass-sidebar { width: 52px; padding: 10px 6px; }
+    }
+    @media (max-width: 640px) {
+      .glass-group-wrapper { display: none; }
+      .main { width: 100%; margin-left: 0; }
+      .content {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 16px 14px 24px;
+        gap: 14px;
+      }
+      .morph {
+        display: block;
+        position: fixed;
+        right: 16px;
+        bottom: 24px;
+        width: 64px;
+        height: 64px;
+        border-radius: 32px;
+        z-index: 100;
+        transform-origin: bottom right;
+        will-change: transform, width, height;
+      }
+      .morph .glass {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background-color: color-mix(in srgb, #bbbbbc 12%, transparent);
+        -webkit-backdrop-filter: blur(10px) saturate(150%);
+        backdrop-filter: url(#liquid-morph) blur(10px) saturate(150%);
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,.1),
+          inset 1.8px 3px 0px -2px rgba(255,255,255,.9),
+          inset -2px -2px 0px -2px rgba(255,255,255,.8),
+          inset -3px -8px 1px -6px rgba(255,255,255,.6),
+          inset -0.3px -1px 4px 0px rgba(0,0,0,.12),
+          inset -1.5px 2.5px 0px -2px rgba(0,0,0,.2),
+          inset 0px 3px 4px -2px rgba(0,0,0,.2),
+          inset 2px -6.5px 1px -4px rgba(0,0,0,.1),
+          0px 1px 5px 0px rgba(0,0,0,.1),
+          0px 6px 16px 0px rgba(0,0,0,.08);
+        transition:
+          background-color 400ms cubic-bezier(1, 0, .4, 1),
+          box-shadow 400ms cubic-bezier(1, 0, .4, 1);
+      }
+      .morph .glass::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(135deg, rgba(255,255,255,.5), transparent 45%);
+        pointer-events: none;
+      }
+      .trigger {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 64px;
+        height: 64px;
+        z-index: 2;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .trigger span {
+        position: absolute;
+        left: 50%;
+        width: 22px;
+        height: 2px;
+        margin-left: -11px;
+        background: var(--navy-2);
+        border-radius: 2px;
+        transition:
+          transform .5s cubic-bezier(.34, 1.56, .64, 1),
+          opacity .2s ease,
+          top .5s cubic-bezier(.34, 1.56, .64, 1);
+      }
+      .trigger span:nth-child(1) { top: 22px; }
+      .trigger span:nth-child(2) { top: 30px; }
+      .trigger span:nth-child(3) { top: 38px; }
+      .trigger.active span:nth-child(1) { top: 30px; transform: rotate(45deg); }
+      .trigger.active span:nth-child(2) { opacity: 0; }
+      .trigger.active span:nth-child(3) { top: 30px; transform: rotate(-45deg); }
+      .morph .panel {
+        position: absolute;
+        right: 0;
+        bottom: calc(64px + 8px);
+        width: 212px;
+        padding: 6px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(14px) scale(.94);
+        transform-origin: bottom right;
+        transition:
+          opacity .16s ease,
+          transform .4s cubic-bezier(.32, .72, 0, 1),
+          visibility 0s linear .2s;
+        z-index: 1;
+      }
+      .morph.open .panel {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition:
+          opacity .3s ease .14s,
+          transform .65s cubic-bezier(.34, 1.56, .64, 1) .06s,
+          visibility 0s;
+      }
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 14px;
+        background: transparent;
+        color: #334155;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+        opacity: 0;
+        transform: translateY(10px);
+        transition:
+          opacity .12s ease,
+          transform .3s cubic-bezier(.32, .72, 0, 1),
+          background .15s ease;
+      }
+      .morph.open .menu-item {
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+          opacity .25s ease,
+          transform .6s cubic-bezier(.34, 1.56, .64, 1),
+          background .15s ease;
+      }
+      .morph.open .menu-item:nth-child(1) { transition-delay: .18s, .18s, 0s; }
+      .morph.open .menu-item:nth-child(2) { transition-delay: .22s, .22s, 0s; }
+      .morph.open .menu-item:nth-child(3) { transition-delay: .26s, .26s, 0s; }
+      .morph.open .menu-item:nth-child(4) { transition-delay: .3s, .3s, 0s; }
+      .morph.open .menu-item:nth-child(5) { transition-delay: .34s, .34s, 0s; }
+      .menu-item:hover { background: color-mix(in srgb, #bbbbbc 20%, transparent); }
+      .menu-item:active { background: color-mix(in srgb, #bbbbbc 36%, transparent); }
+      .menu-item.active {
+        background: color-mix(in srgb, #bbbbbc 36%, transparent);
+        color: #1e293b;
+      }
+      .menu-item.active svg { stroke: #1e293b; }
+      .menu-item svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        fill: none;
+        stroke: #64748b;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .menu-divider {
+        height: 1px;
+        margin: 4px 12px;
+        background: color-mix(in srgb, #000 10%, transparent);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .trigger span, .morph .panel, .menu-item {
+          transition-duration: .01ms !important;
+          transition-delay: 0s !important;
+        }
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .glass-nav-item, .glass-nav-item svg, .glass-circle, .glass-circle::before,
+      .trigger span, .morph .panel {
+        transition-duration: .01ms !important;
+      }
+    }
+
     body.no-scroll { overflow: hidden; }
+
+    .student-leave-card { padding: 18px; }
+    .student-leave-table { min-width: 760px; }
+    .student-leave-table .student-leave-status-cell { text-align: center; }
+    .student-leave-status { padding: 4px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .student-leave-status.pending { background: #fef3c7; color: #b45309; }
+    .student-leave-status.approved { background: #d1fae5; color: #047857; }
+    .student-leave-status.rejected { background: #fee2e2; color: #b91c1c; }
+    .student-leave-empty, .student-leave-error { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .student-leave-error { color: #b91c1c; }
+    .student-leave-feedback { display: none; margin: 0 0 10px; font-size: 12px; line-height: 1.5; }
+    .student-leave-feedback.show { display: block; }
+    .student-leave-feedback.error { color: #b91c1c; }
+    .student-leave-feedback.success { color: #047857; }
+    .fi-submit-message { display: none; margin: 0 0 12px; font-size: 12px; line-height: 1.5; }
+    .fi-submit-message.show { display: block; }
+    .fi-submit-message.error { color: #b91c1c; }
+    .fi-submit-message.success { color: #047857; }
   </style>
 </head>
 <body class="siswa">
 <div class="app">
-
-  <div id="sidebar-container"></div>
-
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="liquid-side" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="7" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
+        <feDisplacementMap in="SourceGraphic" in2="smooth" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="liquid-circle" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="5" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
+        <feDisplacementMap in="SourceGraphic" in2="smooth" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="liquid-morph" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" result="noise"/>
+        <feDisplacementMap id="disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="liquid-btn" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="5" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
+        <feDisplacementMap id="btn-disp" in="SourceGraphic" in2="smooth" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+  <div class="glass-group-wrapper">
+    <div class="glass-buttons-container">
+      <button class="glass-circle glass-top-item" type="button" aria-label="Profil" title="Profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      </button>
+      <button class="glass-circle glass-top-item" type="button" aria-label="Notifikasi" title="Notifikasi">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+      </button>
+      <button class="glass-circle btn-logout" type="button" aria-label="Keluar" title="Keluar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+    <aside class="glass-sidebar" aria-label="Navigasi siswa">
+      <nav class="glass-nav" aria-label="Menu utama">
+        <span class="glass-indicator" id="glass-indicator" aria-hidden="true"></span>
+        <a class="glass-nav-item" href="/src/pages/student/dashboardsiswa.html" aria-label="Dashboard" title="Dashboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        </a>
+        <a class="glass-nav-item" href="/src/pages/student/detail-absensi.html" aria-label="Absensi" title="Absensi" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+        </a>
+      </nav>
+    </aside>
+  </div>
+  <div class="morph" id="morph">
+    <div class="glass"></div>
+    <nav class="panel" id="panel" aria-label="Menu siswa">
+      <a class="menu-item" href="/src/pages/student/dashboardsiswa.html">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="menu-item active" href="/src/pages/student/detail-absensi.html" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+        <span>Absensi</span>
+      </a>
+      <div class="menu-divider"></div>
+      <button class="menu-item glass-top-item" type="button" aria-label="Profil" title="Profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        <span>Profil</span>
+      </button>
+      <button class="menu-item glass-top-item" type="button" aria-label="Notifikasi" title="Notifikasi">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        <span>Notifikasi</span>
+      </button>
+      <button class="menu-item btn-logout" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Keluar</span>
+      </button>
+    </nav>
+    <button class="trigger" id="trigger" type="button" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 
   <div class="main">
-    <!-- ===== TOPBAR ===== -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="hamburger" id="hamburger" aria-label="Buka menu">
-          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <div>
-          <h1 class="page-title">Detail Absensi &amp; Riwayat Kehadiran</h1>
-          <p class="page-sub">Monitoring waktu belajar harian dan log kehadiran siswa</p>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari tanggal, status, atau lokasi..."></label>
-         <a class="bell" href="#" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
-         <button class="btn-logout" aria-label="Keluar" title="Logout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
-         <div class="user">
-          <div>
-            <div class="user-name">Rizky Pratama</div>
-            <div class="user-role">Siswa &bull; XII IPA 1</div>
-          </div>
-          <div class="avatar-initial">RP</div>
-        </div>
-      </div>
-    </header>
-
     <main class="content">
 
-      <!-- Filter & aksi -->
-      <section class="card filter-bar">
-        <div class="left">
-          <div class="period"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Periode: <b>Oktober 2024</b></span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></div>
-          <div class="tabs" id="tab-status">
-            <button type="button" class="active" data-filter="all">Semua (22)</button>
-            <button type="button" data-filter="hadir">Hadir (20)</button>
-            <button type="button" data-filter="izin">Izin (1)</button>
-            <button type="button" data-filter="late">Terlambat (1)</button>
-          </div>
-        </div>
-        <div class="right">
-          <button class="btn btn-outline" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>Export PDF / Excel</button>
-          <button class="btn btn-primary" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Sinkronkan Log</button>
-        </div>
+      <!-- Greeting Section -->
+      <section class="welcome" id="greeting-section">
+        <h2 id="greeting-title">Selamat Siang, Rizky Pratama!</h2>
+        <p id="greeting-subtitle">Hari ini: Sabtu, 7 November 2026. Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
       </section>
 
-      <!-- Ringkasan -->
-      <section class="stats">
-        <div class="card stat">
-          <div class="stat-top"><span class="stat-label">Total Hari Sekolah</span><span class="stat-icon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span></div>
-          <div class="stat-value">22<small> Hari</small></div>
-          <div class="stat-note">Sesuai kalender akademik</div>
-        </div>
-        <div class="card stat">
-          <div class="stat-top"><span class="stat-label">Total Hadir</span><span class="stat-icon green"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div>
-          <div class="stat-value">21<small> Hari</small></div>
-          <div class="stat-note"><span class="ok">95.5% Tingkat Kehadiran</span></div>
-        </div>
-        <div class="card stat">
-          <div class="stat-top"><span class="stat-label">Izin / Sakit / Alfa</span><span class="stat-icon amber"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span></div>
-          <div class="stat-value">1<small> Hari</small></div>
-          <div class="stat-note"><span class="warn">1 Izin/Sakit</span> • <span class="danger">0 Alfa</span></div>
-        </div>
-        <div class="card stat">
-          <div class="stat-top"><span class="stat-label">Akumulasi Jam Belajar</span><span class="stat-icon purple"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span></div>
-          <div class="stat-value">168.5<small> Jam</small></div>
-          <div class="stat-note">Rata-rata <span class="ok">8.0 jam</span> / hari</div>
-        </div>
-      </section>
-
-      <section class="d-grid">
-
-        <!-- Tabel log -->
-        <div class="card table-card">
-          <div class="table-head">
-            <div>
-              <h2 class="panel-title">Riwayat Log Kehadiran Harian</h2>
-              <p class="panel-sub">Data presensi tercatat otomatis berbasis GPS dan biometric stamp</p>
+      <section class="content-layout">
+        
+        <!-- Left: Ringkasan Stats Grid 2x2 -->
+        <div class="layout-left">
+          <section class="stats">
+            <div class="card stat">
+              <div class="stat-top"><span class="stat-label">Total Hari Sekolah</span><span class="stat-icon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span></div>
+              <div class="stat-value">22<small> Hari</small></div>
+              <div class="stat-note">Sesuai kalender akademik</div>
             </div>
-            <span class="chip">Bulan Berjalan</span>
-          </div>
-          <div class="table-scroll">
-            <table class="log-table" id="log-table">
-              <thead><tr><th>Tanggal &amp; Hari</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Durasi</th><th>Lokasi &amp; Radius</th><th>Status</th></tr></thead>
-              <tbody>
-              <tr data-row="0" class="selected" data-status="hadir">
-                <td class="day">Senin, 14 Okt 2024</td><td><span class="t-ok">07:15 WIB</span></td><td>15:30 WIB</td><td>08j 15m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(12m)</span></span></td>
-                <td><span class="badge b-hadir">Hadir</span></td>
-              </tr>
-              <tr data-row="1" data-status="hadir">
-                <td class="day">Jumat, 11 Okt 2024</td><td><span class="t-ok">07:10 WIB</span></td><td>15:35 WIB</td><td>08j 25m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(10m)</span></span></td>
-                <td><span class="badge b-hadir">Hadir</span></td>
-              </tr>
-              <tr data-row="2" data-status="hadir">
-                <td class="day">Kamis, 10 Okt 2024</td><td><span class="t-ok">07:22 WIB</span></td><td>15:30 WIB</td><td>08j 08m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(15m)</span></span></td>
-                <td><span class="badge b-hadir">Hadir</span></td>
-              </tr>
-              <tr data-row="3" class="row-izin" data-status="izin">
-                <td class="day">Rabu, 09 Okt 2024</td><td><span class="t-none">-</span></td><td><span class="t-none">-</span></td><td><span class="t-none">-</span></td><td><span class="muted">Izin Lomba OSN / Luar Sekolah</span></td>
-                <td><span class="badge b-izin">Izin</span></td>
-              </tr>
-              <tr data-row="4" data-status="hadir">
-                <td class="day">Selasa, 08 Okt 2024</td><td><span class="t-ok">07:14 WIB</span></td><td>15:40 WIB</td><td>08j 26m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(14m)</span></span></td>
-                <td><span class="badge b-hadir">Hadir</span></td>
-              </tr>
-              <tr data-row="5" data-status="late">
-                <td class="day">Senin, 07 Okt 2024</td><td><span class="t-late">07:35 WIB</span></td><td>15:30 WIB</td><td>07j 55m</td><td><span class="loc"><i class="dot"></i>SMA Negeri 1 <span class="r">(11m)</span></span></td>
-                <td><span class="badge b-late">Terlambat</span></td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="table-foot">
-            <span>Menampilkan <b>1-6</b> dari <b>22</b> catatan presensi</span>
-            <div class="pager">
-              <button type="button" aria-label="Sebelumnya">Sebelumnya</button>
-              <button type="button" class="active" data-page="1">1</button>
-              <button type="button" data-page="2">2</button>
-              <button type="button" data-page="3">3</button>
-              <button type="button" aria-label="Berikutnya">Berikutnya</button>
+            <div class="card stat">
+              <div class="stat-top"><span class="stat-label">Total Hadir</span><span class="stat-icon green"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div>
+              <div class="stat-value">21<small> Hari</small></div>
+              <div class="stat-note"><span class="ok">95.5% Tingkat Kehadiran</span></div>
             </div>
-          </div>
+            <div class="card stat">
+              <div class="stat-top"><span class="stat-label">Izin / Sakit / Alfa</span><span class="stat-icon amber"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span></div>
+              <div class="stat-value">1<small> Hari</small></div>
+              <div class="stat-note"><span class="warn">1 Izin/Sakit</span> • <span class="danger">0 Alfa</span></div>
+            </div>
+            <div class="card stat">
+              <div class="stat-top"><span class="stat-label">Akumulasi Jam Belajar</span><span class="stat-icon purple"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span></div>
+              <div class="stat-value">168.5<small> Jam</small></div>
+              <div class="stat-note">Rata-rata <span class="ok">8.0 jam</span> / hari</div>
+            </div>
+          </section>
+
+          <!-- Tombol Ajukan Izin dengan Liquid Glass Style -->
+          <button class="glass-btn" id="btn-ajukan-izin" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Ajukan Izin</span>
+          </button>
         </div>
 
-        <!-- Panel inspeksi -->
-        <div class="g-col">
-          <div class="card inspect">
-            <div class="inspect-head">
-              <div>
-                <h2 class="panel-title">Inspeksi Log Terpilih</h2>
-                <p class="panel-sub" id="ins-date">Senin, 14 Oktober 2024</p>
+        <!-- Right: Filter & Tabel -->
+        <div class="layout-right">
+          <!-- Filter & aksi -->
+          <section class="card filter-bar">
+            <div class="left">
+              <div class="period"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Periode: <b>Seluruh Riwayat</b></span></div>
+              <div class="tabs" id="tab-status">
+                <button type="button" class="active" data-filter="all">Semua (22)</button>
+                <button type="button" data-filter="hadir">Hadir (20)</button>
+                <button type="button" data-filter="izin">Izin (1)</button>
+                <button type="button" data-filter="late">Terlambat (1)</button>
               </div>
-              <span class="pill pill-valid"><i class="dot"></i>Valid Terverifikasi</span>
             </div>
-
-            <div class="kv-box">
-              <div class="kv-row"><span>Metode Verifikasi</span><b>Biometrik Face + GPS</b></div>
-              <div class="kv-row"><span>Waktu Check-In</span><b class="ok">07:15:22 WIB</b></div>
-              <div class="kv-row"><span>Akurasi Penangkap</span><b>±5 meter (Optimal)</b></div>
-              <div class="kv-row"><span>IP Server Lokal</span><b class="mono">192.168.1.45</b></div>
+            <div class="right">
+              <button class="btn btn-outline" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>Export PDF / Excel</button>
+              <button class="btn btn-primary" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Sinkronkan Log</button>
             </div>
+          </section>
 
-            <div class="kv-box">
-              <div class="kv-row"><span>Waktu Check-Out</span><b>15:30:14 WIB</b></div>
-              <div class="kv-row"><span>Zona Titik Presensi</span><b>Gedung Kelas XII</b></div>
-              <div class="kv-row"><span>Status Jam Belajar</span><b class="ok">Memenuhi Target (&gt;8 Jam)</b></div>
+          <!-- Tabel log -->
+          <div class="card table-card">
+            <div class="table-head">
+              <div>
+                <h2 class="panel-title">Riwayat Log Kehadiran Harian</h2>
+                <p class="panel-sub">Data presensi tercatat otomatis berbasis GPS dan biometric stamp</p>
+              </div>
+              <span class="chip">Riwayat Tersimpan</span>
             </div>
-
-            <div class="note-box">
-              <span class="eyebrow">Catatan Wali Kelas:</span>
-              <p>"Rizky hadir tepat waktu dan mengikuti seluruh pelajaran dengan baik."</p>
+            <div class="table-scroll">
+              <table class="log-table" id="log-table">
+                <thead><tr><th>Tanggal &amp; Hari</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Durasi</th><th>Keterangan Kehadiran</th><th>Status</th></tr></thead>
+                <tbody id="attendance-tbody">
+                  <tr><td colspan="6" style="text-align:center; padding:20px; color:#64748b;">Memuat riwayat kehadiran...</td></tr>
+                </tbody>
+              </table>
             </div>
-
-            <button class="btn btn-outline btn-block" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Unduh Lembar Bukti (PDF)</button>
+            <div class="table-foot">
+              <span id="attendance-count">Memuat riwayat presensi...</span>
+              <div class="pager">
+                <button type="button" aria-label="Sebelumnya">Sebelumnya</button>
+                <button type="button" class="active" data-page="1">1</button>
+                <button type="button" data-page="2">2</button>
+                <button type="button" data-page="3">3</button>
+                <button type="button" aria-label="Berikutnya">Berikutnya</button>
+              </div>
+            </div>
           </div>
 
+          <section class="card table-card student-leave-card" aria-labelledby="student-leave-title">
+            <div class="table-head">
+              <div>
+                <h2 class="panel-title" id="student-leave-title">Pengajuan Izin Saya</h2>
+                <p class="panel-sub">Pengajuan yang menunggu konfirmasi atau ditolak</p>
+              </div>
+              <span class="badge b-izin" id="student-leave-count">Memuat...</span>
+            </div>
+            <p class="student-leave-feedback" id="student-leave-feedback" role="status" aria-live="polite"></p>
+            <div class="table-scroll">
+              <table class="log-table student-leave-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal Pengajuan</th>
+                    <th>Jenis Izin</th>
+                    <th>Durasi</th>
+                    <th>Keterangan</th>
+                    <th class="student-leave-status-cell">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="student-leave-tbody" aria-live="polite">
+                  <tr><td colspan="5" class="student-leave-empty" style="text-align:center;">Memuat pengajuan izin...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-foot"><span id="student-leave-foot">Memuat pengajuan izin...</span></div>
+          </section>
+
+          <!-- Status Sinkronisasi GPS -->
           <div class="card sync-card">
             <div class="sync-row"><span>Status Sinkronisasi GPS:</span><span class="ok"><i class="dot"></i>Tersinkron</span></div>
           </div>
@@ -1083,64 +1967,205 @@
 </div>
 
 <!-- ============================================================
-     SCRIPT: HAMBURGER SIDEBAR + TAB FILTER + ROW SELECT
+     SCRIPT: SIDEBAR KACA + TAB FILTER + ROW SELECT
      ============================================================ -->
-<script src="/src/js/sidebar-loader.js"></script>
 <script>
 (function () {
-  // ===== Hamburger drawer =====
-  const sidebar   = document.getElementById('sidebar');
-  const overlay   = document.getElementById('sidebar-overlay');
-  const hamburger = document.getElementById('hamburger');
-  const closeBtn  = document.getElementById('sidebar-close');
+  const nav = document.querySelector('.glass-nav');
+  const indicator = document.getElementById('glass-indicator');
+  const items = nav ? Array.from(nav.querySelectorAll('.glass-nav-item')) : [];
+  const activeItem = items.find(item => item.getAttribute('aria-current') === 'page');
 
-  function openSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('show');
-    document.body.classList.add('no-scroll');
-  }
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-    document.body.classList.remove('no-scroll');
-  }
-  function toggleSidebar() {
-    if (sidebar.classList.contains('open')) closeSidebar();
-    else openSidebar();
+  if (indicator && activeItem) {
+    const positionIndicator = () => {
+      indicator.style.transform = `translate3d(-3px, ${activeItem.offsetTop - 3}px, 0)`;
+    };
+    positionIndicator();
+    window.addEventListener('resize', positionIndicator);
   }
 
-  if (sidebar && overlay && hamburger) {
-    hamburger.addEventListener('click', toggleSidebar);
-    closeBtn.addEventListener('click', closeSidebar);
-    overlay.addEventListener('click', closeSidebar);
+  const morph = document.getElementById('morph');
+  const trigger = document.getElementById('trigger');
+  const panel = document.getElementById('panel');
+  const morphDisp = document.getElementById('disp');
+  if (morph && trigger && panel) {
+    const BTN = 64, GAP = 8, PANEL_W = 212, R_CLOSED = 32, R_OPEN = 36;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const spring = x => ({ x, v: 0, target: x, k: 200, c: 20 });
+    const size = {
+      W: spring(BTN),
+      H: spring(BTN),
+      R: spring(R_CLOSED),
+      S: spring(1)
+    };
+    const TUNE_OPEN = { k: 190, c: 17 };
+    const TUNE_CLOSE = { k: 200, c: 21 };
+    const TUNE_PRESS = { k: 300, c: 22 };
+    const TUNE_BOUNCE = { k: 420, c: 13 };
+    const TUNE_REDUCED = { k: 400, c: 40 };
 
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeSidebar();
+    function tune(value, settings) {
+      const selected = reduceMotion ? TUNE_REDUCED : settings;
+      value.k = selected.k;
+      value.c = selected.c;
+    }
+
+    function integrate(value, dt) {
+      const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+      const step = dt / steps;
+      for (let i = 0; i < steps; i++) {
+        const force = value.k * (value.target - value.x) - value.c * value.v;
+        value.v += force * step;
+        value.x += value.v * step;
+      }
+    }
+
+    function isResting(value) {
+      return Math.abs(value.target - value.x) < .02 && Math.abs(value.v) < .05;
+    }
+
+    let liquid = 0;
+    let lastScale = -1;
+    function renderFrame(dt) {
+      morph.style.width = `${size.W.x}px`;
+      morph.style.height = `${size.H.x}px`;
+      morph.style.borderRadius = `${size.R.x}px`;
+      morph.style.transform = `scale(${size.S.x})`;
+
+      const speed = Math.hypot(size.W.v, size.H.v);
+      const targetLiquid = reduceMotion ? 0 : Math.min(26, speed * .011);
+      liquid = Math.max(targetLiquid, liquid * Math.pow(.88, dt * 60));
+      if (liquid < .05) liquid = 0;
+
+      if (Math.abs(liquid - lastScale) > .25) {
+        if (morphDisp) morphDisp.setAttribute('scale', liquid.toFixed(2));
+        lastScale = liquid;
+      }
+    }
+
+    let rafId = null;
+    let lastTime = 0;
+    function allSettled() {
+      return isResting(size.W) && isResting(size.H) &&
+        isResting(size.R) && isResting(size.S) && liquid === 0;
+    }
+
+    function frame(now) {
+      const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+      lastTime = now;
+      integrate(size.W, dt);
+      integrate(size.H, dt);
+      integrate(size.R, dt);
+      integrate(size.S, dt);
+      renderFrame(dt);
+      rafId = allSettled() ? null : requestAnimationFrame(frame);
+    }
+
+    function kick() {
+      if (rafId === null) {
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(frame);
+      }
+    }
+
+    let pressed = false;
+    function squashPress() {
+      tune(size.S, TUNE_PRESS);
+      size.S.target = .84;
+      kick();
+    }
+    function squashRelease() {
+      tune(size.S, TUNE_BOUNCE);
+      size.S.target = 1;
+      kick();
+    }
+
+    let isOpen = false;
+    function setOpen(value) {
+      if (value === isOpen) return;
+      isOpen = value;
+      morph.classList.toggle('open', isOpen);
+      trigger.classList.toggle('active', isOpen);
+      trigger.setAttribute('aria-expanded', String(isOpen));
+
+      const settings = isOpen ? TUNE_OPEN : TUNE_CLOSE;
+      tune(size.W, settings);
+      tune(size.H, settings);
+      tune(size.R, settings);
+      size.W.target = isOpen ? PANEL_W : BTN;
+      size.H.target = isOpen ? BTN + GAP + panel.offsetHeight : BTN;
+      size.R.target = isOpen ? R_OPEN : R_CLOSED;
+      squashRelease();
+      kick();
+    }
+
+    function setActiveItem(item) {
+      panel.querySelectorAll('.menu-item').forEach(menuItem => {
+        menuItem.classList.remove('active');
+        menuItem.removeAttribute('aria-current');
+      });
+      item.classList.add('active');
+      item.setAttribute('aria-current', 'page');
+    }
+
+    trigger.addEventListener('pointerdown', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      pressed = true;
+      squashPress();
+    });
+    const releasePress = () => {
+      if (!pressed) return;
+      pressed = false;
+      squashRelease();
+    };
+    trigger.addEventListener('pointerup', releasePress);
+    trigger.addEventListener('pointerleave', releasePress);
+    trigger.addEventListener('pointercancel', releasePress);
+    trigger.addEventListener('click', event => {
+      event.stopPropagation();
+      if (event.detail === 0) {
+        size.S.x = .9;
+        size.S.v = 0;
+        squashRelease();
+      }
+      setOpen(!isOpen);
     });
 
-    sidebar.querySelectorAll('.nav a').forEach(function (link) {
-      link.addEventListener('click', function () {
-        if (window.matchMedia('(max-width: 640px)').matches) closeSidebar();
+    document.addEventListener('click', event => {
+      if (isOpen && !morph.contains(event.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') setOpen(false);
+    });
+
+    panel.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        setActiveItem(item);
+        setOpen(false);
       });
     });
-
-    window.addEventListener('resize', function () {
-      if (window.innerWidth > 640) closeSidebar();
+    window.addEventListener('resize', () => {
+      if (isOpen) {
+        size.H.target = BTN + GAP + panel.offsetHeight;
+        kick();
+      }
     });
+    renderFrame(0);
+
   }
 
   // ===== Tab filter status =====
   const tabWrap = document.getElementById('tab-status');
-  const rows = document.querySelectorAll('#log-table tbody tr');
+  const attendanceTbody = document.getElementById('attendance-tbody');
 
   function applyFilter(filter) {
-    rows.forEach(function (row) {
+    attendanceTbody.querySelectorAll('tr[data-status]').forEach(function (row) {
       const st = row.getAttribute('data-status');
-      let show = true;
-      if (filter !== 'all') show = (st === filter);
+      const show = filter === 'all' || st === filter;
       row.style.display = show ? '' : 'none';
     });
   }
+  window.filterStudentAttendance = applyFilter;
 
   if (tabWrap) {
     tabWrap.addEventListener('click', function (e) {
@@ -1152,20 +2177,657 @@
     });
   }
 
-  // ===== Row select =====
-  rows.forEach(function (row) {
-    row.addEventListener('click', function () {
-      rows.forEach(r => r.classList.remove('selected'));
-      row.classList.add('selected');
-      const dayCell = row.querySelector('.day');
-      const insDate = document.getElementById('ins-date');
-      if (dayCell && insDate) insDate.textContent = dayCell.textContent;
-    });
+  attendanceTbody.addEventListener('click', event => {
+    const row = event.target.closest('tr[data-status]');
+    if (!row) return;
+    attendanceTbody.querySelectorAll('tr.selected').forEach(item => item.classList.remove('selected'));
+    row.classList.add('selected');
   });
 })();
 </script>
 
+<script src="/public/components/student/greeting.js"></script>
+<script>
+// Initialize Greeting Component
+document.addEventListener('DOMContentLoaded', function() {
+  // Data siswa - dapat diambil dari session/API
+  const studentData = {
+    name: sessionStorage.getItem('student_name') || 'Rizky Pratama'
+  };
+
+  // Inisialisasi greeting component
+  if (window.StudentGreeting) {
+    StudentGreeting.init(studentData);
+  }
+
+  // Liquid pulse effect untuk tombol ajukan izin
+  const btnDisp = document.getElementById('btn-disp');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function liquidPulse(duration = 600, peak = 14) {
+    if (reduceMotion || !btnDisp) return;
+    const start = performance.now();
+    function frame(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = Math.sin(p * Math.PI) * (1 - p * 0.4);
+      btnDisp.setAttribute('scale', (eased * peak).toFixed(2));
+      if (p < 1) requestAnimationFrame(frame);
+      else btnDisp.setAttribute('scale', '0');
+    }
+    requestAnimationFrame(frame);
+  }
+
+  const ajukanBtn = document.getElementById('btn-ajukan-izin');
+  if (ajukanBtn) {
+    ajukanBtn.addEventListener('click', function() {
+      liquidPulse();
+    });
+  }
+});
+</script>
+
 <script src="/src/js/script-siswa.js"></script>
+<script src="/src/js/student-logout.js"></script>
+
+<!-- Popup form ajukan izin -->
+<div class="fi-overlay" id="fi-overlay" aria-hidden="true">
+  <form class="fi-dialog" id="fi-form" role="dialog" aria-modal="true" aria-labelledby="fi-title" novalidate>
+    <div class="fi-head">
+      <h2 id="fi-title">Ajukan Izin</h2>
+      <p>Isi jenis izin, durasi, dan lampirkan bukti jika ada.</p>
+    </div>
+
+    <div class="fi-field">
+      <span class="fi-label" id="fi-type-label">Jenis Izin</span>
+      <div class="fi-chips" role="radiogroup" aria-labelledby="fi-type-label">
+        <label class="fi-chip"><input type="radio" name="jenis" value="Sakit" required><span>Sakit</span></label>
+        <label class="fi-chip"><input type="radio" name="jenis" value="Keperluan"><span>Ada Keperluan</span></label>
+        <label class="fi-chip"><input type="radio" name="jenis" value="Dispensasi"><span>Dispensasi</span></label>
+        <label class="fi-chip"><input type="radio" name="jenis" value="Lainnya" id="jenis-lainnya"><span>Lainnya</span></label>
+      </div>
+      <div class="fi-error" id="err-jenis">Pilih salah satu jenis izin.</div>
+    </div>
+
+    <div class="fi-field fi-hidden" id="field-lainnya">
+      <label class="fi-label" for="jenis-custom">Tulis Jenis Izin</label>
+      <input class="fi-input" id="jenis-custom" type="text" maxlength="60" placeholder="Contoh: Mengikuti lomba">
+      <div class="fi-error" id="err-custom">Jenis izin wajib diisi.</div>
+    </div>
+
+    <div class="fi-field">
+      <span class="fi-label">Durasi Izin</span>
+      <div class="fi-row">
+        <div>
+          <label class="fi-label" style="margin-bottom:6px" for="tgl-mulai">Mulai</label>
+          <input class="fi-date" id="tgl-mulai" type="date" required>
+        </div>
+        <div>
+          <label class="fi-label" style="margin-bottom:6px" for="tgl-selesai">Selesai</label>
+          <input class="fi-date" id="tgl-selesai" type="date" required>
+        </div>
+      </div>
+      <div class="fi-field fi-hidden" id="field-dispensasi-same-day" style="margin:12px 0 0;">
+        <label class="fi-chip" for="dispensasi-same-day">
+          <input type="checkbox" id="dispensasi-same-day">
+          <span>Selesai di hari yang sama</span>
+        </label>
+        <div class="fi-field fi-hidden" id="field-dispensasi-minutes" style="margin:12px 0 0;">
+          <label class="fi-label" for="dispensasi-minutes">Durasi Dispensasi (menit)</label>
+          <input class="fi-input" id="dispensasi-minutes" type="number" min="1" max="1440" step="1" inputmode="numeric" placeholder="Contoh: 120">
+          <div class="fi-error" id="err-dispensasi-minutes">Masukkan durasi antara 1 sampai 1440 menit.</div>
+        </div>
+      </div>
+      <small class="fi-hint" id="hint-durasi">Maksimal 90 hari untuk pengajuan berdasarkan rentang tanggal.</small>
+      <div class="fi-error" id="err-durasi"></div>
+    </div>
+
+    <div class="fi-field">
+      <label class="fi-label" for="alasan">Keterangan</label>
+      <textarea class="fi-textarea" id="alasan" maxlength="300" placeholder="Tulis alasan izin secara singkat" required></textarea>
+      <div class="fi-error" id="err-reason">Keterangan wajib diisi.</div>
+    </div>
+
+    <div class="fi-field">
+      <span class="fi-label">Foto Bukti</span>
+      <label class="fi-upload">
+        <input type="file" id="bukti" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+        <span class="fi-thumb" id="thumb" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>
+        </span>
+        <span class="fi-upload-text" id="upload-text">
+          Pilih foto bukti
+          <small>JPG atau PNG, maksimal 2 MB (opsional)</small>
+        </span>
+      </label>
+      <div class="fi-error" id="err-bukti">Gunakan foto JPG atau PNG maksimal 2 MB.</div>
+    </div>
+
+    <p class="fi-submit-message" id="fi-submit-message" role="status" aria-live="polite"></p>
+    <div class="fi-actions">
+      <button class="fi-btn fi-btn--cancel" type="button" id="fi-cancel">Batal</button>
+      <button class="fi-btn fi-btn--submit" type="submit" id="fi-submit">Kirim</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const overlay = document.getElementById('fi-overlay');
+  const form = document.getElementById('fi-form');
+  const openBtn = document.getElementById('btn-ajukan-izin');
+  const cancelBtn = document.getElementById('fi-cancel');
+  const fieldLainnya = document.getElementById('field-lainnya');
+  const customInput = document.getElementById('jenis-custom');
+  const mulai = document.getElementById('tgl-mulai');
+  const selesai = document.getElementById('tgl-selesai');
+  const sameDayField = document.getElementById('field-dispensasi-same-day');
+  const sameDayCheckbox = document.getElementById('dispensasi-same-day');
+  const minutesField = document.getElementById('field-dispensasi-minutes');
+  const minutesInput = document.getElementById('dispensasi-minutes');
+  const durationHint = document.getElementById('hint-durasi');
+  const bukti = document.getElementById('bukti');
+  const thumb = document.getElementById('thumb');
+  const uploadText = document.getElementById('upload-text');
+  const reasonInput = document.getElementById('alasan');
+  const submitButton = document.getElementById('fi-submit');
+  const submitMessage = document.getElementById('fi-submit-message');
+  const leaveTbody = document.getElementById('student-leave-tbody');
+  const leaveCount = document.getElementById('student-leave-count');
+  const leaveFoot = document.getElementById('student-leave-foot');
+  const attendanceTbody = document.getElementById('attendance-tbody');
+  const attendanceCount = document.getElementById('attendance-count');
+  const leaveFeedback = document.getElementById('student-leave-feedback');
+  let previewUrl = null;
+  let isSubmitting = false;
+  let lastFocus = null;
+
+  function openForm(trigger) {
+    lastFocus = trigger || document.activeElement;
+    if (overlay) {
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => {
+        const firstRadio = form ? form.querySelector('input[name="jenis"]') : null;
+        if (firstRadio) firstRadio.focus({ preventScroll: true });
+      });
+    }
+  }
+
+  function closeForm() {
+    if (!overlay || !overlay.classList.contains('show')) return;
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden', 'true');
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus({ preventScroll: true });
+  }
+
+  function resetForm() {
+    if (form) form.reset();
+    if (fieldLainnya) fieldLainnya.classList.add('fi-hidden');
+    if (sameDayField) sameDayField.classList.add('fi-hidden');
+    if (minutesField) minutesField.classList.add('fi-hidden');
+    if (durationHint) durationHint.textContent = 'Maksimal 90 hari untuk pengajuan berdasarkan rentang tanggal.';
+    if (selesai) selesai.disabled = false;
+    if (thumb) thumb.style.backgroundImage = '';
+    if (thumb) thumb.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>';
+    if (uploadText) uploadText.innerHTML = 'Pilih foto bukti<small>JPG atau PNG, maksimal 2 MB (opsional)</small>';
+    if (form) form.querySelectorAll('.fi-error').forEach(el => el.classList.remove('show'));
+    if (submitMessage) {
+      submitMessage.textContent = '';
+      submitMessage.className = 'fi-submit-message';
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+  }
+
+  function updateLeaveTypeFields() {
+    const selectedType = form && form.querySelector('input[name="jenis"]:checked');
+    const isDispensation = selectedType && selectedType.value === 'Dispensasi';
+    const isOther = selectedType && selectedType.value === 'Lainnya';
+    const sameDayDispensation = isDispensation && sameDayCheckbox?.checked;
+    if (fieldLainnya) fieldLainnya.classList.toggle('fi-hidden', !isOther);
+    if (sameDayField) sameDayField.classList.toggle('fi-hidden', !isDispensation);
+    if (durationHint) {
+      durationHint.textContent = sameDayDispensation
+        ? 'Pilih tanggal mulai; durasi dispensasi dihitung dalam menit (maksimal 1440).'
+        : 'Maksimal 90 hari untuk pengajuan berdasarkan rentang tanggal.';
+    }
+    if (!isDispensation) {
+      if (sameDayCheckbox) sameDayCheckbox.checked = false;
+      if (minutesField) minutesField.classList.add('fi-hidden');
+      if (selesai) selesai.disabled = false;
+    }
+    if (isDispensation && sameDayCheckbox?.checked) {
+      if (minutesField) minutesField.classList.remove('fi-hidden');
+      if (selesai) {
+        selesai.value = mulai.value;
+        selesai.disabled = true;
+      }
+    }
+  }
+
+  if (form) {
+    form.querySelectorAll('input[name="jenis"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        updateLeaveTypeFields();
+        const errJenis = document.getElementById('err-jenis');
+        if (errJenis) errJenis.classList.remove('show');
+        if (radio.value === 'Lainnya' && radio.checked && customInput) customInput.focus({ preventScroll: true });
+      });
+    });
+  }
+  if (sameDayCheckbox) {
+    sameDayCheckbox.addEventListener('change', () => {
+      const active = sameDayCheckbox.checked;
+      if (minutesField) minutesField.classList.toggle('fi-hidden', !active);
+      updateLeaveTypeFields();
+      if (selesai) {
+        selesai.disabled = active;
+        if (active) selesai.value = mulai.value;
+      }
+      if (!active && minutesInput) minutesInput.value = '';
+    });
+  }
+  if (mulai) {
+    mulai.addEventListener('change', () => {
+      if (sameDayCheckbox?.checked && selesai) selesai.value = mulai.value;
+    });
+  }
+
+  // Pratinjau foto dan validasi ukuran
+  if (bukti) {
+    bukti.addEventListener('change', () => {
+      const file = bukti.files[0];
+      const err = document.getElementById('err-bukti');
+      if (err) err.classList.remove('show');
+      if (!file) return;
+      if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        if (err) err.classList.add('show');
+        bukti.value = '';
+        return;
+      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      if (thumb) thumb.style.backgroundImage = `url("${previewUrl}")`;
+      if (thumb) thumb.innerHTML = '';
+      if (uploadText) uploadText.innerHTML = `${file.name.replace(/[<>&]/g, '')}<small>Ketuk untuk mengganti foto</small>`;
+    });
+  }
+
+  function validate() {
+    let ok = true;
+    const jenis = form ? form.querySelector('input[name="jenis"]:checked') : null;
+    const errJenis = document.getElementById('err-jenis');
+    const errCustom = document.getElementById('err-custom');
+    const errDurasi = document.getElementById('err-durasi');
+    const errReason = document.getElementById('err-reason');
+
+    if (errJenis) errJenis.classList.toggle('show', !jenis);
+    if (!jenis) ok = false;
+
+    const needCustom = jenis && jenis.value === 'Lainnya';
+    const customEmpty = needCustom && customInput && customInput.value.trim() === '';
+    if (errCustom) errCustom.classList.toggle('show', customEmpty);
+    if (customEmpty) ok = false;
+
+    const sameDayDispensation = jenis?.value === 'Dispensasi' && sameDayCheckbox?.checked;
+    const startDate = mulai?.value || '';
+    const endDate = sameDayDispensation ? startDate : (selesai?.value || '');
+    const dateMissing = sameDayDispensation ? !startDate : (!startDate || !endDate);
+    const durationDays = !dateMissing
+      ? (Date.parse(`${endDate}T00:00:00.000Z`) - Date.parse(`${startDate}T00:00:00.000Z`)) / 86400000 + 1
+      : 0;
+    const dateRangeReversed = !dateMissing && endDate < startDate;
+    const dateRangeTooLong = !sameDayDispensation && !dateMissing && durationDays > 90;
+    const durasiSalah = dateMissing || dateRangeReversed || dateRangeTooLong;
+    if (errDurasi) {
+      errDurasi.textContent = sameDayDispensation
+        ? 'Pilih tanggal mulai untuk dispensasi.'
+        : dateMissing
+          ? 'Tanggal mulai dan selesai wajib diisi.'
+          : dateRangeReversed
+            ? 'Tanggal selesai tidak boleh sebelum tanggal mulai.'
+            : 'Durasi pengajuan tanggal maksimal 90 hari.';
+    }
+    if (errDurasi) errDurasi.classList.toggle('show', durasiSalah);
+    if (durasiSalah) ok = false;
+
+    const durationMinutes = Number(minutesInput?.value);
+    const minutesInvalid = Boolean(sameDayDispensation) &&
+      (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440);
+    const minutesError = document.getElementById('err-dispensasi-minutes');
+    if (minutesError) minutesError.classList.toggle('show', minutesInvalid);
+    if (minutesInvalid) ok = false;
+
+    const reasonInvalid = !reasonInput || !reasonInput.value.trim();
+    if (errReason) errReason.classList.toggle('show', reasonInvalid);
+    if (reasonInvalid) ok = false;
+
+    return ok;
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener('click', e => {
+      openForm(e.currentTarget);
+    });
+  }
+  if (cancelBtn) cancelBtn.addEventListener('click', closeForm);
+  if (overlay) {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeForm();
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!overlay || !overlay.classList.contains('show')) return;
+    if (e.key === 'Escape') closeForm();
+  });
+
+  if (form) {
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (isSubmitting || !validate()) return;
+
+      const jenisEl = form.querySelector('input[name="jenis"]:checked');
+      const jenis = jenisEl && jenisEl.value === 'Lainnya' ? (customInput ? customInput.value.trim() : '') : (jenisEl ? jenisEl.value : '');
+      const file = bukti && bukti.files[0];
+
+      isSubmitting = true;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Mengirim...';
+      if (submitMessage) {
+        submitMessage.textContent = '';
+        submitMessage.className = 'fi-submit-message';
+      }
+
+      try {
+        let proof = null;
+        if (file) {
+          proof = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Foto bukti gagal dibaca.'));
+            reader.readAsDataURL(file);
+          });
+        }
+
+        const response = await fetch('/api/izin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: jenis,
+            startDate: mulai.value,
+            endDate: sameDayCheckbox?.checked && jenis === 'Dispensasi' ? mulai.value : selesai.value,
+            reason: reasonInput.value.trim(),
+            sameDay: sameDayCheckbox?.checked && jenis === 'Dispensasi',
+            durationMinutes: sameDayCheckbox?.checked && jenis === 'Dispensasi' ? Number(minutesInput.value) : null,
+            proof
+          })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Pengajuan izin gagal dikirim.');
+        }
+
+        if (leaveFeedback) {
+          leaveFeedback.textContent = result.message;
+          leaveFeedback.className = 'student-leave-feedback show success';
+        }
+        closeForm();
+        resetForm();
+        await Promise.all([loadMyLeaveApplications(), loadMyAttendance()]);
+      } catch (error) {
+        if (submitMessage) {
+          submitMessage.textContent = error.message || 'Gagal terhubung ke server.';
+          submitMessage.className = 'fi-submit-message show error';
+        }
+      } finally {
+        isSubmitting = false;
+        submitButton.disabled = false;
+        submitButton.textContent = 'Kirim';
+      }
+    });
+  }
+
+  function formatLeaveDate(value) {
+    if (!value) return '-';
+    const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? String(value || '-')
+      : date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function formatAttendanceDate(value) {
+    if (!value) return '-';
+    const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleDateString('id-ID', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+  }
+
+  function showTableMessage(tbody, columns, message, isError = false) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = columns;
+    cell.style.textAlign = 'center';
+    cell.style.padding = '20px';
+    cell.style.color = isError ? '#b91c1c' : '#64748b';
+    cell.textContent = message;
+    row.appendChild(cell);
+    tbody.replaceChildren(row);
+  }
+
+  function formatAttendanceTime(value) {
+    if (!value || value === '-') return '-';
+    const time = String(value);
+    if (/WIB$/i.test(time)) return time;
+    const match = time.match(/^(\d{1,2}:\d{2})/);
+    return match ? `${match[1]} WIB` : time;
+  }
+
+  function parseLeaveAttendance(note) {
+    const match = String(note || '').match(
+      /^(.+?) \((\d+) hari, (\d{4}-\d{2}-\d{2}) s\.d\. (\d{4}-\d{2}-\d{2})\):\s*(.*)$/i
+    );
+    return match
+      ? { type: match[1], days: Number(match[2]), startDate: match[3], endDate: match[4], reason: match[5] }
+      : null;
+  }
+
+  function parseDispensationAttendance(note) {
+    const match = String(note || '').match(
+      /^Dispensasi \| durasi: (\d+) menit \| mulai: ([^|]+) \| target: ([^|]+)(?: \| kembali: ([^|]+) \| aktual: (\d+) menit)?/
+    );
+    return match
+      ? {
+          requestedMinutes: Number(match[1]),
+          startedAt: match[2].trim(),
+          targetEndAt: match[3].trim(),
+          returnedAt: match[4]?.trim() || null,
+          actualMinutes: match[5] ? Number(match[5]) : null
+        }
+      : null;
+  }
+
+  function formatDuration(record, leave) {
+    if (leave) return `${leave.days} hari`;
+    const dispensation = parseDispensationAttendance(record.note);
+    if (dispensation) {
+      return dispensation.actualMinutes === null
+        ? `${dispensation.requestedMinutes} menit`
+        : `${dispensation.actualMinutes} menit aktual`;
+    }
+    if (record.durasi && record.durasi !== '-') return record.durasi;
+    if (!record.check_in || !record.check_out || record.check_in === '-' || record.check_out === '-') return '-';
+    const toMinutes = value => {
+      const [hours, minutes] = String(value).split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    const duration = toMinutes(record.check_out) - toMinutes(record.check_in);
+    if (!Number.isFinite(duration) || duration < 0) return '-';
+    return `${String(Math.floor(duration / 60)).padStart(2, '0')}j ${String(duration % 60).padStart(2, '0')}m`;
+  }
+
+  function renderAttendance(records) {
+    attendanceTbody.replaceChildren();
+    const activeFilter = document.querySelector('#tab-status button.active')?.dataset.filter || 'all';
+    if (!records.length) {
+      showTableMessage(attendanceTbody, 6, 'Belum ada riwayat kehadiran.');
+      attendanceCount.textContent = 'Belum ada catatan presensi.';
+      document.querySelectorAll('#tab-status button[data-filter]').forEach(button => {
+        const label = button.dataset.filter === 'all' ? 'Semua' : button.dataset.filter === 'late' ? 'Terlambat' : button.dataset.filter === 'izin' ? 'Izin' : 'Hadir';
+        button.textContent = `${label} (0)`;
+      });
+      return;
+    }
+
+    records.forEach(record => {
+      const status = String(record.status || '').toLowerCase();
+      const leave = ['izin', 'sakit'].includes(status) ? parseLeaveAttendance(record.note) : null;
+      const dispensation = parseDispensationAttendance(record.note);
+      const activeDispensation = status === 'dispensasi';
+      const label = leave?.type || ({ hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat', late: 'Terlambat' }[status] || status || '-');
+      const isLeave = ['izin', 'sakit'].includes(status);
+      const row = document.createElement('tr');
+      row.dataset.status = status === 'sakit' ? 'izin' : (status === 'terlambat' ? 'late' : status);
+
+      const dateCell = document.createElement('td');
+      dateCell.className = 'day';
+      dateCell.textContent = formatAttendanceDate(record.date);
+      row.appendChild(dateCell);
+
+      const checkInCell = document.createElement('td');
+      const checkIn = document.createElement('span');
+      checkIn.className = isLeave || activeDispensation ? 't-none' : 't-ok';
+      checkIn.textContent = isLeave || activeDispensation ? '-' : formatAttendanceTime(record.check_in);
+      checkInCell.appendChild(checkIn);
+      row.appendChild(checkInCell);
+
+      const checkOutCell = document.createElement('td');
+      checkOutCell.textContent = isLeave || activeDispensation ? '-' : formatAttendanceTime(record.check_out);
+      row.appendChild(checkOutCell);
+
+      const durationCell = document.createElement('td');
+      durationCell.textContent = formatDuration(record, leave);
+      row.appendChild(durationCell);
+
+      const noteCell = document.createElement('td');
+      noteCell.textContent = leave
+        ? `${leave.type}: ${leave.reason || '-'} (${formatLeaveDate(leave.startDate)} - ${formatLeaveDate(leave.endDate)})`
+        : dispensation
+          ? `${label}: ${dispensation.startedAt} - ${dispensation.returnedAt || `target ${dispensation.targetEndAt}`}${dispensation.actualMinutes === null ? '' : `; aktual ${dispensation.actualMinutes} menit`}`
+          : (record.note || (status === 'hadir' ? 'Presensi tercatat' : '-'));
+      row.appendChild(noteCell);
+
+      const statusCell = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = `badge ${status === 'izin' || status === 'sakit' || status === 'dispensasi' ? 'b-izin' : status === 'alfa' ? 'b-alfa' : status === 'terlambat' || status === 'late' ? 'b-late' : 'b-hadir'}`;
+      badge.textContent = label;
+      statusCell.appendChild(badge);
+      row.appendChild(statusCell);
+      attendanceTbody.appendChild(row);
+    });
+
+    const rows = Array.from(attendanceTbody.querySelectorAll('tr[data-status]'));
+    const counts = {
+      all: rows.length,
+      hadir: rows.filter(row => row.dataset.status === 'hadir').length,
+      izin: rows.filter(row => row.dataset.status === 'izin').length,
+      late: rows.filter(row => row.dataset.status === 'late').length
+    };
+    document.querySelectorAll('#tab-status button[data-filter]').forEach(button => {
+      const filter = button.dataset.filter;
+      const label = filter === 'all' ? 'Semua' : filter === 'late' ? 'Terlambat' : filter === 'izin' ? 'Izin' : 'Hadir';
+      button.textContent = `${label} (${counts[filter] || 0})`;
+    });
+    if (window.filterStudentAttendance) window.filterStudentAttendance(activeFilter);
+    attendanceCount.textContent = `Menampilkan ${records.length} catatan presensi`;
+  }
+
+  async function loadMyAttendance() {
+    try {
+      const response = await fetch('/api/absensi');
+      const result = await response.json();
+      if (!response.ok || !result.success || !Array.isArray(result.data)) {
+        throw new Error(result.message || 'Gagal memuat riwayat kehadiran.');
+      }
+      renderAttendance(result.data);
+    } catch (error) {
+      showTableMessage(attendanceTbody, 6, error.message || 'Gagal memuat riwayat kehadiran.', true);
+      attendanceCount.textContent = 'Riwayat kehadiran tidak dapat dimuat.';
+    }
+  }
+
+  function renderMyLeaveApplications(applications) {
+    leaveTbody.replaceChildren();
+    const visibleApplications = applications.filter(application => application.status !== 'Disetujui');
+    leaveCount.textContent = `${visibleApplications.length} Pengajuan`;
+    leaveFoot.textContent = `Menampilkan ${visibleApplications.length} pengajuan izin`;
+    if (!visibleApplications.length) {
+      showTableMessage(leaveTbody, 5, 'Belum ada pengajuan yang menunggu konfirmasi atau ditolak.');
+      return;
+    }
+
+    visibleApplications.forEach(application => {
+      const row = document.createElement('tr');
+      const submissionDate = application.created_at
+        ? new Date(application.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '-';
+      const startTime = Date.parse(`${String(application.start_date || '').slice(0, 10)}T00:00:00.000Z`);
+      const endTime = Date.parse(`${String(application.end_date || '').slice(0, 10)}T00:00:00.000Z`);
+      const durationDays = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime >= startTime
+        ? Math.floor((endTime - startTime) / 86400000) + 1
+        : 0;
+      const status = application.status || 'Menunggu';
+      const sameDayDispensation = application.same_day && String(application.type).toLowerCase() === 'dispensasi';
+      const values = [
+        submissionDate,
+        application.type || 'Izin',
+        sameDayDispensation
+          ? `${application.duration_minutes} menit (${formatLeaveDate(application.start_date)})`
+          : `${durationDays ? `${durationDays} hari` : '-'} (${formatLeaveDate(application.start_date)} - ${formatLeaveDate(application.end_date)})`,
+        [application.reason, application.review_note ? `Catatan sekolah: ${application.review_note}` : ''].filter(Boolean).join(' — ') || '-'
+      ];
+      values.forEach(value => {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+
+      const statusCell = document.createElement('td');
+      statusCell.className = 'student-leave-status-cell';
+      const badge = document.createElement('span');
+      badge.className = `student-leave-status ${status === 'Ditolak' ? 'rejected' : status === 'Disetujui - Menunggu Tap' ? 'approved' : 'pending'}`;
+      badge.textContent = status === 'Menunggu' ? 'Menunggu Konfirmasi' : status;
+      statusCell.appendChild(badge);
+      row.appendChild(statusCell);
+      leaveTbody.appendChild(row);
+    });
+  }
+
+  async function loadMyLeaveApplications() {
+    try {
+      const response = await fetch('/api/izin');
+      const result = await response.json();
+      if (!response.ok || !result.success || !Array.isArray(result.data)) {
+        throw new Error(result.message || 'Gagal memuat status pengajuan izin.');
+      }
+      renderMyLeaveApplications(result.data);
+    } catch (error) {
+      showTableMessage(leaveTbody, 5, error.message || 'Gagal memuat pengajuan izin.', true);
+      leaveCount.textContent = 'Gagal memuat';
+      leaveFoot.textContent = 'Daftar pengajuan izin tidak dapat dimuat.';
+    }
+  }
+
+  loadMyAttendance();
+  loadMyLeaveApplications();
+});
+</script>
 
 </body>
 </html>

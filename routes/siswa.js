@@ -3,6 +3,7 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+let dispensasiSchemaWarningLogged = false;
 
 function normalizeRfidUid(value) {
   if (value === undefined || value === null || String(value).trim() === '') return null;
@@ -17,6 +18,9 @@ function normalizeRfidUid(value) {
 
 // GET /api/siswa
 router.get('/', authenticate, async (req, res) => {
+  if (!['admin', 'guru'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Akses data siswa hanya untuk guru dan admin.' });
+  }
   try {
     const list = await db.getSiswa(req.query);
     res.json({ success: true, count: list.length, data: list });
@@ -215,8 +219,22 @@ function getUtcTime(dateStr) {
 // GET /api/siswa/tracker (Status tracker aktif siswa)
 router.get('/tracker', authenticate, async (req, res) => {
   try {
-    const nis = req.user.nis || '0089211478';
+    const nis = req.user.nis;
+    if (!nis) {
+      return res.status(403).json({ success: false, message: 'Akun belum terhubung dengan NIS siswa.' });
+    }
     const active = await db.getActiveStudentTracker(nis);
+    let dispensation = null;
+    try {
+      dispensation = await db.getActiveDispensation(nis);
+      dispensasiSchemaWarningLogged = false;
+    } catch (error) {
+      if (!['42703', 'PGRST204'].includes(error.code)) throw error;
+      if (!dispensasiSchemaWarningLogged) {
+        console.warn('Kolom dispensasi belum tersedia; timer reguler tetap berjalan. Jalankan migrasi 2026110707.');
+        dispensasiSchemaWarningLogged = true;
+      }
+    }
     if (active) {
       const startTime = getUtcTime(active.durasi && /^\d{12,14}$/.test(active.durasi) ? active.durasi : active.created_at);
       const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
@@ -225,10 +243,11 @@ router.get('/tracker', authenticate, async (req, res) => {
         isRunning: true,
         startTime,
         elapsedSeconds,
+        dispensation,
         log: active
       });
     }
-    res.json({ success: true, isRunning: false });
+    res.json({ success: true, isRunning: false, dispensation });
   } catch (err) {
     console.error('getTracker error:', err);
     res.status(500).json({ success: false, message: 'Gagal memuat status tracker.' });
@@ -345,7 +364,7 @@ router.post('/absen-masuk', authenticate, async (req, res) => {
     const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     // Cek jika log hari ini sudah ada
-    const existing = await db.findStudentLogByNisAndDate(nis, String(now.getDate()));
+    const existing = await db.findStudentLogByNisAndDate(nis, dateStr);
 
     let log;
     if (existing) {

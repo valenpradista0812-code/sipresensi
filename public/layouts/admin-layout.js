@@ -12,6 +12,13 @@ const AdminLayout = {
       userInfo = {},
       content = ''
     } = options;
+    const safeCurrentPage = String(currentPage).replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[character]));
 
     return `
 <!DOCTYPE html>
@@ -25,9 +32,9 @@ const AdminLayout = {
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/styles/shared.css">
 </head>
-<body>
+<body class="admin">
 <div class="app">
-  ${AdminSidebar.render(currentPage)}
+  <div id="sidebar-container" data-current-page="${safeCurrentPage}"></div>
   
   <div class="main">
     ${AdminTopbar.render(pageTitle, userInfo)}
@@ -38,7 +45,7 @@ const AdminLayout = {
   </div>
 </div>
 
-<script src="/public/components/admin/sidebar.js"></script>
+<script src="/src/js/sidebar-loader.js"></script>
 <script src="/public/components/admin/topbar.js"></script>
 <script src="/public/components/shared/toast.js"></script>
 <script src="/public/components/shared/utils.js"></script>
