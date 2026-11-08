@@ -986,7 +986,7 @@
 
     .log-table {
       width: 100%;
-      min-width: 720px;
+      min-width: 900px;
       border-collapse: collapse;
       font-size: 12px;
     }
@@ -1355,7 +1355,7 @@
          border: none;
          border-radius: 0;
        }
-       .log-table { min-width: 680px; font-size: 11px; }
+       .log-table { min-width: 900px; font-size: 11px; }
        .log-table thead th { padding: 8px 10px; font-size: 11px; }
        .log-table tbody td { padding: 10px; }
 
@@ -1754,6 +1754,33 @@
     .fi-submit-message.show { display: block; }
     .fi-submit-message.error { color: #b91c1c; }
     .fi-submit-message.success { color: #047857; }
+    .attendance-detail-cell { min-width: 220px; max-width: 320px; font-size: 11px; line-height: 1.5; }
+    .attendance-detail-summary + .attendance-detail-summary { display: block; margin-top: 4px; }
+    .attendance-detail-action { width: 64px; text-align: center !important; }
+    .attendance-detail-button { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; padding: 0; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; color: #2563eb; cursor: pointer; }
+    .attendance-detail-button:hover { background: #eff6ff; border-color: #93c5fd; }
+    .attendance-detail-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .attendance-detail-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15,23,42,.55); }
+    .attendance-detail-overlay.is-open { display: flex; }
+    .attendance-detail-dialog { width: min(100%, 560px); max-height: min(90vh, 760px); overflow-y: auto; padding: 22px; border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; box-shadow: 0 24px 70px rgba(15,23,42,.24); }
+    .attendance-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .attendance-detail-heading h2 { margin: 0; color: #0f1e3d; font-size: 18px; }
+    .attendance-detail-close { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 9px; background: #f1f5f9; color: #475569; font-size: 22px; cursor: pointer; }
+    .attendance-detail-entry + .attendance-detail-entry { margin-top: 12px; }
+    .attendance-detail-entry { padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+    .attendance-detail-entry h3 { margin: 0 0 10px; color: #1e293b; font-size: 14px; }
+    .attendance-detail-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .attendance-detail-value { min-width: 0; overflow-wrap: anywhere; color: #0f172a; font-size: 12px; }
+    .attendance-detail-value b { display: block; margin-bottom: 3px; color: #64748b; font-size: 10px; text-transform: uppercase; }
+    .attendance-detail-proof { margin-top: 12px; }
+    .attendance-detail-proof-label { display: block; margin-bottom: 6px; color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .attendance-detail-proof-content { display: flex; min-height: 72px; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #cbd5e1; border-radius: 10px; background: #fff; color: #64748b; font-size: 12px; text-align: center; }
+    .attendance-detail-proof-content img { display: block; width: 100%; max-height: 320px; object-fit: contain; }
+    @media (max-width: 640px) {
+      .attendance-detail-overlay { padding: 12px; }
+      .attendance-detail-dialog { padding: 16px; border-radius: 14px; }
+      .attendance-detail-values { grid-template-columns: 1fr; gap: 8px; }
+    }
   </style>
 </head>
 <body class="siswa">
@@ -1908,9 +1935,9 @@
             </div>
             <div class="table-scroll">
               <table class="log-table" id="log-table">
-                <thead><tr><th>Tanggal &amp; Hari</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Durasi</th><th>Keterangan Kehadiran</th><th>Status</th></tr></thead>
+                <thead><tr><th>Tanggal &amp; Hari</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Durasi</th><th>Keterangan Kehadiran</th><th>Status</th><th>Detail</th><th>Aksi</th></tr></thead>
                 <tbody id="attendance-tbody">
-                  <tr><td colspan="6" style="text-align:center; padding:20px; color:#64748b;">Memuat riwayat kehadiran...</td></tr>
+                  <tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Memuat riwayat kehadiran...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1964,6 +1991,16 @@
     </main>
   </div>
 
+</div>
+
+<div class="attendance-detail-overlay" id="attendance-detail-overlay" aria-hidden="true">
+  <section class="attendance-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title" tabindex="-1">
+    <div class="attendance-detail-heading">
+      <h2 id="attendance-detail-title">Detail Kehadiran</h2>
+      <button class="attendance-detail-close" type="button" aria-label="Tutup detail">&times;</button>
+    </div>
+    <div id="attendance-detail-list"></div>
+  </section>
 </div>
 
 <!-- ============================================================
@@ -2337,9 +2374,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const attendanceTbody = document.getElementById('attendance-tbody');
   const attendanceCount = document.getElementById('attendance-count');
   const leaveFeedback = document.getElementById('student-leave-feedback');
+  const attendanceDetailOverlay = document.getElementById('attendance-detail-overlay');
+  const attendanceDetailDialog = attendanceDetailOverlay?.querySelector('.attendance-detail-dialog');
+  const attendanceDetailClose = attendanceDetailOverlay?.querySelector('.attendance-detail-close');
+  const attendanceDetailList = document.getElementById('attendance-detail-list');
   let previewUrl = null;
   let isSubmitting = false;
   let lastFocus = null;
+  let attendanceRecords = [];
+  let myLeaveApplications = [];
+  let attendanceLoadError = null;
+  let lastAttendanceDetailTrigger = null;
 
   function openForm(trigger) {
     lastFocus = trigger || document.activeElement;
@@ -2653,8 +2698,24 @@ document.addEventListener('DOMContentLoaded', function() {
       : null;
   }
 
-  function formatDuration(record, leave) {
+  function formatDuration(record, leave, applications = []) {
     if (leave) return `${leave.days} hari`;
+    const sameDayDispensation = applications.find(application =>
+      application.same_day && String(application.type || '').toLowerCase() === 'dispensasi'
+    );
+    if (sameDayDispensation) {
+      return sameDayDispensation.actual_seconds !== null && sameDayDispensation.actual_seconds !== undefined
+        ? `${Math.floor(sameDayDispensation.actual_seconds / 60)} menit aktual`
+        : `${sameDayDispensation.duration_minutes || '-'} menit`;
+    }
+    const dateRangeApplication = applications[0];
+    if (dateRangeApplication) {
+      const start = Date.parse(`${String(dateRangeApplication.start_date || '').slice(0, 10)}T00:00:00Z`);
+      const end = Date.parse(`${String(dateRangeApplication.end_date || '').slice(0, 10)}T00:00:00Z`);
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+        return `${Math.floor((end - start) / 86400000) + 1} hari`;
+      }
+    }
     const dispensation = parseDispensationAttendance(record.note);
     if (dispensation) {
       return dispensation.actualMinutes === null
@@ -2672,12 +2733,227 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${String(Math.floor(duration / 60)).padStart(2, '0')}j ${String(duration % 60).padStart(2, '0')}m`;
   }
 
+  function getApplicationsForAttendanceDate(record) {
+    const attendanceDate = String(record.date || '').slice(0, 10);
+    return myLeaveApplications.filter(application =>
+    String(application.start_date || '').slice(0, 10) <= attendanceDate &&
+    String(application.end_date || '').slice(0, 10) >= attendanceDate
+    );
+  }
+
+  function getJakartaDate() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  }
+
+  function millisecondsUntilJakartaMidnight() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, Number(part.value)]));
+    const nextMidnight = Date.UTC(values.year, values.month - 1, values.day + 1) - 7 * 60 * 60 * 1000;
+    return Math.max(1000, nextMidnight - Date.now());
+  }
+
+  function buildAttendanceRows(records, targetDate) {
+    const rows = records.filter(record =>
+      String(record.date || '').slice(0, 10) === targetDate
+    ).map(record => ({
+    ...record,
+    leaveApplications: getApplicationsForAttendanceDate(record)
+    }));
+    const recordedDates = new Set(rows.map(record =>
+    `${String(record.nis || '')}|${String(record.date || '').slice(0, 10)}`
+    ));
+    const applicationRows = new Map();
+
+    myLeaveApplications.forEach(application => {
+    const startDate = String(application.start_date || '').slice(0, 10);
+    const endDate = String(application.end_date || '').slice(0, 10);
+    const key = `${String(application.nis || '')}|${targetDate}`;
+    if (!startDate || startDate > targetDate || !endDate || endDate < targetDate || recordedDates.has(key)) return;
+    if (!applicationRows.has(key)) {
+      applicationRows.set(key, {
+        nis: application.nis,
+        date: targetDate,
+        status: application.status || 'Menunggu',
+        check_in: '-',
+        check_out: '-',
+        note: '',
+        applicationOnly: true,
+        leaveApplications: []
+      });
+    }
+    applicationRows.get(key).leaveApplications.push(application);
+    });
+
+    return [...rows, ...applicationRows.values()]
+    .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+  }
+
+  function attendanceApplicationSummary(application) {
+    const status = application.status || 'Menunggu';
+    const type = application.type || 'Izin';
+    if (application.same_day && String(type).toLowerCase() === 'dispensasi') {
+    const requestedMinutes = Number(application.duration_minutes) || 0;
+    if (application.started_at && application.returned_at) {
+      const actualMinutes = Math.floor((Number(application.actual_seconds) || 0) / 60);
+      return `Telah melakukan dispensasi pukul ${formatAttendanceClock(application.started_at)}–${formatAttendanceClock(application.returned_at)} (${actualMinutes} menit).`;
+    }
+    if (application.started_at) {
+      return `Dispensasi dimulai pukul ${formatAttendanceClock(application.started_at)}; target selesai ${formatAttendanceClock(application.target_end_at)} (${requestedMinutes} menit).`;
+    }
+    return `Pengajuan dispensasi ${requestedMinutes} menit — ${status}.`;
+    }
+    return `Mengajukan izin ${type.toLowerCase()}: ${application.reason || '-'} (${status}).`;
+  }
+
+  function formatAttendanceClock(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+    }).format(date).replace(':', '.');
+  }
+
+  function formatSubmittedAt(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('id-ID');
+  }
+
+  function appendDetailValue(container, label, value) {
+    const item = document.createElement('div');
+    item.className = 'attendance-detail-value';
+    const heading = document.createElement('b');
+    heading.textContent = label;
+    const text = document.createElement('span');
+    text.textContent = value || '-';
+    item.append(heading, text);
+    container.appendChild(item);
+  }
+
+  async function openAttendanceDetails(applications, trigger) {
+    if (!attendanceDetailOverlay || !attendanceDetailList) return;
+    lastAttendanceDetailTrigger = trigger;
+    attendanceDetailList.replaceChildren();
+
+    applications.forEach(application => {
+    const entry = document.createElement('section');
+    entry.className = 'attendance-detail-entry';
+    const title = document.createElement('h3');
+    title.textContent = application.student_name || 'Detail Izin';
+    entry.appendChild(title);
+
+    const values = document.createElement('div');
+    values.className = 'attendance-detail-values';
+    const sameDayDispensation = application.same_day &&
+      String(application.type || '').toLowerCase() === 'dispensasi';
+    const startDate = String(application.start_date || '').slice(0, 10);
+    const endDate = String(application.end_date || '').slice(0, 10);
+    const durationDays = startDate && endDate
+      ? Math.floor((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000) + 1
+      : 0;
+    const timeDetails = sameDayDispensation
+      ? `Mulai ${formatAttendanceClock(application.started_at)}; target selesai ${formatAttendanceClock(application.target_end_at)}; kembali ${formatAttendanceClock(application.returned_at)}`
+      : `${formatLeaveDate(startDate)}${startDate === endDate ? '' : ` - ${formatLeaveDate(endDate)}`}`;
+
+    appendDetailValue(values, 'Nama Siswa', application.student_name);
+    appendDetailValue(values, 'Jenis Izin', application.type);
+    appendDetailValue(values, 'Waktu Pengajuan', formatSubmittedAt(application.created_at));
+    appendDetailValue(values, 'Periode / Waktu', timeDetails);
+    appendDetailValue(values, 'Durasi', sameDayDispensation
+      ? `${application.duration_minutes || '-'} menit${application.actual_seconds === null || application.actual_seconds === undefined ? '' : ` (aktual ${Math.floor(application.actual_seconds / 60)} menit)`}`
+      : `${durationDays > 0 ? `${durationDays} hari` : '-'}`);
+    appendDetailValue(values, 'Status Persetujuan', application.status || 'Menunggu');
+    appendDetailValue(values, 'Alasan / Keterangan', application.reason);
+    if (application.review_note) appendDetailValue(values, 'Catatan Peninjau', application.review_note);
+    if (application.reviewed_at) appendDetailValue(values, 'Waktu Ditinjau', formatSubmittedAt(application.reviewed_at));
+    entry.appendChild(values);
+
+    const proofSection = document.createElement('div');
+    proofSection.className = 'attendance-detail-proof';
+    const proofLabel = document.createElement('b');
+    proofLabel.className = 'attendance-detail-proof-label';
+    proofLabel.textContent = 'Foto Bukti';
+    const proofContent = document.createElement('div');
+    proofContent.className = 'attendance-detail-proof-content';
+    proofContent.textContent = 'Memuat foto bukti...';
+    proofSection.append(proofLabel, proofContent);
+    entry.appendChild(proofSection);
+    attendanceDetailList.appendChild(entry);
+    });
+
+    attendanceDetailOverlay.classList.add('is-open');
+    attendanceDetailOverlay.setAttribute('aria-hidden', 'false');
+    attendanceDetailDialog?.focus({ preventScroll: true });
+
+    await Promise.all(applications.map(async (application, index) => {
+      const proofContent = attendanceDetailList.querySelectorAll('.attendance-detail-proof-content')[index];
+      if (!proofContent) return;
+      try {
+        const response = await fetch(`/api/izin/${encodeURIComponent(application.id)}`);
+        const result = await response.json();
+        if (!response.ok || !result.success || !result.data) {
+          throw new Error(result.message || 'Foto bukti tidak dapat dimuat.');
+        }
+        proofContent.replaceChildren();
+        if (!result.data.proof_data) {
+          proofContent.textContent = 'Tidak ada foto bukti yang dilampirkan.';
+          return;
+        }
+        const image = document.createElement('img');
+        image.src = result.data.proof_data;
+        image.alt = `Foto bukti izin ${application.student_name || ''}`.trim();
+        image.addEventListener('error', () => {
+          proofContent.textContent = 'Foto bukti tidak dapat ditampilkan.';
+        }, { once: true });
+        proofContent.appendChild(image);
+      } catch (error) {
+        proofContent.textContent = error.message || 'Foto bukti tidak dapat dimuat.';
+      }
+    }));
+  }
+
+  function closeAttendanceDetails() {
+    if (!attendanceDetailOverlay) return;
+    attendanceDetailOverlay.classList.remove('is-open');
+    attendanceDetailOverlay.setAttribute('aria-hidden', 'true');
+    if (lastAttendanceDetailTrigger?.isConnected) {
+    lastAttendanceDetailTrigger.focus({ preventScroll: true });
+    }
+  }
+
+  attendanceDetailClose?.addEventListener('click', closeAttendanceDetails);
+  attendanceDetailOverlay?.addEventListener('click', event => {
+    if (event.target === attendanceDetailOverlay) closeAttendanceDetails();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && attendanceDetailOverlay?.classList.contains('is-open')) {
+    closeAttendanceDetails();
+    }
+  });
+
   function renderAttendance(records) {
     attendanceTbody.replaceChildren();
     const activeFilter = document.querySelector('#tab-status button.active')?.dataset.filter || 'all';
-    if (!records.length) {
-      showTableMessage(attendanceTbody, 6, 'Belum ada riwayat kehadiran.');
-      attendanceCount.textContent = 'Belum ada catatan presensi.';
+    const displayRecords = buildAttendanceRows(records, getJakartaDate());
+    if (!displayRecords.length) {
+      showTableMessage(attendanceTbody, 8, attendanceLoadError || 'Belum ada riwayat kehadiran hari ini.', Boolean(attendanceLoadError));
+      attendanceCount.textContent = attendanceLoadError ? 'Riwayat kehadiran tidak dapat dimuat.' : 'Belum ada catatan presensi hari ini.';
       document.querySelectorAll('#tab-status button[data-filter]').forEach(button => {
         const label = button.dataset.filter === 'all' ? 'Semua' : button.dataset.filter === 'late' ? 'Terlambat' : button.dataset.filter === 'izin' ? 'Izin' : 'Hadir';
         button.textContent = `${label} (0)`;
@@ -2685,15 +2961,19 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    records.forEach(record => {
+    const detailGroups = new Map();
+    displayRecords.forEach(record => {
       const status = String(record.status || '').toLowerCase();
       const leave = ['izin', 'sakit'].includes(status) ? parseLeaveAttendance(record.note) : null;
       const dispensation = parseDispensationAttendance(record.note);
+      const applications = Array.isArray(record.leaveApplications) ? record.leaveApplications : [];
       const activeDispensation = status === 'dispensasi';
-      const label = leave?.type || ({ hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat', late: 'Terlambat' }[status] || status || '-');
+      const label = record.applicationOnly
+          ? (record.status || 'Pengajuan')
+        : leave?.type || ({ hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat', late: 'Terlambat' }[status] || status || '-');
       const isLeave = ['izin', 'sakit'].includes(status);
       const row = document.createElement('tr');
-      row.dataset.status = status === 'sakit' ? 'izin' : (status === 'terlambat' ? 'late' : status);
+      row.dataset.status = record.applicationOnly ? 'izin' : status === 'sakit' ? 'izin' : (status === 'terlambat' ? 'late' : status);
 
       const dateCell = document.createElement('td');
       dateCell.className = 'day';
@@ -2712,7 +2992,7 @@ document.addEventListener('DOMContentLoaded', function() {
       row.appendChild(checkOutCell);
 
       const durationCell = document.createElement('td');
-      durationCell.textContent = formatDuration(record, leave);
+      durationCell.textContent = formatDuration(record, leave, applications);
       row.appendChild(durationCell);
 
       const noteCell = document.createElement('td');
@@ -2725,10 +3005,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const statusCell = document.createElement('td');
       const badge = document.createElement('span');
-      badge.className = `badge ${status === 'izin' || status === 'sakit' || status === 'dispensasi' ? 'b-izin' : status === 'alfa' ? 'b-alfa' : status === 'terlambat' || status === 'late' ? 'b-late' : 'b-hadir'}`;
+      const badgeClass = record.applicationOnly
+        ? (status === 'ditolak' ? 'b-alfa' : status === 'menunggu' || status.includes('disetujui') ? 'b-izin' : 'b-hadir')
+        : status === 'izin' || status === 'sakit' || status === 'dispensasi' ? 'b-izin' : status === 'alfa' ? 'b-alfa' : status === 'terlambat' || status === 'late' ? 'b-late' : 'b-hadir';
+      badge.className = `badge ${badgeClass}`;
       badge.textContent = label;
       statusCell.appendChild(badge);
       row.appendChild(statusCell);
+
+      const detailCell = document.createElement('td');
+      detailCell.className = 'attendance-detail-cell';
+      detailCell.textContent = applications.length
+        ? applications.map(attendanceApplicationSummary).join(' ')
+        : '-';
+      row.appendChild(detailCell);
+
+      const actionCell = document.createElement('td');
+      actionCell.className = 'attendance-detail-action';
+      if (applications.length) {
+        const detailKey = String(detailGroups.size);
+        detailGroups.set(detailKey, applications);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'attendance-detail-button';
+        button.dataset.detailKey = detailKey;
+        button.setAttribute('aria-label', 'Lihat detail izin dan kehadiran');
+        button.title = 'Lihat detail';
+        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        actionCell.appendChild(button);
+      }
+      row.appendChild(actionCell);
       attendanceTbody.appendChild(row);
     });
 
@@ -2745,20 +3051,31 @@ document.addEventListener('DOMContentLoaded', function() {
       button.textContent = `${label} (${counts[filter] || 0})`;
     });
     if (window.filterStudentAttendance) window.filterStudentAttendance(activeFilter);
-    attendanceCount.textContent = `Menampilkan ${records.length} catatan presensi`;
+    attendanceCount.textContent = `Menampilkan ${displayRecords.length} catatan presensi`;
+
+    attendanceTbody.onclick = event => {
+      const button = event.target.closest('.attendance-detail-button');
+      if (!button) return;
+      event.stopPropagation();
+      const applications = detailGroups.get(button.dataset.detailKey);
+      if (applications) void openAttendanceDetails(applications, button);
+    };
   }
 
   async function loadMyAttendance() {
+    attendanceLoadError = null;
     try {
       const response = await fetch('/api/absensi');
       const result = await response.json();
       if (!response.ok || !result.success || !Array.isArray(result.data)) {
         throw new Error(result.message || 'Gagal memuat riwayat kehadiran.');
       }
-      renderAttendance(result.data);
+      attendanceRecords = result.data;
+      renderAttendance(attendanceRecords);
     } catch (error) {
-      showTableMessage(attendanceTbody, 6, error.message || 'Gagal memuat riwayat kehadiran.', true);
-      attendanceCount.textContent = 'Riwayat kehadiran tidak dapat dimuat.';
+      attendanceRecords = [];
+      attendanceLoadError = error.message || 'Gagal memuat riwayat kehadiran.';
+      renderAttendance(attendanceRecords);
     }
   }
 
@@ -2816,14 +3133,37 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!response.ok || !result.success || !Array.isArray(result.data)) {
         throw new Error(result.message || 'Gagal memuat status pengajuan izin.');
       }
+      myLeaveApplications = result.data;
       renderMyLeaveApplications(result.data);
+      renderAttendance(attendanceRecords);
     } catch (error) {
+      myLeaveApplications = [];
       showTableMessage(leaveTbody, 5, error.message || 'Gagal memuat pengajuan izin.', true);
       leaveCount.textContent = 'Gagal memuat';
       leaveFoot.textContent = 'Daftar pengajuan izin tidak dapat dimuat.';
+      renderAttendance(attendanceRecords);
     }
   }
 
+  let attendanceDisplayDate = getJakartaDate();
+  function rollAttendanceDateIfNeeded() {
+    const today = getJakartaDate();
+    if (today === attendanceDisplayDate) return;
+    attendanceDisplayDate = today;
+    void loadMyAttendance();
+  }
+
+  function scheduleAttendanceDateRollover() {
+    window.setTimeout(() => {
+      rollAttendanceDateIfNeeded();
+      scheduleAttendanceDateRollover();
+    }, millisecondsUntilJakartaMidnight());
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) rollAttendanceDateIfNeeded();
+  });
+  scheduleAttendanceDateRollover();
   loadMyAttendance();
   loadMyLeaveApplications();
 });

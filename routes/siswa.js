@@ -236,13 +236,13 @@ router.get('/tracker', authenticate, async (req, res) => {
       }
     }
     if (active) {
-      const startTime = getUtcTime(active.durasi && /^\d{12,14}$/.test(active.durasi) ? active.durasi : active.created_at);
-      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+      const startTimeMs = active.durasi && /^\d{12,14}$/.test(String(active.durasi))
+        ? Number(active.durasi)
+        : new Date(active.created_at).getTime();
       return res.json({
         success: true,
         isRunning: true,
-        startTime,
-        elapsedSeconds,
+        startTime: startTimeMs,
         dispensation,
         log: active
       });

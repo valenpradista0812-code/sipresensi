@@ -1332,8 +1332,7 @@
 </script>
 
 <script>
-/* Satu-satunya pengelola timer dashboard: status diambil dari backend RFID. */
-(function () {
+(function() {
   const timer = document.getElementById('timer-count');
   const pillText = document.getElementById('status-text');
   const hint = document.getElementById('tracker-hint');
@@ -1342,17 +1341,16 @@
   const pill = document.getElementById('status-pill');
   if (!timer || !pillText) return;
 
-  const state = { isRunning: false, startTime: null, dispensation: null };
-  let syncInProgress = false;
-  let lastRendered = '';
+  const state = {
+    isRunning: false,
+    startTime: null,
+    dispensation: null,
+    lastSyncTime: 0
+  };
 
-  function parseStartTime(value) {
-    if (value === null || value === undefined || value === '') return null;
-    const numeric = Number(value);
-    if (Number.isFinite(numeric) && numeric > 0) return numeric;
-    const parsed = Date.parse(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
+  let rafId = null;
+  let lastRenderedText = '';
+  let syncInProgress = false;
 
   function formatDuration(seconds) {
     seconds = Math.max(0, Math.floor(seconds));
@@ -1362,51 +1360,78 @@
     return `${h}:${m}:${s}`;
   }
 
-  function render() {
-    const regularSeconds = state.isRunning && state.startTime
-      ? Math.floor(Math.max(0, Date.now() - state.startTime) / 1000)
-      : 0;
-    const targetEnd = state.dispensation ? parseStartTime(state.dispensation.target_end_at) : null;
-    const dispensationSeconds = targetEnd === null
-      ? null
-      : Math.max(0, Math.ceil((targetEnd - Date.now()) / 1000));
-    const isDispensing = dispensationSeconds !== null;
-    const seconds = isDispensing ? dispensationSeconds : regularSeconds;
-    const text = formatDuration(seconds);
+  function parseTimestamp(value) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    if (typeof value !== 'string') return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
 
-    if (text !== lastRendered) {
-      timer.textContent = text;
-      lastRendered = text;
+  function renderFrame() {
+    let displaySeconds = 0;
+    let mode = 'idle';
+
+    if (state.dispensation && state.dispensation.target_end_at) {
+      const targetMs = parseTimestamp(state.dispensation.target_end_at);
+      if (targetMs !== null) {
+        const remaining = Math.max(0, Math.ceil((targetMs - Date.now()) / 1000));
+        displaySeconds = remaining;
+        mode = remaining === 0 ? 'dispensasi-expired' : 'dispensasi-active';
+      } else {
+        mode = 'dispensasi-sync-error';
+      }
+    } else if (state.isRunning && state.startTime) {
+      const elapsedMs = Math.max(0, Date.now() - state.startTime);
+      displaySeconds = Math.floor(elapsedMs / 1000);
+      mode = 'running';
     }
 
-    if (isDispensing) {
-      const expired = dispensationSeconds === 0;
-      pillText.textContent = expired ? 'Waktu Dispensasi Habis' : 'Sedang Dispensasi';
-      if (pill) pill.className = expired ? 'pill' : 'pill pill-green';
-      if (hint) {
-        hint.textContent = expired
-          ? 'Waktu dispensasi habis. Silakan tap kartu RFID saat kembali.'
-          : `Dispensasi aktif (${state.dispensation.type || 'Dispensasi'}). Tap kartu RFID saat kembali.`;
-      }
+    const text = formatDuration(displaySeconds);
+    if (text !== lastRenderedText) {
+      timer.textContent = text;
+      lastRenderedText = text;
+    }
+
+    if (mode === 'dispensasi-active') {
+      pillText.textContent = `Dispensasi Aktif - ${state.dispensation.type || 'Dispensasi'}`;
+      if (pill) pill.className = 'pill pill-green';
+      if (hint) hint.innerHTML = '⏱️ Timer absensi tetap berjalan, countdown dispensasi aktif. Tap RFID saat waktu dispensasi habis.';
       if (button) {
         button.disabled = true;
-        button.textContent = 'Dispensasi Aktif';
+        button.innerHTML = 'Dispensasi Aktif';
         button.style.opacity = '0.7';
-        button.style.cursor = 'not-allowed';
       }
-      if (display) display.style.cursor = 'default';
-      timer.style.color = expired ? '#dc2626' : '#f59e0b';
-    } else if (state.isRunning) {
+      timer.style.color = '#f59e0b';
+    } else if (mode === 'dispensasi-expired') {
+      pillText.textContent = 'Dispensasi Selesai';
+      if (pill) pill.className = 'pill';
+      if (hint) hint.innerHTML = '✅ Waktu dispensasi habis. Tap RFID untuk konfirmasi kembali masuk.';
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = 'Dispensasi Selesai';
+        button.style.opacity = '0.7';
+      }
+      timer.style.color = '#dc2626';
+    } else if (mode === 'dispensasi-sync-error') {
+      pillText.textContent = 'Sinkronisasi Dispensasi';
+      if (pill) pill.className = 'pill';
+      if (hint) hint.textContent = 'Waktu dispensasi belum terbaca. Muat ulang dashboard atau hubungi guru.';
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = 'Memuat Dispensasi';
+        button.style.opacity = '0.7';
+      }
+      timer.style.color = '#f59e0b';
+    } else if (mode === 'running') {
       pillText.textContent = 'Tracker Berjalan';
       if (pill) pill.className = 'pill pill-green';
-      if (hint) hint.innerHTML = '✅ Tracker berjalan. Tap kartu RFID yang sama lagi setelah minimal 1 menit untuk menghentikan.';
+      if (hint) hint.innerHTML = '✅ Tracker berjalan. Tap RFID lagi setelah 1 menit untuk stop.';
       if (button) {
         button.disabled = true;
         button.innerHTML = 'Tracker Berjalan';
         button.style.opacity = '0.7';
-        button.style.cursor = 'not-allowed';
       }
-      if (display) display.style.cursor = 'default';
       timer.style.color = '#10b981';
     } else {
       pillText.textContent = 'Siap Memulai';
@@ -1416,15 +1441,18 @@
         button.disabled = true;
         button.innerHTML = 'Menunggu Kartu RFID';
         button.style.opacity = '0.7';
-        button.style.cursor = 'not-allowed';
       }
-      if (display) display.style.cursor = 'default';
       timer.style.color = '#1e293b';
     }
+
+    rafId = requestAnimationFrame(renderFrame);
   }
 
   async function syncTracker() {
     if (syncInProgress) return;
+    const now = Date.now();
+    if (now - state.lastSyncTime < 500) return;
+
     syncInProgress = true;
     try {
       const response = await fetch('/api/siswa/tracker', {
@@ -1433,40 +1461,55 @@
       });
 
       if (response.status === 401 || response.status === 403) {
+        state.isRunning = false;
+        state.startTime = null;
         pillText.textContent = 'Login diperlukan';
         return;
       }
 
       const data = await response.json();
       if (!data.success) return;
-      state.dispensation = data.dispensation || null;
 
+      state.lastSyncTime = now;
+      const prevState = { isRunning: state.isRunning, dispensation: state.dispensation };
+
+      state.dispensation = data.dispensation || null;
       if (data.isRunning && data.startTime) {
-        const serverStart = parseStartTime(data.startTime);
-        if (serverStart !== null) {
-          if (!state.isRunning || state.startTime !== serverStart) {
-            state.startTime = serverStart;
-          }
+        const startMs = Number(data.startTime);
+        if (Number.isFinite(startMs) && startMs > 0) {
+          state.startTime = startMs;
           state.isRunning = true;
+        } else {
+          state.isRunning = false;
+          state.startTime = null;
         }
       } else {
         state.isRunning = false;
         state.startTime = null;
       }
 
-      render();
+      if (prevState.isRunning && !state.isRunning) {
+        console.log('✅ Tracker stopped by server');
+      }
+      if (!prevState.isRunning && state.isRunning) {
+        console.log('✅ Tracker started by RFID');
+      }
+      if (!prevState.dispensation && state.dispensation) {
+        console.log('✅ Dispensasi started:', state.dispensation);
+      }
+      if (prevState.dispensation && !state.dispensation) {
+        console.log('✅ Dispensasi ended');
+      }
     } catch (error) {
-      console.warn('Gagal sinkronisasi tracker:', error);
+      console.error('Sync error:', error);
     } finally {
       syncInProgress = false;
     }
   }
 
-  render();
+  renderFrame();
   syncTracker();
-
-  setInterval(render, 250);
-  setInterval(syncTracker, 1000);
+  setInterval(syncTracker, 800);
 })();
 </script>
 

@@ -17,7 +17,7 @@
     .panel-title { font-size: 16px; margin: 0; color: #0f1e3d; font-weight: 700; }
     .panel-sub { margin: 4px 0 0; font-size: 12px; color: #64748b; }
     .table-scroll { width: 100%; max-height: 215px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; border: 1px solid #e2e8f0; }
-    .log-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 13px; }
+    .log-table { width: 100%; min-width: 1000px; border-collapse: collapse; font-size: 13px; }
     .log-table thead th { position: sticky; top: 0; z-index: 2; text-align: left; padding: 12px 14px; background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #64748b; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
     .log-table tbody td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #0f172a; }
     .log-table tbody tr:last-child td { border-bottom: none; }
@@ -73,6 +73,10 @@
     .leave-icon-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .leave-review-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
     .leave-review-actions .btn { padding: 6px 10px; }
+    .attendance-detail-cell { min-width: 220px; max-width: 320px; color: #475569 !important; font-size: 12px; line-height: 1.5; }
+    .attendance-detail-action { width: 72px; text-align: center !important; }
+    .attendance-detail-summary + .attendance-detail-summary { display: block; margin-top: 4px; }
+    .attendance-detail-button { border-color: #bfdbfe; color: #2563eb; }
 
     .leave-detail-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .55); }
     .leave-detail-overlay.is-open { display: flex; }
@@ -89,6 +93,9 @@
     .leave-detail-item--wide { grid-column: 1 / -1; }
     .leave-proof { display: flex; min-height: 120px; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; color: #64748b; font-size: 13px; text-align: center; }
     .leave-proof img { display: block; width: 100%; max-height: 320px; object-fit: contain; }
+    .attendance-leave-detail-group { grid-column: 1 / -1; }
+    .attendance-leave-detail-group + .attendance-leave-detail-group { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+    .attendance-leave-detail-group h3 { margin: 0 0 12px; color: #0f1e3d; font-size: 14px; }
 
     @media (max-width: 640px) {
       .leave-detail-overlay { padding: 12px; }
@@ -175,10 +182,12 @@
                 <th>Durasi</th>
                 <th>Keterangan Kehadiran</th>
                 <th>Status</th>
+                <th>Detail</th>
+                <th class="attendance-detail-action">Aksi</th>
               </tr>
             </thead>
             <tbody id="absensi-tbody">
-              <tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Memuat data siswa...</td></tr>
+              <tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Memuat data siswa...</td></tr>
             </tbody>
           </table>
         </div>
@@ -247,12 +256,20 @@
         <div class="leave-detail-value" id="leave-detail-date">-</div>
       </div>
       <div class="leave-detail-item">
+        <span class="leave-detail-label">Status Persetujuan</span>
+        <div class="leave-detail-value" id="leave-detail-status">-</div>
+      </div>
+      <div class="leave-detail-item">
         <span class="leave-detail-label">Jenis Izin</span>
         <div class="leave-detail-value" id="leave-detail-type">-</div>
       </div>
       <div class="leave-detail-item leave-detail-item--wide">
         <span class="leave-detail-label">Durasi Izin</span>
         <div class="leave-detail-value" id="leave-detail-duration">-</div>
+      </div>
+      <div class="leave-detail-item leave-detail-item--wide">
+        <span class="leave-detail-label">Waktu / Periode Izin</span>
+        <div class="leave-detail-value" id="leave-detail-times">-</div>
       </div>
       <div class="leave-detail-item leave-detail-item--wide">
         <span class="leave-detail-label">Keterangan</span>
@@ -280,10 +297,38 @@
     const detailOverlay = document.getElementById('leave-detail-overlay');
     const detailDialog = detailOverlay.querySelector('.leave-detail-dialog');
     const detailClose = detailOverlay.querySelector('.leave-detail-close');
+    const detailGrid = detailOverlay.querySelector('.leave-detail-grid');
+    const defaultDetailGrid = detailGrid.innerHTML;
     let lastDetailTrigger = null;
-    if (filterDate && !filterDate.value) {
-      filterDate.value = sessionStorage.getItem('adminAbsensiDate') || new Date().toLocaleDateString('en-CA');
+    function getJakartaDate() {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+      return `${values.year}-${values.month}-${values.day}`;
     }
+
+    function millisecondsUntilJakartaMidnight() {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      const values = Object.fromEntries(parts.map(part => [part.type, Number(part.value)]));
+      const nextMidnight = Date.UTC(values.year, values.month - 1, values.day + 1) - 7 * 60 * 60 * 1000;
+      return Math.max(1000, nextMidnight - Date.now());
+    }
+
+    let attendanceDisplayDate = getJakartaDate();
+    if (filterDate && !filterDate.value) {
+      const savedDate = sessionStorage.getItem('adminAbsensiDate');
+      filterDate.value = savedDate === attendanceDisplayDate ? savedDate : attendanceDisplayDate;
+    }
+    sessionStorage.setItem('adminAbsensiDate', filterDate.value);
     const savedClass = sessionStorage.getItem('adminAbsensiClass');
     if (savedClass && filterKelas && !Array.from(filterKelas.options).some(option => option.value === savedClass)) {
       filterKelas.add(new Option(savedClass, savedClass));
@@ -303,6 +348,11 @@
     function normalizeLeaveApplication(item) {
       const startDate = formatLeaveDate(item.start_date);
       const endDate = formatLeaveDate(item.end_date);
+      const durationDays = Math.max(1, Math.floor(
+        (Date.parse(`${String(item.end_date || '').slice(0, 10)}T00:00:00Z`) -
+          Date.parse(`${String(item.start_date || '').slice(0, 10)}T00:00:00Z`)) / 86400000) + 1
+      );
+      const sameDayDispensation = item.same_day === true && String(item.type || '').toLowerCase() === 'dispensasi';
       return {
         id: item.id,
         nis: item.nis || '-',
@@ -311,17 +361,55 @@
         date: item.created_at
           ? new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
           : '-',
+        submittedAt: item.created_at || null,
         name: item.student_name || '-',
         kelas: item.kelas || '-',
         type: item.type || '-',
-        duration: startDate === endDate ? startDate : `${startDate} - ${endDate}`,
+        duration: sameDayDispensation
+          ? `${item.duration_minutes || '-'} menit (${startDate})`
+          : `${durationDays} hari (${startDate}${startDate === endDate ? '' : ` - ${endDate}`})`,
         description: item.reason || '-',
         status: item.status || 'Menunggu',
-        sameDay: item.same_day === true,
+        sameDay: sameDayDispensation,
         durationMinutes: item.duration_minutes,
         startedAt: item.started_at,
+        targetEndAt: item.target_end_at,
+        returnedAt: item.returned_at,
+        actualSeconds: item.actual_seconds,
+        reviewedAt: item.reviewed_at,
         proof: item.proof_data || ''
       };
+    }
+
+    function formatAttendanceClock(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }).format(date).replace(':', '.');
+    }
+
+    function attendanceDetailSummary(application) {
+      if (application.sameDay) {
+        if (application.startedAt && application.returnedAt) {
+          const minutes = Math.floor((Number(application.actualSeconds) || 0) / 60);
+          return `Telah melakukan dispensasi pukul ${formatAttendanceClock(application.startedAt)}–${formatAttendanceClock(application.returnedAt)} (${minutes} menit).`;
+        }
+        if (application.startedAt) {
+          return `Dispensasi dimulai pukul ${formatAttendanceClock(application.startedAt)}; target kembali ${formatAttendanceClock(application.targetEndAt)} (${application.durationMinutes} menit).`;
+        }
+        return `Pengajuan dispensasi ${application.durationMinutes} menit — ${application.status}.`;
+      }
+      return `Mengajukan izin ${application.type.toLowerCase()} — ${application.description} (${application.status}).`;
+    }
+
+    function attendanceDetailsForDate(item) {
+      return (Array.isArray(item.leaveApplications) ? item.leaveApplications : [])
+        .map(normalizeLeaveApplication);
     }
 
     async function loadLeaveApplications() {
@@ -455,12 +543,19 @@
 
     async function openLeaveDetails(application, trigger) {
       lastDetailTrigger = trigger;
+      detailGrid.innerHTML = defaultDetailGrid;
       document.getElementById('leave-detail-student').textContent = application.name;
       document.getElementById('leave-detail-class').textContent = application.kelas;
-      document.getElementById('leave-detail-date').textContent = application.date;
+      document.getElementById('leave-detail-date').textContent = application.submittedAt
+        ? new Date(application.submittedAt).toLocaleString('id-ID')
+        : application.date;
+      document.getElementById('leave-detail-status').textContent = application.status;
       document.getElementById('leave-detail-type').textContent = application.type;
       document.getElementById('leave-detail-duration').textContent = application.duration;
       document.getElementById('leave-detail-description').textContent = application.description;
+      document.getElementById('leave-detail-times').textContent = application.sameDay
+        ? `Mulai: ${application.startedAt ? formatAttendanceClock(application.startedAt) : '-'}; target selesai: ${formatAttendanceClock(application.targetEndAt)}; kembali: ${formatAttendanceClock(application.returnedAt)}${application.actualSeconds === null || application.actualSeconds === undefined ? '' : `; durasi aktual: ${Math.floor(application.actualSeconds / 60)} menit`}`
+        : `${formatLeaveDate(application.startDateRaw)}${application.startDateRaw === application.endDateRaw ? '' : ` - ${formatLeaveDate(application.endDateRaw)}`}`;
 
       const proof = document.getElementById('leave-detail-proof');
       proof.textContent = 'Memuat foto bukti...';
@@ -490,6 +585,91 @@
         proof.textContent = error.message || 'Foto bukti tidak dapat dimuat.';
       }
 
+    }
+
+    async function openAttendanceLeaveDetails(applications, trigger) {
+      if (!applications.length) return;
+      lastDetailTrigger = trigger;
+      detailGrid.replaceChildren();
+
+      const addField = (container, label, value, wide = false) => {
+        const field = document.createElement('div');
+        field.className = `leave-detail-item${wide ? ' leave-detail-item--wide' : ''}`;
+        const heading = document.createElement('span');
+        heading.className = 'leave-detail-label';
+        heading.textContent = label;
+        const content = document.createElement('div');
+        content.className = 'leave-detail-value';
+        content.textContent = value || '-';
+        field.append(heading, content);
+        container.appendChild(field);
+      };
+
+      const proofLoads = [];
+      applications.forEach(application => {
+        const group = document.createElement('section');
+        group.className = 'attendance-leave-detail-group';
+        const title = document.createElement('h3');
+        title.textContent = `${application.name} — ${application.type}`;
+        group.appendChild(title);
+
+        const fields = document.createElement('div');
+        fields.className = 'leave-detail-grid';
+        addField(fields, 'Nama Siswa', application.name);
+        addField(fields, 'Kelas', application.kelas);
+        addField(fields, 'Tanggal Pengajuan', application.submittedAt
+          ? new Date(application.submittedAt).toLocaleString('id-ID')
+          : application.date);
+        addField(fields, 'Status Persetujuan', application.status);
+        addField(fields, 'Jenis Izin', application.type);
+        addField(fields, 'Durasi Izin', application.duration, true);
+        addField(fields, 'Waktu / Periode Izin', application.sameDay
+          ? `Mulai: ${application.startedAt ? formatAttendanceClock(application.startedAt) : '-'}; target selesai: ${formatAttendanceClock(application.targetEndAt)}; kembali: ${formatAttendanceClock(application.returnedAt)}${application.actualSeconds === null || application.actualSeconds === undefined ? '' : `; durasi aktual: ${Math.floor(application.actualSeconds / 60)} menit`}`
+          : `${formatLeaveDate(application.startDateRaw)}${application.startDateRaw === application.endDateRaw ? '' : ` - ${formatLeaveDate(application.endDateRaw)}`}`, true);
+        addField(fields, 'Keterangan', application.description, true);
+        group.appendChild(fields);
+
+        const proofField = document.createElement('div');
+        proofField.className = 'leave-detail-item leave-detail-item--wide';
+        const proofHeading = document.createElement('span');
+        proofHeading.className = 'leave-detail-label';
+        proofHeading.textContent = 'Foto Bukti';
+        const proof = document.createElement('div');
+        proof.className = 'leave-proof';
+        proof.textContent = 'Memuat foto bukti...';
+        proofField.append(proofHeading, proof);
+        group.appendChild(proofField);
+        detailGrid.appendChild(group);
+
+        proofLoads.push((async () => {
+          try {
+            const response = await fetch(`/api/izin/${encodeURIComponent(application.id)}`);
+            const result = await response.json();
+            if (!response.ok || !result.success || !result.data) {
+              throw new Error(result.message || 'Gagal memuat detail pengajuan.');
+            }
+            proof.replaceChildren();
+            if (!result.data.proof_data) {
+              proof.textContent = 'Tidak ada foto bukti yang dilampirkan.';
+              return;
+            }
+            const image = document.createElement('img');
+            image.src = result.data.proof_data;
+            image.alt = `Foto bukti izin ${application.name}`;
+            image.addEventListener('error', () => {
+              proof.textContent = 'Foto bukti tidak dapat ditampilkan.';
+            }, { once: true });
+            proof.appendChild(image);
+          } catch (error) {
+            proof.textContent = error.message || 'Foto bukti tidak dapat dimuat.';
+          }
+        })());
+      });
+
+      detailOverlay.classList.add('is-open');
+      detailOverlay.setAttribute('aria-hidden', 'false');
+      detailDialog.focus({ preventScroll: true });
+      await Promise.all(proofLoads);
     }
 
     function closeLeaveDetails() {
@@ -572,22 +752,47 @@
     loadLeaveApplications();
 
     let currentRecords = [];
-
     async function loadAbsensi() {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Memuat data absensi...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Memuat data absensi...</td></tr>';
       try {
         const res = await fetch(`/api/absensi?kelas=${encodeURIComponent(filterKelas.value)}&tanggal=${filterDate.value}&mapel=${encodeURIComponent(filterMapel.value)}`);
         const json = await res.json();
-        if (json.success && json.data.length > 0) {
+        if (!res.ok || !json.success || !Array.isArray(json.data)) {
+          throw new Error(json.message || 'Gagal memuat data absensi.');
+        }
+        if (json.data.length > 0) {
           currentRecords = json.data;
           renderTable();
         } else {
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Tidak ada data siswa untuk kelas ini.</td></tr>';
+          currentRecords = [];
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Tidak ada data siswa untuk kelas ini.</td></tr>';
         }
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat data dari server.</td></tr>';
+      } catch (error) {
+        currentRecords = [];
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#ef4444;">${escapeHtml(error.message || 'Gagal memuat data absensi.')}</td></tr>`;
       }
     }
+
+    function rollAttendanceDateIfNeeded() {
+      const today = getJakartaDate();
+      if (today === attendanceDisplayDate) return;
+      attendanceDisplayDate = today;
+      filterDate.value = today;
+      sessionStorage.setItem('adminAbsensiDate', today);
+      void loadAbsensi();
+    }
+
+    function scheduleAttendanceDateRollover() {
+      window.setTimeout(() => {
+        rollAttendanceDateIfNeeded();
+        scheduleAttendanceDateRollover();
+      }, millisecondsUntilJakartaMidnight());
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) rollAttendanceDateIfNeeded();
+    });
+    scheduleAttendanceDateRollover();
 
     function renderTable() {
       tbody.innerHTML = '';
@@ -595,10 +800,12 @@
         const tr = document.createElement('tr');
         tr.dataset.nis = item.nis;
         const status = String(item.status || 'hadir').toLowerCase();
-        const isLeave = ['izin', 'sakit', 'dispensasi'].includes(status);
-        const statusLabels = { hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat' };
-        const badgeClass = status === 'izin' ? 'b-izin' : status === 'sakit' ? 'b-sakit' : status === 'dispensasi' ? 'b-izin' : status === 'alfa' ? 'b-alfa' : status === 'terlambat' ? 'b-late' : 'b-hadir';
-        const statusLabel = statusLabels[status] || status;
+        const isLeave = item.applicationOnly || ['izin', 'sakit', 'dispensasi'].includes(status);
+        const statusLabels = { hadir: 'Hadir', izin: 'Izin', sakit: 'Sakit', dispensasi: 'Dispensasi', alfa: 'Alfa', terlambat: 'Terlambat', menunggu: 'Menunggu Konfirmasi', ditolak: 'Ditolak', disetujui: 'Disetujui', 'disetujui - menunggu tap': 'Disetujui - Menunggu Tap' };
+        const badgeClass = status === 'izin' ? 'b-izin' : status === 'sakit' ? 'b-sakit' : status === 'dispensasi' ? 'b-izin' : status === 'alfa' || status === 'ditolak' ? 'b-alfa' : status === 'terlambat' ? 'b-late' : ['menunggu', 'disetujui', 'disetujui - menunggu tap'].includes(status) ? 'b-izin' : 'b-hadir';
+        const statusLabel = item.applicationOnly ? (item.status || statusLabels[status]) : (statusLabels[status] || status);
+        const details = attendanceDetailsForDate(item);
+        const primaryDetail = details[0];
         const requestedMinutesMatch = status === 'dispensasi' && String(item.note || '').match(/durasi:\s*(\d+)\s+menit/i);
         const actualMinutesMatch = String(item.note || '').match(/aktual:\s*(\d+)\s+menit/i);
         const durationMatch = isLeave && String(item.note || '').match(/\((\d+)\s+hari,/i);
@@ -606,12 +813,19 @@
           ? `${requestedMinutesMatch[1]} menit`
           : actualMinutesMatch
             ? `${actualMinutesMatch[1]} menit aktual`
+            : primaryDetail
+              ? primaryDetail.sameDay
+                ? (primaryDetail.actualSeconds === null || primaryDetail.actualSeconds === undefined
+                  ? `${primaryDetail.durationMinutes || '-'} menit`
+                  : `${Math.floor(primaryDetail.actualSeconds / 60)} menit aktual`)
+                : `${Math.max(1, Math.floor((Date.parse(`${primaryDetail.endDateRaw}T00:00:00Z`) - Date.parse(`${primaryDetail.startDateRaw}T00:00:00Z`)) / 86400000) + 1)} hari`
             : isLeave
               ? (durationMatch ? `${durationMatch[1]} hari` : '-')
           : (item.durasi || '08j 15m');
         const ketText = item.note || (isLeave ? statusLabel : 'Tepat Waktu');
         const timeIn = isLeave ? '-' : (item.masuk || '07:15 WIB');
         const timeOut = isLeave ? '-' : (item.keluar || '15:30 WIB');
+        const detailText = details.map(attendanceDetailSummary);
 
         tr.innerHTML = `
           <td>${index + 1}</td>
@@ -626,11 +840,29 @@
               ${escapeHtml(statusLabel)}
             </span>
           </td>
+          <td class="attendance-detail-cell">${detailText.length
+            ? detailText.map(text => `<span class="attendance-detail-summary">${escapeHtml(text)}</span>`).join('')
+            : '-'}</td>
+          <td class="attendance-detail-action">${details.length ? `
+            <button type="button" class="leave-icon-button attendance-detail-button btn-view-attendance-detail"
+              data-index="${index}"
+              aria-label="Lihat detail izin ${escapeHtml(item.name)}"
+              title="Lihat detail izin">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>` : '-'}</td>
         `;
 
         tbody.appendChild(tr);
       });
     }
+
+    tbody.addEventListener('click', event => {
+      const button = event.target.closest('.btn-view-attendance-detail');
+      if (!button) return;
+      const record = currentRecords[Number(button.dataset.index)];
+      const applications = record ? attendanceDetailsForDate(record) : [];
+      if (applications.length) void openAttendanceLeaveDetails(applications, button);
+    });
 
     filterKelas.addEventListener('change', () => {
       sessionStorage.setItem('adminAbsensiClass', filterKelas.value);

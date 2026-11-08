@@ -733,6 +733,27 @@ async function getActiveDispensation(nis) {
   return data || null;
 }
 
+async function getDispensationRfidContext(nis) {
+  const { data, error } = await supabase
+    .from('pengajuan_izin')
+    .select('id,kelas,status,start_date,started_at,returned_at,duration_minutes,type')
+    .eq('nis', nis)
+    .eq('same_day', true)
+    .in('status', ['Disetujui - Menunggu Tap', 'Disetujui'])
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  const applications = (data || []).filter(application =>
+    String(application.type || '').toLowerCase() === 'dispensasi'
+  );
+  return applications.find(application =>
+    application.status === 'Disetujui' && application.started_at && !application.returned_at
+  ) || applications.find(application =>
+    application.status === 'Disetujui - Menunggu Tap' && !application.started_at
+  ) || null;
+}
+
 async function processDispensationRfid(nis, kelas, studentName, eventId = null) {
   const { data, error } = await supabase.rpc('process_dispensasi_rfid', {
     p_nis: nis,
@@ -763,6 +784,24 @@ async function stopStudentTracker(nis, keluarTime, durasi) {
     return updated;
   }
   return null;
+}
+
+async function clearDispensationState(nis) {
+  try {
+    const { error } = await supabase
+      .from('pengajuan_izin')
+      .update({ returned_at: new Date().toISOString() })
+      .eq('nis', nis)
+      .eq('same_day', true)
+      .eq('status', 'Disetujui')
+      .not('started_at', 'is', null)
+      .is('returned_at', null);
+    if (error && error.code !== 'PGRST116') throw error;
+    return true;
+  } catch (err) {
+    if (['42703', 'PGRST204'].includes(err.code)) return true;
+    throw err;
+  }
 }
 
 // ─── PENGATURAN ───────────────────────────────────────────────────
@@ -922,6 +961,23 @@ async function getIzinApplications(nis, { excludeApproved = false } = {}) {
   return data || [];
 }
 
+async function getIzinApplicationsForAttendanceDate(date, kelas) {
+  let query = supabase
+    .from('pengajuan_izin')
+    .select('id,nis,student_name,kelas,type,start_date,end_date,reason,status,review_note,created_at,reviewed_at,reviewed_by,same_day,duration_minutes,started_at,target_end_at,returned_at,actual_seconds')
+    .lte('start_date', date)
+    .gte('end_date', date)
+    .order('created_at', { ascending: true });
+
+  if (kelas && !['all', 'semua kelas'].includes(String(kelas).trim().toLowerCase())) {
+    query = query.ilike('kelas', kelas);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
 async function getIzinApplicationById(id) {
   const { data, error } = await supabase
     .from('pengajuan_izin')
@@ -1012,8 +1068,10 @@ module.exports = {
   updateStudentLogCheckOut,
   getActiveStudentTracker,
   getActiveDispensation,
+  getDispensationRfidContext,
   processDispensationRfid,
   stopStudentTracker,
+  clearDispensationState,
   // Pengaturan
   getPengaturan,
   savePengaturan,
@@ -1024,6 +1082,7 @@ module.exports = {
   getNotifikasi,
   // Leave Applications
   getIzinApplications,
+  getIzinApplicationsForAttendanceDate,
   getIzinApplicationById,
   createIzinApplication,
   reviewIzinApplication

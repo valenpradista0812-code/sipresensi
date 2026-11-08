@@ -14,6 +14,9 @@ router.get('/', authenticate, async (req, res) => {
       const records = await db.getAbsensiByNis(req.user.nis);
       return res.json({ success: true, count: records.length, data: records });
     }
+    if (!['guru', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Akses riwayat absensi hanya untuk siswa, guru, dan admin.' });
+    }
 
     const kelas   = req.query.kelas   || 'XII IPA 1';
     const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
@@ -27,18 +30,29 @@ router.get('/', authenticate, async (req, res) => {
 
     // Ambil record absensi yang sudah ada untuk kelas & tanggal ini
     const existingRecords = await db.getAbsensi({ kelas, tanggal });
+    const leaveApplications = await db.getIzinApplicationsForAttendanceDate(tanggal, kelas);
+    const applicationsByNis = new Map();
+    leaveApplications.forEach(application => {
+      const key = String(application.nis);
+      if (!applicationsByNis.has(key)) applicationsByNis.set(key, []);
+      applicationsByNis.get(key).push(application);
+    });
     const existingMap = {};
     existingRecords.forEach(a => { existingMap[a.nis] = a; });
 
     const result = students.map((st, idx) => {
       const existing = existingMap[st.nis];
+      const studentApplications = applicationsByNis.get(String(st.nis)) || [];
+      const applicationOnly = !existing && studentApplications.length > 0;
       return {
         no:     idx + 1,
         nis:    st.nis,
         name:   st.name,
         kelas:  st.kelas,
-        status: existing ? existing.status : 'hadir',
-        note:   existing ? (existing.note || '') : ''
+        status: existing ? existing.status : applicationOnly ? studentApplications[0].status : 'hadir',
+        note:   existing ? (existing.note || '') : '',
+        applicationOnly,
+        leaveApplications: studentApplications
       };
     });
     const studentNis = new Set(result.map(student => String(student.nis)));
@@ -50,7 +64,9 @@ router.get('/', authenticate, async (req, res) => {
         name: record.student_name || 'Siswa',
         kelas: record.kelas,
         status: record.status,
-        note: record.note || ''
+        note: record.note || '',
+        applicationOnly: false,
+        leaveApplications: applicationsByNis.get(String(record.nis)) || []
       });
     });
 
