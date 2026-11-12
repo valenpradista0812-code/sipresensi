@@ -7,3 +7,7 @@ pnp.*.json
 
 # Environment files
 .env
+
+# Local ESP32 configuration can contain device credentials and Wi-Fi passwords
+docs/device_config.json
+docs/wifi_config.json

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jadwal Pelajaran - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .schedule-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .schedule-filters select, .schedule-filters input { min-height: 40px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
+    .schedule-filters input { flex: 1 1 220px; }
+    .schedule-table { min-width: 700px; }
+    @media (max-width: 640px) { .schedule-filters > * { width: 100%; } }
+  </style>
+</head>
+<body class="siswa">
+<div class="app">
+  <div id="sidebar-container"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="hamburger" id="hamburger" type="button" aria-label="Buka menu"><span></span><span></span><span></span></button>
+      <div class="topbar-left"><div><h1>Jadwal Pelajaran</h1><p>Jadwal sesuai kelas Anda</p></div></div>
+      <div class="topbar-right"><div class="user"><div><div class="user-name">-</div><div class="user-role">Siswa</div></div></div></div>
+    </header>
+    <main class="content">
+      <section class="card" style="padding:18px;">
+        <div class="schedule-filters">
+          <select id="schedule-day" aria-label="Filter hari"><option value="">Semua Hari</option></select>
+          <input id="schedule-search" type="search" placeholder="Cari mata pelajaran atau guru...">
+        </div>
+        <div class="table-scroll">
+          <table class="schedule-table">
+            <thead><tr><th>Hari</th><th>Jam</th><th>Mata Pelajaran</th><th>Guru</th><th>Ruang</th></tr></thead>
+            <tbody id="schedule-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:#64748b;">Memuat jadwal...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span id="schedule-count">Memuat jadwal...</span></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+<script src="/src/js/sidebar-loader.js"></script>
+<script src="/src/js/script-siswa.js"></script>
+<script src="/src/js/app-core.js"></script>
+<script>
+(() => {
+  const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  const dayFilter = document.getElementById('schedule-day');
+  const search = document.getElementById('schedule-search');
+  const body = document.getElementById('schedule-body');
+  const count = document.getElementById('schedule-count');
+  let schedules = [];
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+
+  days.forEach(day => dayFilter.add(new Option(day, day)));
+
+  async function loadSchedules() {
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#64748b;">Memuat jadwal...</td></tr>';
+    try {
+      const response = await fetch('/api/jadwal');
+      const result = await response.json();
+      if (!response.ok || !result.success || !Array.isArray(result.data)) {
+        throw new Error(result.message || 'Gagal memuat jadwal.');
+      }
+      schedules = result.data;
+      render();
+    } catch (error) {
+      body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#b91c1c;">${escapeHtml(error.message)}</td></tr>`;
+      count.textContent = 'Jadwal tidak dapat dimuat.';
+    }
+  }
+
+  function render() {
+    const query = search.value.trim().toLowerCase();
+    const visible = schedules.filter(item =>
+      (!dayFilter.value || item.hari === dayFilter.value) &&
+      [item.mapel, item.name_guru, item.ruangan].some(value => String(value || '').toLowerCase().includes(query))
+    );
+    body.replaceChildren();
+    if (!visible.length) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#64748b;">Belum ada jadwal untuk kelas Anda.</td></tr>';
+    }
+    visible.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${escapeHtml(item.hari)}</td>
+        <td>${escapeHtml(String(item.jam_mulai).slice(0, 5))}–${escapeHtml(String(item.jam_selesai).slice(0, 5))}</td>
+        <td>${escapeHtml(item.mapel)}</td><td>${escapeHtml(item.name_guru)}</td><td>${escapeHtml(item.ruangan || '-')}</td>`;
+      body.appendChild(row);
+    });
+    count.textContent = `Menampilkan ${visible.length} jadwal`;
+  }
+
+  dayFilter.addEventListener('change', render);
+  search.addEventListener('input', render);
+  loadSchedules();
+})();
+</script>
+</body>
+</html>

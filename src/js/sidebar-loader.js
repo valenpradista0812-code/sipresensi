@@ -130,6 +130,21 @@
     const activeItem = navItems.find(item => item.dataset.page === currentPage);
     const mobileItems = Array.from(container.querySelectorAll('.admin-mobile-item[data-page]'));
 
+    fetch('/api/auth/me')
+      .then(response => response.json())
+      .then(result => {
+        const isAdmin = result.success && ['admin', 'guru'].includes(result.user?.role);
+        container.querySelectorAll('[data-admin-only="true"]').forEach(item => {
+          item.style.display = isAdmin ? '' : 'none';
+        });
+      })
+      .catch(error => {
+        console.error('Gagal memuat hak akses menu admin:', error);
+        container.querySelectorAll('[data-admin-only="true"]').forEach(item => {
+          item.style.display = 'none';
+        });
+      });
+
     navItems.forEach(item => {
       if (item === activeItem) {
         item.setAttribute('aria-current', 'page');

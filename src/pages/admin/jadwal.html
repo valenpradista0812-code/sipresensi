@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manajemen Jadwal - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .schedule-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .schedule-toolbar select, .schedule-toolbar input, .schedule-field input, .schedule-field select {
+      min-height: 40px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: #fff;
+    }
+    .schedule-search { flex: 1 1 220px; }
+    .schedule-table { min-width: 900px; }
+    .schedule-action { white-space: nowrap; }
+    .schedule-action button { padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--navy); }
+    .schedule-action button + button { margin-left: 5px; }
+    .schedule-modal { position: fixed; inset: 0; z-index: 9999; display: none; place-items: center; padding: 16px; background: rgba(15,23,42,.5); }
+    .schedule-modal.open { display: grid; }
+    .schedule-dialog { width: min(100%, 620px); max-height: 92vh; overflow-y: auto; padding: 22px; border-radius: 16px; background: #fff; box-shadow: 0 20px 50px rgba(15,23,42,.2); }
+    .schedule-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .schedule-dialog-head h2 { font-size: 18px; }
+    .schedule-dialog-head button { font-size: 24px; color: var(--muted); }
+    .schedule-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+    .schedule-field { display: grid; gap: 5px; }
+    .schedule-field label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+    .schedule-field--wide { grid-column: 1 / -1; }
+    .schedule-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .schedule-form-error { min-height: 20px; margin-top: 10px; color: var(--red-dark); font-size: 12px; }
+    @media (max-width: 640px) {
+      .schedule-form-grid { grid-template-columns: 1fr; }
+      .schedule-field--wide { grid-column: auto; }
+      .schedule-toolbar > * { width: 100%; }
+    }
+  </style>
+</head>
+<body class="admin">
+<div class="app">
+  <div id="sidebar-container"></div>
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Manajemen Jadwal</h1>
+      <div class="topbar-right">
+        <a class="bell" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi">◎</a>
+        <div class="user"><div><div class="user-name">-</div><div class="user-role">-</div></div></div>
+      </div>
+    </header>
+    <main class="content">
+      <section class="card" style="padding:18px;">
+        <div class="schedule-toolbar">
+          <select id="filter-day" aria-label="Filter hari"><option value="">Semua Hari</option></select>
+          <select id="filter-class" aria-label="Filter kelas"><option value="">Semua Kelas</option></select>
+          <select id="filter-teacher" aria-label="Filter guru"><option value="">Semua Guru</option></select>
+          <select id="filter-subject" aria-label="Filter mata pelajaran"><option value="">Semua Mata Pelajaran</option></select>
+          <input id="schedule-search" class="schedule-search" type="search" placeholder="Cari jadwal...">
+          <button id="add-schedule" class="btn btn-primary admin-only" type="button">+ Tambah Jadwal</button>
+        </div>
+        <div class="table-scroll">
+          <table class="schedule-table">
+            <thead><tr><th>Hari</th><th>Jam</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th><th>Ruang</th><th class="admin-only">Aksi</th></tr></thead>
+            <tbody id="schedule-body"><tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">Memuat jadwal...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span id="schedule-count">Memuat jadwal...</span></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="schedule-modal" class="schedule-modal" aria-hidden="true">
+  <section class="schedule-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
+    <div class="schedule-dialog-head">
+      <h2 id="schedule-modal-title">Tambah Jadwal</h2>
+      <button id="schedule-close" type="button" aria-label="Tutup">&times;</button>
+    </div>
+    <form id="schedule-form">
+      <input id="schedule-id" type="hidden">
+      <div class="schedule-form-grid">
+        <div class="schedule-field"><label for="schedule-day">Hari</label><select id="schedule-day" required></select></div>
+        <div class="schedule-field"><label for="schedule-class">Kelas</label><select id="schedule-class" required></select></div>
+        <div class="schedule-field"><label for="schedule-teacher">Guru Pengajar</label><select id="schedule-teacher" required></select></div>
+        <div class="schedule-field"><label for="schedule-subject">Mata Pelajaran</label><select id="schedule-subject" required></select></div>
+        <div class="schedule-field"><label for="schedule-start">Jam Mulai</label><input id="schedule-start" type="time" required></div>
+        <div class="schedule-field"><label for="schedule-end">Jam Selesai</label><input id="schedule-end" type="time" required></div>
+        <div class="schedule-field schedule-field--wide"><label for="schedule-room">Ruang Kelas (opsional)</label><input id="schedule-room" maxlength="100"></div>
+        <div class="schedule-field schedule-field--wide"><label for="schedule-note">Catatan (opsional)</label><input id="schedule-note" maxlength="200"></div>
+      </div>
+      <div id="schedule-error" class="schedule-form-error" role="alert"></div>
+      <div class="schedule-form-actions">
+        <button id="schedule-cancel" class="btn" type="button">Batal</button>
+        <button class="btn btn-primary" type="submit">Simpan Jadwal</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script src="/src/js/sidebar-loader.js"></script>
+<script src="/src/js/script.js"></script>
+<script src="/src/js/app-core.js"></script>
+<script>
+(() => {
+  const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  const body = document.getElementById('schedule-body');
+  const count = document.getElementById('schedule-count');
+  const form = document.getElementById('schedule-form');
+  const modal = document.getElementById('schedule-modal');
+  const errorBox = document.getElementById('schedule-error');
+  const filters = {
+    day: document.getElementById('filter-day'),
+    kelas: document.getElementById('filter-class'),
+    guruId: document.getElementById('filter-teacher'),
+    mapel: document.getElementById('filter-subject')
+  };
+  let schedules = [];
+  let teachers = [];
+  let classes = [];
+  let subjects = [];
+  let isAdmin = false;
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+
+  function setOptions(select, values, placeholder, getValue = value => value, getLabel = value => value) {
+    select.replaceChildren(new Option(placeholder, ''));
+    values.forEach(value => select.add(new Option(getLabel(value), getValue(value))));
+  }
+
+  function teacherSubjects(teacher) {
+    return String(teacher.mapel || '').split(/[,;/]/).map(value => value.trim()).filter(Boolean);
+  }
+
+  async function request(url, options) {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || 'Permintaan gagal.');
+    return result;
+  }
+
+  async function initialize() {
+    try {
+      const { user } = await request('/api/auth/me');
+      isAdmin = user.role === 'admin';
+      document.querySelectorAll('.admin-only').forEach(element => {
+        element.hidden = !isAdmin;
+      });
+      if (isAdmin) {
+        const { data } = await request('/api/jadwal/options');
+        teachers = data.teachers || [];
+        classes = data.classes || [];
+        subjects = data.subjects || [];
+        setOptions(filters.kelas, classes, 'Semua Kelas', item => item.name, item => item.name);
+        setOptions(filters.guruId, teachers, 'Semua Guru', item => item.id, item => item.name);
+        setOptions(filters.mapel, subjects, 'Semua Mata Pelajaran');
+        setOptions(document.getElementById('schedule-class'), classes, 'Pilih kelas', item => item.name, item => item.name);
+        setOptions(document.getElementById('schedule-teacher'), teachers, 'Pilih guru', item => item.id, item => `${item.name} (${item.nip})`);
+        updateFormSubjects();
+      } else {
+        filters.kelas.hidden = true;
+        filters.guruId.hidden = true;
+        filters.mapel.hidden = true;
+      }
+      setOptions(filters.day, days, 'Semua Hari');
+      setOptions(document.getElementById('schedule-day'), days, 'Pilih hari');
+      await loadSchedules();
+    } catch (error) {
+      showError(error.message);
+    }
+  }
+
+  function showError(message) {
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c;">${escapeHtml(message)}</td></tr>`;
+    count.textContent = 'Jadwal tidak dapat dimuat.';
+  }
+
+  async function loadSchedules() {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">Memuat jadwal...</td></tr>';
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, element]) => {
+        if (element.value) params.set(key, element.value);
+      });
+      const result = await request(`/api/jadwal?${params}`);
+      schedules = result.data;
+      renderSchedules();
+    } catch (error) {
+      showError(error.message);
+    }
+  }
+
+  function renderSchedules() {
+    const query = document.getElementById('schedule-search').value.trim().toLowerCase();
+    const visible = schedules.filter(item =>
+      [item.hari, item.kelas, item.mapel, item.name_guru, item.ruangan].some(value =>
+        String(value || '').toLowerCase().includes(query)
+      )
+    );
+    body.replaceChildren();
+    if (!visible.length) {
+      body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">Belum ada jadwal yang cocok.</td></tr>`;
+    }
+    visible.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${escapeHtml(item.hari)}</td>
+        <td>${escapeHtml(String(item.jam_mulai).slice(0, 5))}–${escapeHtml(String(item.jam_selesai).slice(0, 5))}</td>
+        <td>${escapeHtml(item.kelas)}</td><td>${escapeHtml(item.mapel)}</td>
+        <td>${escapeHtml(item.name_guru)}</td><td>${escapeHtml(item.ruangan || '-')}</td>
+        <td class="schedule-action admin-only"></td>`;
+      if (isAdmin) {
+        const cell = row.lastElementChild;
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.textContent = 'Edit';
+        edit.dataset.action = 'edit';
+        edit.dataset.id = item.id;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Hapus';
+        remove.dataset.action = 'delete';
+        remove.dataset.id = item.id;
+        cell.append(edit, remove);
+      } else {
+        row.lastElementChild.remove();
+      }
+      body.appendChild(row);
+    });
+    count.textContent = `Menampilkan ${visible.length} jadwal`;
+  }
+
+  function updateFormSubjects(selected = '') {
+    const teacher = teachers.find(item => item.id === document.getElementById('schedule-teacher').value);
+    const options = teacher ? teacherSubjects(teacher) : subjects;
+    setOptions(document.getElementById('schedule-subject'), options, 'Pilih mata pelajaran');
+    if (selected && options.includes(selected)) document.getElementById('schedule-subject').value = selected;
+  }
+
+  function openModal(item) {
+    errorBox.textContent = '';
+    form.reset();
+    document.getElementById('schedule-id').value = item?.id || '';
+    document.getElementById('schedule-modal-title').textContent = item ? 'Edit Jadwal' : 'Tambah Jadwal';
+    document.getElementById('schedule-day').value = item?.hari || '';
+    document.getElementById('schedule-class').value = item?.kelas || '';
+    document.getElementById('schedule-teacher').value = item?.guru_id || '';
+    updateFormSubjects(item?.mapel || '');
+    document.getElementById('schedule-start').value = String(item?.jam_mulai || '').slice(0, 5);
+    document.getElementById('schedule-end').value = String(item?.jam_selesai || '').slice(0, 5);
+    document.getElementById('schedule-room').value = item?.ruangan || '';
+    document.getElementById('schedule-note').value = item?.catatan || '';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  document.getElementById('add-schedule').addEventListener('click', () => openModal());
+  document.getElementById('schedule-close').addEventListener('click', closeModal);
+  document.getElementById('schedule-cancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', event => { if (event.target === modal) closeModal(); });
+  document.getElementById('schedule-teacher').addEventListener('change', () => updateFormSubjects());
+  Object.values(filters).forEach(element => element.addEventListener('change', loadSchedules));
+  document.getElementById('schedule-search').addEventListener('input', renderSchedules);
+
+  body.addEventListener('click', async event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const item = schedules.find(schedule => schedule.id === button.dataset.id);
+    if (!item) return;
+    if (button.dataset.action === 'edit') {
+      openModal(item);
+      return;
+    }
+    if (!window.confirm(`Hapus jadwal ${item.mapel} kelas ${item.kelas} hari ${item.hari}?`)) return;
+    button.disabled = true;
+    try {
+      const result = await request(`/api/jadwal/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      SiPresensi.showToast(result.message, 'success');
+      await loadSchedules();
+    } catch (error) {
+      button.disabled = false;
+      SiPresensi.showToast(error.message, 'error');
+    }
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    errorBox.textContent = '';
+    const id = document.getElementById('schedule-id').value;
+    const payload = {
+      hari: document.getElementById('schedule-day').value,
+      kelas: document.getElementById('schedule-class').value,
+      guruId: document.getElementById('schedule-teacher').value,
+      mapel: document.getElementById('schedule-subject').value,
+      jamMulai: document.getElementById('schedule-start').value,
+      jamSelesai: document.getElementById('schedule-end').value,
+      ruangan: document.getElementById('schedule-room').value,
+      catatan: document.getElementById('schedule-note').value
+    };
+    if (payload.jamSelesai <= payload.jamMulai) {
+      errorBox.textContent = 'Jam selesai harus lebih besar daripada jam mulai.';
+      return;
+    }
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      const result = await request(id
+        ? `/api/jadwal/${encodeURIComponent(id)}`
+        : '/api/jadwal', {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      closeModal();
+      SiPresensi.showToast(result.message, 'success');
+      await loadSchedules();
+    } catch (error) {
+      errorBox.textContent = error.message || 'Gagal menyimpan jadwal.';
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  initialize();
+})();
+</script>
+</body>
+</html>

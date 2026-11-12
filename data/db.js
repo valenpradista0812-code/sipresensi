@@ -1015,6 +1015,179 @@ async function reviewIzinApplication(id, status, reviewer, reviewNote) {
 }
 
 module.exports = {
+  async getIotDevice(id) {
+    const { data, error } = await supabase
+      .from('iot_devices')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async updateIotDevice(id, fields) {
+    const { data, error } = await supabase
+      .from('iot_devices')
+      .update(fields)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async markIotDeviceOffline(id, timestamp) {
+    const { data, error } = await supabase
+      .from('iot_devices')
+      .update({ offline_reported_at: timestamp })
+      .eq('id', id)
+      .is('offline_reported_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async upsertIotDevice(device) {
+    const { data, error } = await supabase
+      .from('iot_devices')
+      .upsert(device, { onConflict: 'id' })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async createIotDeviceEvent(event) {
+    const { data, error } = await supabase
+      .from('iot_device_events')
+      .insert(event)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async getIotDeviceEvents(deviceId, limit = 100) {
+    const { data, error } = await supabase
+      .from('iot_device_events')
+      .select('*')
+      .eq('device_id', deviceId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data || [];
+  },
+  async createIotDeviceCommand(command) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .insert(command)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async getIotDeviceCommands(deviceId, now) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .select('id,command,requested_at,expires_at')
+      .eq('device_id', deviceId)
+      .eq('status', 'pending')
+      .gt('expires_at', now)
+      .order('requested_at', { ascending: true })
+      .limit(10);
+    if (error) throw error;
+    return data || [];
+  },
+  async getActiveIotDeviceCommand(deviceId) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .select('id,command,status,requested_at,expires_at')
+      .eq('device_id', deviceId)
+      .in('status', ['pending', 'acknowledged'])
+      .order('requested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async updateIotDeviceCommand(id, deviceId, status, details = {}) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .update({ status, ...details })
+      .eq('id', id)
+      .eq('device_id', deviceId)
+      .eq('status', 'pending')
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async completeAcknowledgedIotDeviceCommands(deviceId, completedAt) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .update({ status: 'completed', completed_at: completedAt })
+      .eq('device_id', deviceId)
+      .eq('status', 'acknowledged')
+      .select('id');
+    if (error) throw error;
+    return data || [];
+  },
+  async expireIotDeviceCommands(deviceId, now) {
+    const { data, error } = await supabase
+      .from('iot_device_commands')
+      .update({ status: 'expired' })
+      .eq('device_id', deviceId)
+      .in('status', ['pending', 'acknowledged'])
+      .lte('expires_at', now)
+      .select('id');
+    if (error) throw error;
+    return data || [];
+  },
+  async getJadwal({ hari, kelas, guruId, mapel, activeOnly = false } = {}) {
+    let query = supabase.from('jadwal_mapel').select('*');
+    if (hari) query = query.eq('hari', hari);
+    if (kelas) query = query.eq('kelas', kelas);
+    if (guruId) query = query.eq('guru_id', guruId);
+    if (mapel) query = query.eq('mapel', mapel);
+    if (activeOnly) query = query.eq('aktif', 1);
+    const { data, error } = await query.order('hari').order('jam_mulai');
+    if (error) throw error;
+    return data || [];
+  },
+  async findSiswaByNis(nis) {
+    const { data, error } = await supabase
+      .from('siswa')
+      .select('*')
+      .eq('nis', nis)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async createJadwal(record) {
+    const { data, error } = await supabase
+      .from('jadwal_mapel')
+      .insert(record)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateJadwal(id, record) {
+    const { data, error } = await supabase
+      .from('jadwal_mapel')
+      .update(record)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async deleteJadwal(id) {
+    const { data, error } = await supabase
+      .from('jadwal_mapel')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
   supabase,
   hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   // Auth & User Management

@@ -14,6 +14,8 @@ const absensiRoutes = require('./routes/absensi');
 const pengaturanRoutes = require('./routes/pengaturan');
 const notifikasiRoutes = require('./routes/notifikasi');
 const izinRoutes = require('./routes/izin');
+const jadwalRoutes = require('./routes/jadwal');
+const iotMonitoringRoutes = require('./routes/iot-monitoring');
 
 const { pageAuthGuard, optionalAuth } = require('./middleware/auth');
 
@@ -40,6 +42,8 @@ app.use('/api/absensi', absensiRoutes);
 app.use('/api/pengaturan', pengaturanRoutes);
 app.use('/api/notifikasi', notifikasiRoutes);
 app.use('/api/izin', izinRoutes);
+app.use('/api/jadwal', jadwalRoutes);
+app.use('/api/iot-monitoring', iotMonitoringRoutes);
 
 // Root Route handler
 app.get('/', optionalAuth, (req, res) => {
@@ -94,6 +98,7 @@ const adminPages = [
   { old: '/absensi.html', new: '/src/pages/admin/absensi.html' },
   { old: '/riwayat-absensi.html', new: '/src/pages/admin/riwayat-absensi.html' },
   { old: '/rekap-bulanan.html', new: '/src/pages/admin/rekap-bulanan.html' },
+  { old: '/jadwal.html', new: '/src/pages/admin/jadwal.html' },
   { old: '/profil-sekolah.html', new: '/src/pages/admin/profil-sekolah.html' },
   { old: '/pengaturan.html', new: '/src/pages/admin/pengaturan.html' },
   { old: '/notifikasi.html', new: '/src/pages/admin/notifikasi.html' }
@@ -120,6 +125,13 @@ adminPages.forEach(page => {
   });
 });
 
+app.get('/perangkat-rfid.html', pageAuthGuard(['guru', 'admin']), (req, res) => {
+  res.sendFile(path.join(__dirname, 'src/pages/admin/perangkat-rfid.html'));
+});
+app.get('/src/pages/admin/perangkat-rfid.html', pageAuthGuard(['guru', 'admin']), (req, res) => {
+  res.sendFile(path.join(__dirname, 'src/pages/admin/perangkat-rfid.html'));
+});
+
 // ==========================================
 // STUDENT PAGES
 // ==========================================
@@ -128,7 +140,8 @@ const studentPages = [
   { old: '/dashboardsiswa.html', new: '/src/pages/student/dashboardsiswa.html' },
   { old: '/detail-absensi.html', new: '/src/pages/student/detail-absensi.html' },
   { old: '/profil-siswa.html', new: '/src/pages/student/profil.html' },
-  { old: '/notifikasi-siswa.html', new: '/src/pages/student/notifikasi.html' }
+  { old: '/notifikasi-siswa.html', new: '/src/pages/student/notifikasi.html' },
+  { old: '/jadwal-siswa.html', new: '/src/pages/student/jadwal.html' }
 ];
 
 // Register both old and new paths for student pages

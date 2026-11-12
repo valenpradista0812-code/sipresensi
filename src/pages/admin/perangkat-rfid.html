@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Perangkat RFID - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .device-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .device-toolbar p { color: var(--muted); font-size: 12px; }
+    .device-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .device-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+    .device-card h2 { margin-bottom: 12px; color: var(--navy); font-size: 14px; }
+    .device-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--border-soft); font-size: 12px; }
+    .device-row span:first-child { color: var(--muted); }
+    .device-row b { text-align: right; overflow-wrap: anywhere; }
+    .device-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: 700; }
+    .device-pill::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+    .device-pill.online, .device-pill.connected { background: #dcfce7; color: #15803d; }
+    .device-pill.offline, .device-pill.disconnected, .device-pill.error { background: #fee2e2; color: #b91c1c; }
+    .device-activity { margin-top: 16px; }
+    .device-activity .table-scroll { margin-top: 12px; }
+    .device-activity table { min-width: 640px; }
+    .device-empty { padding: 22px; color: var(--muted); text-align: center; }
+    #device-error { margin: 0 0 14px; color: #b91c1c; font-size: 13px; }
+    @media (max-width: 900px) { .device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px) {
+      .device-grid { grid-template-columns: 1fr; }
+      .device-toolbar { align-items: flex-start; flex-direction: column; }
+      .device-toolbar .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body class="admin">
+<div class="app">
+  <div id="sidebar-container"></div>
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Pengaturan Perangkat RFID</h1>
+      <div class="topbar-right">
+        <a class="bell" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi">◎</a>
+        <div class="user"><div><div class="user-name">-</div><div class="user-role">-</div></div></div>
+      </div>
+    </header>
+    <main class="content">
+      <section class="device-toolbar">
+        <p>Status diperbarui berkala. Perangkat dianggap online bila heartbeat diterima dalam 45 detik terakhir.</p>
+        <button id="restart-device" class="btn btn-primary" type="button" disabled>Restart ESP32</button>
+      </section>
+      <div id="device-error" role="alert"></div>
+      <section class="device-grid" aria-label="Status perangkat">
+        <article class="device-card">
+          <h2>Perangkat &amp; Backend</h2>
+          <div class="device-row"><span>Status Perangkat</span><b id="device-online" class="device-pill">Belum diketahui</b></div>
+          <div class="device-row"><span>Komunikasi Backend</span><b id="backend-status" class="device-pill">Memeriksa</b></div>
+          <div class="device-row"><span>Terakhir Terhubung</span><b id="device-last-seen">-</b></div>
+          <div class="device-row"><span>Versi Firmware</span><b id="device-firmware">-</b></div>
+        </article>
+        <article class="device-card">
+          <h2>Jaringan Wi-Fi</h2>
+          <div class="device-row"><span>Status Wi-Fi</span><b id="wifi-status" class="device-pill">Belum diketahui</b></div>
+          <div class="device-row"><span>SSID</span><b id="wifi-ssid">-</b></div>
+          <div class="device-row"><span>Alamat IP</span><b id="wifi-ip">-</b></div>
+          <div class="device-row"><span>Kekuatan Sinyal</span><b id="wifi-rssi">-</b></div>
+        </article>
+        <article class="device-card">
+          <h2>Modul RFID RC522</h2>
+          <div class="device-row"><span>Inisialisasi</span><b id="rfid-init" class="device-pill">Belum diketahui</b></div>
+          <div class="device-row"><span>Komunikasi Modul</span><b id="rfid-status" class="device-pill">Belum diketahui</b></div>
+          <div class="device-row"><span>Pembacaan Kartu Terakhir</span><b id="rfid-last-read">-</b></div>
+          <div class="device-row"><span>UID Terakhir</span><b id="rfid-last-uid">-</b></div>
+          <div class="device-row"><span>Error Terakhir</span><b id="device-last-error">-</b></div>
+        </article>
+      </section>
+      <section class="card device-activity" style="padding:18px;">
+        <h2 class="panel-title">Riwayat Aktivitas Perangkat</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Waktu</th><th>Aktivitas</th><th>Detail</th></tr></thead>
+            <tbody id="device-events"><tr><td colspan="3" class="device-empty">Memuat aktivitas...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span id="event-count">Memuat aktivitas...</span></div>
+      </section>
+    </main>
+  </div>
+</div>
+<script src="/src/js/sidebar-loader.js"></script>
+<script src="/src/js/script.js"></script>
+<script src="/src/js/app-core.js"></script>
+<script>
+(() => {
+  const errorBox = document.getElementById('device-error');
+  const restartButton = document.getElementById('restart-device');
+  const eventBody = document.getElementById('device-events');
+  const eventCount = document.getElementById('event-count');
+  let timer = null;
+  let online = false;
+  let activeCommand = null;
+  let loading = false;
+
+  const eventLabels = {
+    device_connected: 'Perangkat terhubung',
+    device_disconnected: 'Perangkat terputus',
+    wifi_changed: 'Koneksi Wi-Fi berubah',
+    rfid_card_read: 'Kartu RFID dibaca',
+    rfid_error: 'Error modul RFID',
+    device_error: 'Error perangkat',
+    restart_requested: 'Restart diminta admin',
+    restart_acknowledged: 'Perangkat menerima perintah restart',
+    restarted: 'Perangkat kembali setelah restart'
+  };
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+  const formatDate = value => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('id-ID');
+  };
+  const setPill = (id, label, state = '') => {
+    const element = document.getElementById(id);
+    element.textContent = label;
+    element.className = `device-pill ${state}`;
+  };
+  const yesNo = (value, yes, no) => value === true ? yes : value === false ? no : 'Belum dilaporkan';
+
+  async function getJson(url, options) {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || 'Permintaan gagal.');
+    return result;
+  }
+
+  function renderStatus(snapshot) {
+    const device = snapshot.device;
+    online = Boolean(snapshot.online);
+    activeCommand = snapshot.activeCommand;
+    setPill('device-online', online ? 'Online' : 'Offline', online ? 'online' : 'offline');
+    setPill('backend-status', 'Terhubung', 'connected');
+    setPill('wifi-status', yesNo(device?.wifi_connected, 'Terhubung', 'Terputus'),
+      device?.wifi_connected === true ? 'connected' : device?.wifi_connected === false ? 'disconnected' : '');
+    setPill('rfid-init', yesNo(device?.rfid_initialized, 'Berhasil', 'Gagal'),
+      device?.rfid_initialized === true ? 'connected' : device?.rfid_initialized === false ? 'error' : '');
+    setPill('rfid-status', yesNo(device?.rfid_connected, 'Terhubung', 'Tidak terdeteksi'),
+      device?.rfid_connected === true ? 'connected' : device?.rfid_connected === false ? 'disconnected' : '');
+    document.getElementById('device-last-seen').textContent = formatDate(device?.last_seen_at);
+    document.getElementById('device-firmware').textContent = device?.firmware_version || '-';
+    document.getElementById('wifi-ssid').textContent = device?.wifi_ssid || '-';
+    document.getElementById('wifi-ip').textContent = device?.ip_address || '-';
+    document.getElementById('wifi-rssi').textContent = Number.isInteger(device?.rssi) ? `${device.rssi} dBm` : '-';
+    document.getElementById('rfid-last-read').textContent = formatDate(device?.last_card_at);
+    document.getElementById('rfid-last-uid').textContent = device?.last_uid || '-';
+    document.getElementById('device-last-error').textContent = device?.last_error || '-';
+    restartButton.disabled = !online || Boolean(activeCommand) || loading;
+    if (!device) {
+      errorBox.textContent = 'Belum ada heartbeat perangkat. Setelah migration diterapkan dan firmware mengirim heartbeat, status perangkat akan tampil di sini.';
+    } else {
+      errorBox.textContent = '';
+    }
+  }
+
+  function renderEvents(events) {
+    eventBody.replaceChildren();
+    if (!events.length) {
+      eventBody.innerHTML = '<tr><td colspan="3" class="device-empty">Belum ada aktivitas perangkat.</td></tr>';
+      eventCount.textContent = '0 aktivitas';
+      return;
+    }
+    events.forEach(event => {
+      const details = event.details || {};
+      const summary = event.event_type === 'rfid_card_read'
+        ? `UID ${details.uid || '-'}${details.read_at ? ` · ${formatDate(details.read_at)}` : ''}`
+        : event.event_type === 'wifi_changed'
+          ? `${details.previous_ssid || '-'} → ${details.wifi_ssid || '-'} (${details.ip_address || '-'})`
+          : details.message || details.ip_address || details.command_id || '-';
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${escapeHtml(formatDate(event.created_at))}</td>
+        <td>${escapeHtml(eventLabels[event.event_type] || event.event_type)}</td>
+        <td>${escapeHtml(summary)}</td>`;
+      eventBody.appendChild(row);
+    });
+    eventCount.textContent = `Menampilkan ${events.length} aktivitas terakhir`;
+  }
+
+  async function refresh() {
+    if (loading) return;
+    window.clearTimeout(timer);
+    loading = true;
+    try {
+      const [statusResult, eventResult] = await Promise.all([
+        getJson('/api/iot-monitoring/status'),
+        getJson('/api/iot-monitoring/events')
+      ]);
+      renderStatus(statusResult.data);
+      renderEvents(eventResult.data || []);
+    } catch (error) {
+      online = false;
+      activeCommand = null;
+      setPill('backend-status', 'Tidak dapat memeriksa', 'error');
+      errorBox.textContent = error.message || 'Gagal memuat status perangkat.';
+      restartButton.disabled = true;
+    } finally {
+      loading = false;
+      if (online && !activeCommand) restartButton.disabled = false;
+      timer = window.setTimeout(refresh, 10_000);
+    }
+  }
+
+  restartButton.addEventListener('click', async () => {
+    if (!online || loading || activeCommand) return;
+    if (!window.confirm('Restart ESP32 sekarang? Perangkat akan terputus sementara dan kembali online setelah boot ulang.')) return;
+    restartButton.disabled = true;
+    try {
+      const result = await getJson('/api/iot-monitoring/restart', { method: 'POST' });
+      SiPresensi.showToast(result.message, 'success');
+      await refresh();
+    } catch (error) {
+      SiPresensi.showToast(error.message || 'Perintah restart gagal dikirim.', 'error');
+      restartButton.disabled = !online;
+    }
+  });
+
+  window.addEventListener('beforeunload', () => window.clearTimeout(timer));
+  refresh();
+})();
+</script>
+</body>
+</html>
