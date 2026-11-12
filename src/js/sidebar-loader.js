@@ -19,13 +19,17 @@
     let role = 'admin';
     if (document.body.classList.contains('siswa')) {
       role = 'student';
+    } else if (document.body.classList.contains('petugas')) {
+      role = 'petugas';
     }
 
     // Load sidebar HTML
     try {
       const path = role === 'student' 
         ? '/public/components/student/sidebar-content.html' 
-        : '/public/components/admin/sidebar-content.html';
+        : role === 'petugas'
+          ? '/public/components/petugas/sidebar-content.html'
+          : '/public/components/admin/sidebar-content.html';
       
       const response = await fetch(path);
       if (!response.ok) throw new Error('Failed to load sidebar');
@@ -33,7 +37,7 @@
       const html = await response.text();
       container.innerHTML = html;
       
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'petugas') {
         setupAdminGlassSidebar(container);
       } else {
         setupSidebarLogic();

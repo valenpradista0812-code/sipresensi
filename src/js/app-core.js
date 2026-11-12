@@ -91,7 +91,7 @@ window.SiPresensi = (function () {
     const roleEls = document.querySelectorAll('.user-role');
     roleEls.forEach(el => {
       if (el && user.role && el.textContent.trim() === '-') {
-        el.textContent = user.role === 'admin' ? 'Admin Kepegawaian' : (user.role === 'guru' ? 'Guru / Pengajar' : 'Siswa');
+        el.textContent = user.role === 'admin' ? 'Admin Kepegawaian' : (user.role === 'guru' ? 'Guru / Pengajar' : (user.role === 'petugas' ? 'Petugas' : 'Siswa'));
       }
     });
 

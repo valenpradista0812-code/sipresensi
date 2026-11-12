@@ -15,7 +15,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/guru
-router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const { nip, name, mapel, phone, email } = req.body;
     if (!nip || !name || !mapel) {
@@ -43,7 +43,7 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
 });
 
 // PUT /api/guru/:id
-router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.put('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const updated = await db.updateGuru(req.params.id, req.body);
     if (!updated) return res.status(404).json({ success: false, message: 'Data guru tidak ditemukan.' });
@@ -55,7 +55,7 @@ router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) 
 });
 
 // DELETE /api/guru/:id
-router.delete('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.delete('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const removed = await db.deleteGuru(req.params.id);
     if (!removed) return res.status(404).json({ success: false, message: 'Data guru tidak ditemukan.' });

@@ -109,7 +109,9 @@ function pageAuthGuard(allowedRoles = []) {
 
       // If specific roles are required
       if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        const target = user.role === 'siswa' ? '/dashboard-siswa.html' : '/dashboard.html';
+        const target = user.role === 'siswa' ? '/dashboard-siswa.html'
+          : user.role === 'petugas' ? '/src/pages/petugas/dashboard.html'
+          : '/dashboard.html';
         if (req.path === target) {
           return res.status(403).send('Akses ditolak: peran tidak sesuai.');
         }

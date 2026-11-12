@@ -18,7 +18,7 @@ function normalizeRfidUid(value) {
 
 // GET /api/siswa
 router.get('/', authenticate, async (req, res) => {
-  if (!['admin', 'guru'].includes(req.user.role)) {
+  if (!['admin', 'guru', 'petugas'].includes(req.user.role)) {
     return res.status(403).json({ success: false, message: 'Akses data siswa hanya untuk guru dan admin.' });
   }
   try {
@@ -31,7 +31,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/siswa
-router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
     const rfidUid = normalizeRfidUid(req.body.rfid_uid);
@@ -112,7 +112,7 @@ router.post('/', authenticate, requireRole('guru', 'admin'), async (req, res) =>
 });
 
 // PUT /api/siswa/:id
-router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.put('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
     const rfidUid = normalizeRfidUid(req.body.rfid_uid);
@@ -190,7 +190,7 @@ router.put('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) 
 });
 
 // DELETE /api/siswa/:id
-router.delete('/:id', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.delete('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
   try {
     const existing = await db.findSiswaByIdOrNis(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Data siswa tidak ditemukan.' });

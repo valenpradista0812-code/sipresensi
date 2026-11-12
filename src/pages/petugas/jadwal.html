@@ -37,7 +37,7 @@
     }
   </style>
 </head>
-<body class="admin">
+<body class="petugas admin">
 <div class="app">
   <div id="sidebar-container"></div>
   <div class="main">
@@ -143,7 +143,7 @@
   async function initialize() {
     try {
       const { user } = await request('/api/auth/me');
-      isAdmin = user.role === 'admin';
+      isAdmin = user.role === 'admin' || user.role === 'petugas';
       document.querySelectorAll('.admin-only').forEach(element => {
         element.hidden = !isAdmin;
       });

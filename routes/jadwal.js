@@ -91,7 +91,7 @@ async function buildScheduleRecord(body, userId) {
   };
 }
 
-router.get('/options', authenticate, requireRole('admin'), async (req, res) => {
+router.get('/options', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
   try {
     const [teachers, classes] = await Promise.all([
       db.getGuru(),
@@ -110,7 +110,7 @@ router.get('/', authenticate, async (req, res) => {
       hari: DAYS.includes(req.query.hari) ? req.query.hari : undefined,
       kelas: typeof req.query.kelas === 'string' ? req.query.kelas : undefined,
       mapel: typeof req.query.mapel === 'string' ? req.query.mapel : undefined,
-      guruId: req.user.role === 'admin' && typeof req.query.guruId === 'string' ? req.query.guruId : undefined
+      guruId: (req.user.role === 'admin' || req.user.role === 'petugas') && typeof req.query.guruId === 'string' ? req.query.guruId : undefined
     };
     let activeOnly = false;
 
@@ -134,7 +134,7 @@ router.get('/', authenticate, async (req, res) => {
       }
       filters.kelas = student.kelas;
       activeOnly = true;
-    } else if (req.user.role !== 'admin') {
+    } else if (req.user.role !== 'admin' && req.user.role !== 'petugas') {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke jadwal.' });
     }
 
@@ -145,7 +145,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.post('/', authenticate, requireRole('admin'), async (req, res) => {
+router.post('/', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
   try {
     const result = await buildScheduleRecord(req.body, req.user.id);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
@@ -156,7 +156,7 @@ router.post('/', authenticate, requireRole('admin'), async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, requireRole('admin'), async (req, res) => {
+router.put('/:id', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
   try {
     const result = await buildScheduleRecord(req.body, req.user.id);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
@@ -168,7 +168,7 @@ router.put('/:id', authenticate, requireRole('admin'), async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticate, requireRole('admin'), async (req, res) => {
+router.delete('/:id', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
   try {
     const deleted = await db.deleteJadwal(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: 'Jadwal tidak ditemukan.' });

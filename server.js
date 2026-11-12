@@ -51,6 +51,9 @@ app.get('/', optionalAuth, (req, res) => {
     if (req.user.role === 'siswa') {
       return res.redirect('/src/pages/student/dashboardsiswa.html');
     }
+    if (req.user.role === 'petugas') {
+      return res.redirect('/src/pages/petugas/dashboard.html');
+    }
     return res.redirect('/src/pages/admin/dashboard.html');
   }
   return res.redirect('/src/pages/auth/login.html');
@@ -72,6 +75,9 @@ app.get('/login.html', optionalAuth, (req, res, next) => {
     if (req.user.role === 'siswa') {
       return res.redirect('/src/pages/student/dashboardsiswa.html');
     }
+    if (req.user.role === 'petugas') {
+      return res.redirect('/src/pages/petugas/dashboard.html');
+    }
     return res.redirect('/src/pages/admin/dashboard.html');
   }
   res.sendFile(path.join(__dirname, 'src/pages/auth/login.html'));
@@ -81,6 +87,9 @@ app.get('/src/pages/auth/login.html', optionalAuth, (req, res, next) => {
   if (req.user) {
     if (req.user.role === 'siswa') {
       return res.redirect('/src/pages/student/dashboardsiswa.html');
+    }
+    if (req.user.role === 'petugas') {
+      return res.redirect('/src/pages/petugas/dashboard.html');
     }
     return res.redirect('/src/pages/admin/dashboard.html');
   }
@@ -92,13 +101,10 @@ app.get('/src/pages/auth/login.html', optionalAuth, (req, res, next) => {
 // ==========================================
 const adminPages = [
   { old: '/dashboard.html', new: '/src/pages/admin/dashboard.html' },
-  { old: '/data-siswa.html', new: '/src/pages/admin/data-siswa.html' },
-  { old: '/data-guru.html', new: '/src/pages/admin/data-guru.html' },
   { old: '/data-kelas.html', new: '/src/pages/admin/data-kelas.html' },
   { old: '/absensi.html', new: '/src/pages/admin/absensi.html' },
   { old: '/riwayat-absensi.html', new: '/src/pages/admin/riwayat-absensi.html' },
   { old: '/rekap-bulanan.html', new: '/src/pages/admin/rekap-bulanan.html' },
-  { old: '/jadwal.html', new: '/src/pages/admin/jadwal.html' },
   { old: '/profil-sekolah.html', new: '/src/pages/admin/profil-sekolah.html' },
   { old: '/pengaturan.html', new: '/src/pages/admin/pengaturan.html' },
   { old: '/notifikasi.html', new: '/src/pages/admin/notifikasi.html' }
@@ -125,11 +131,26 @@ adminPages.forEach(page => {
   });
 });
 
-app.get('/perangkat-rfid.html', pageAuthGuard(['guru', 'admin']), (req, res) => {
-  res.sendFile(path.join(__dirname, 'src/pages/admin/perangkat-rfid.html'));
-});
-app.get('/src/pages/admin/perangkat-rfid.html', pageAuthGuard(['guru', 'admin']), (req, res) => {
-  res.sendFile(path.join(__dirname, 'src/pages/admin/perangkat-rfid.html'));
+// ==========================================
+// PETUGAS PAGES
+// ==========================================
+const petugasPages = [
+  { old: '/petugas-dashboard.html', new: '/src/pages/petugas/dashboard.html' },
+  { old: '/data-siswa.html', new: '/src/pages/petugas/data-siswa.html' },
+  { old: '/data-guru.html', new: '/src/pages/petugas/data-guru.html' },
+  { old: '/jadwal.html', new: '/src/pages/petugas/jadwal.html' },
+  { old: '/perangkat-rfid.html', new: '/src/pages/petugas/perangkat-rfid.html' }
+];
+
+// Register both old and new paths for petugas pages
+petugasPages.forEach(page => {
+  app.get(page.old, pageAuthGuard(['petugas']), (req, res) => {
+    res.sendFile(path.join(__dirname, page.new));
+  });
+
+  app.get(page.new, pageAuthGuard(['petugas']), (req, res) => {
+    res.sendFile(path.join(__dirname, page.new));
+  });
 });
 
 // ==========================================

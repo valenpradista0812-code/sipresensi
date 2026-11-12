@@ -227,7 +227,7 @@ router.post('/commands/:id/ack', authenticateDevice, requireServiceRole, async (
   }
 });
 
-router.get('/status', authenticate, requireRole('guru', 'admin'), requireServiceRole, async (req, res) => {
+router.get('/status', authenticate, requireRole('guru', 'admin', 'petugas'), requireServiceRole, async (req, res) => {
   try {
     const snapshot = await getStatusSnapshot();
     return res.json({ success: true, data: snapshot });
@@ -236,7 +236,7 @@ router.get('/status', authenticate, requireRole('guru', 'admin'), requireService
   }
 });
 
-router.get('/events', authenticate, requireRole('guru', 'admin'), requireServiceRole, async (req, res) => {
+router.get('/events', authenticate, requireRole('guru', 'admin', 'petugas'), requireServiceRole, async (req, res) => {
   try {
     const data = await db.getIotDeviceEvents(DEVICE_ID, 100);
     return res.json({ success: true, count: data.length, data });
@@ -245,7 +245,7 @@ router.get('/events', authenticate, requireRole('guru', 'admin'), requireService
   }
 });
 
-router.post('/restart', authenticate, requireRole('guru', 'admin'), requireServiceRole, async (req, res) => {
+router.post('/restart', authenticate, requireRole('guru', 'admin', 'petugas'), requireServiceRole, async (req, res) => {
   try {
     const snapshot = await getStatusSnapshot();
     if (!snapshot.online) {
