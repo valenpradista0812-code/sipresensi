@@ -155,7 +155,8 @@
     document.getElementById('rfid-last-read').textContent = formatDate(device?.last_card_at);
     document.getElementById('rfid-last-uid').textContent = device?.last_uid || '-';
     document.getElementById('device-last-error').textContent = device?.last_error || '-';
-    restartButton.disabled = !online || Boolean(activeCommand) || loading;
+    restartButton.disabled = Boolean(activeCommand) || loading;
+    restartButton.title = online ? '' : 'Perangkat sedang offline; perintah restart belum dapat dikirim.';
     if (!device) {
       errorBox.textContent = 'Belum ada heartbeat perangkat. Setelah migration diterapkan dan firmware mengirim heartbeat, status perangkat akan tampil di sini.';
     } else {
@@ -202,16 +203,22 @@
       activeCommand = null;
       setPill('backend-status', 'Tidak dapat memeriksa', 'error');
       errorBox.textContent = error.message || 'Gagal memuat status perangkat.';
-      restartButton.disabled = true;
+      restartButton.disabled = false;
     } finally {
       loading = false;
-      if (online && !activeCommand) restartButton.disabled = false;
+      if (!activeCommand) restartButton.disabled = false;
       timer = window.setTimeout(refresh, 10_000);
     }
   }
 
   restartButton.addEventListener('click', async () => {
-    if (!online || loading || activeCommand) return;
+    if (loading || activeCommand) return;
+    if (!online) {
+      const message = 'Perangkat sedang offline (tidak ada heartbeat). Periksa daya/Wi-Fi ESP32 lalu coba lagi.';
+      errorBox.textContent = message;
+      SiPresensi.showToast(message, 'error');
+      return;
+    }
     if (!window.confirm('Restart ESP32 sekarang? Perangkat akan terputus sementara dan kembali online setelah boot ulang.')) return;
     restartButton.disabled = true;
     try {
@@ -220,7 +227,7 @@
       await refresh();
     } catch (error) {
       SiPresensi.showToast(error.message || 'Perintah restart gagal dikirim.', 'error');
-      restartButton.disabled = !online;
+      restartButton.disabled = false;
     }
   });
 

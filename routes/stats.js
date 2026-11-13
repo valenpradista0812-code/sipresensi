@@ -44,7 +44,7 @@ router.get('/overview', authenticate, async (req, res) => {
 
     let hadirCount = 0, izinCount = 0, sakitCount = 0, alfaCount = 0;
     todayRecords.forEach(r => {
-      if (r.status === 'hadir')      hadirCount++;
+      if (r.status === 'hadir' || r.status === 'terlambat') hadirCount++;
       else if (r.status === 'izin')  izinCount++;
       else if (r.status === 'sakit') sakitCount++;
       else if (r.status === 'alfa')  alfaCount++;
@@ -66,7 +66,7 @@ router.get('/overview', authenticate, async (req, res) => {
 
     const weeklyChart = days.map(d => {
       const records = (weekRecords || []).filter(r => r.date === d.date);
-      const h = records.filter(r => r.status === 'hadir').length;
+      const h = records.filter(r => r.status === 'hadir' || r.status === 'terlambat').length;
       const z = records.filter(r => r.status === 'izin').length;
       const s = records.filter(r => r.status === 'sakit').length;
       const a = records.filter(r => r.status === 'alfa').length;
@@ -135,10 +135,11 @@ router.get('/siswa', authenticate, async (req, res) => {
   try {
     const nis      = req.user.nis || '0089211478';
     const userLogs = await db.getStudentLogs(nis);
+    const settings = await db.getPengaturan();
 
     const todayLog = userLogs[0] || null;
 
-    const hadirDays = userLogs.filter(l => l.status === 'hadir').length;
+    const hadirDays = userLogs.filter(l => l.status === 'hadir' || l.status === 'terlambat').length;
     const izinDays  = userLogs.filter(l => l.status === 'izin' || l.status === 'sakit').length;
     const alfaDays  = userLogs.filter(l => l.status === 'alfa').length;
     const totalDays = userLogs.length;
@@ -150,7 +151,8 @@ router.get('/siswa', authenticate, async (req, res) => {
         studentName:         req.user.name,
         kelas:               req.user.kelas || 'XII IPA 1',
         jamMasuk:            todayLog ? (todayLog.masuk || '-') : '-',
-        targetPulang:        '15:30 WIB',
+        targetPulang:        settings.jamPulang || '15:30 WIB',
+        batasMasuk:          (settings.jamMasuk || '07:00 WIB').replace(/\s*WIB/i, '').trim(),
         statusMasuk:         todayLog ? (todayLog.status_text || 'Hadir Tepat Waktu') : 'Belum Absen',
         jamBelajarMingguIni: `${hadirDays * 7} Jam`,
         targetBelajar:       '40 Jam',

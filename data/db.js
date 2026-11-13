@@ -577,21 +577,42 @@ async function getAbsensiByNisRange(nis, startDate, endDate) {
   return data || [];
 }
 
+async function findAbsensiByNisDate(nis, date, kelas) {
+  let query = supabase
+    .from('absensi')
+    .select('*')
+    .eq('nis', nis)
+    .eq('date', date);
+  if (kelas) query = query.eq('kelas', kelas);
+
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 async function upsertAbsensi(data) {
-  const { id, date, kelas, mapel, nis, studentName, status, checkIn, checkOut, note } = data;
+  const { id, date, kelas, mapel, nis, studentName, status, checkIn, checkOut, note, isOvertime, overtimeMinutes, jadwalPulang } = data;
+
+  // Preserve fields that are not part of the current operation (mis. check-in saat tap pulang).
+  const existing = await findAbsensiByNisDate(nis, date, kelas);
 
   const payload = {
-    id: id || ('abs-' + Date.now() + '-' + nis),
+    id: (existing && existing.id) || id || ('abs-' + Date.now() + '-' + nis),
     date,
     kelas,
-    mapel: mapel || null,
+    mapel: mapel !== undefined ? (mapel || null) : ((existing && existing.mapel) || null),
     nis,
-    student_name: studentName || null,
-    status,
-    check_in: checkIn || '-',
-    check_out: checkOut || '-',
-    note: note || null
+    student_name: studentName || (existing && existing.student_name) || null,
+    status: status || (existing && existing.status) || 'hadir',
+    check_in: checkIn !== undefined ? (checkIn || '-') : ((existing && existing.check_in) || '-'),
+    check_out: checkOut !== undefined ? (checkOut || '-') : ((existing && existing.check_out) || '-'),
+    note: note !== undefined ? (note || null) : ((existing && existing.note) || null)
   };
+  if (isOvertime === true) {
+    payload.is_overtime = true;
+    payload.overtime_minutes = overtimeMinutes || 0;
+    payload.jadwal_pulang = jadwalPulang || null;
+  }
   const { data: saved, error } = await supabase
     .from('absensi')
     .upsert(payload, { onConflict: 'nis,date,kelas' })
@@ -766,15 +787,24 @@ async function processDispensationRfid(nis, kelas, studentName, eventId = null) 
   return data || null;
 }
 
-async function stopStudentTracker(nis, keluarTime, durasi) {
+async function stopStudentTracker(nis, keluarTime, durasi, extra = {}) {
   const active = await getActiveStudentTracker(nis);
   if (active) {
+    const isOvertime = extra.isOvertime === true;
+    const overtimeMinutes = isOvertime ? (extra.overtimeMinutes || 0) : null;
     const { data: updated, error } = await supabase
       .from('student_logs')
       .update({
         keluar: keluarTime,
         durasi: durasi || '-',
-        status_text: `Selesai (${durasi || keluarTime})`
+        status_text: isOvertime
+          ? `Overtime (+${overtimeMinutes} mnt)`
+          : `Selesai (${durasi || keluarTime})`,
+        ...(isOvertime ? {
+          is_overtime: true,
+          overtime_minutes: overtimeMinutes,
+          jadwal_pulang: extra.jadwalPulang || null
+        } : {})
       })
       .eq('id', active.id)
       .select()
@@ -819,6 +849,7 @@ async function getPengaturan() {
       sekolah: 'SMA Negeri 1 Jakarta',
       ta: '2024/2025 Ganjil',
       jamMasuk: '07:00 WIB',
+      jamPulang: '15:00 WIB',
       toleransi: '15 Menit',
       emailNotif: true,
       whatsappRekap: false,
@@ -828,7 +859,8 @@ async function getPengaturan() {
   return {
     sekolah: data.sekolah,
     ta: data.ta,
-    jamMasuk: data.jam_masuk,
+    jamMasuk: data.jam_masuk || '07:00 WIB',
+    jamPulang: data.jam_pulang || '15:00 WIB',
     toleransi: data.toleransi,
     emailNotif: !!data.email_notif,
     whatsappRekap: !!data.whatsapp_rekap,
@@ -839,19 +871,27 @@ async function getPengaturan() {
 async function savePengaturan(data) {
   const { data: existing, error: selectError } = await supabase
     .from('pengaturan')
-    .select('id')
+    .select('*')
     .limit(1)
     .maybeSingle();
   if (selectError) throw selectError;
 
+  const prev = existing || {};
   const payload = {
-    sekolah: data.sekolah || 'SMA Negeri 1 Jakarta',
-    ta: data.ta || '2024/2025 Ganjil',
-    jam_masuk: data.jamMasuk || '07:00 WIB',
-    toleransi: data.toleransi || '15 Menit',
-    email_notif: data.emailNotif ? 1 : 0,
-    whatsapp_rekap: data.whatsappRekap ? 1 : 0,
-    bahasa: data.bahasa || 'Bahasa Indonesia'
+    sekolah: data.sekolah || prev.sekolah || 'SMA Negeri 1 Jakarta',
+    ta: data.ta || prev.ta || '2024/2025 Ganjil',
+    jam_masuk: data.jamMasuk || prev.jam_masuk || '07:00 WIB',
+    jam_pulang: data.jamPulang !== undefined && data.jamPulang !== null
+      ? data.jamPulang
+      : (prev.jam_pulang || null),
+    toleransi: data.toleransi || prev.toleransi || '15 Menit',
+    email_notif: data.emailNotif !== undefined
+      ? (data.emailNotif ? 1 : 0)
+      : (prev.email_notif ? 1 : 0),
+    whatsapp_rekap: data.whatsappRekap !== undefined
+      ? (data.whatsappRekap ? 1 : 0)
+      : (prev.whatsapp_rekap ? 1 : 0),
+    bahasa: data.bahasa || prev.bahasa || 'Bahasa Indonesia'
   };
 
   if (existing) {
@@ -1231,6 +1271,7 @@ module.exports = {
   getAbsensiByNis,
   getAbsensiRiwayat,
   getAbsensiByNisRange,
+  findAbsensiByNisDate,
   upsertAbsensi,
   // Student Logs
   getStudentLogs,

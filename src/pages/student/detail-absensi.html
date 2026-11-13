@@ -2989,6 +2989,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const checkOutCell = document.createElement('td');
       checkOutCell.textContent = isLeave || activeDispensation ? '-' : formatAttendanceTime(record.check_out);
+      if (!isLeave && !activeDispensation && record.is_overtime) {
+        const overtime = document.createElement('div');
+        overtime.style.cssText = 'margin-top:2px;font-size:10px;font-weight:700;color:#d97706;';
+        overtime.textContent = `Overtime +${record.overtime_minutes || 0} mnt`;
+        checkOutCell.appendChild(overtime);
+      }
       row.appendChild(checkOutCell);
 
       const durationCell = document.createElement('td');

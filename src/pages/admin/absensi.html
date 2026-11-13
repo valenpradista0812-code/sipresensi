@@ -832,7 +832,7 @@
           <td><b>${escapeHtml(item.name)}</b><br><small style="color:#64748b">NIS: ${escapeHtml(item.nis)}</small></td>
           <td class="day">${escapeHtml(filterDate.value || '-')}</td>
           <td>${isLeave ? '-' : `<span class="t-ok">${escapeHtml(timeIn)}</span>`}</td>
-          <td>${escapeHtml(timeOut)}</td>
+          <td>${escapeHtml(timeOut)}${item.is_overtime ? `<br><small style="color:#d97706;font-weight:700;">+ OT ${item.overtime_minutes || 0} mnt</small>` : ''}</td>
           <td>${escapeHtml(durationText)}</td>
           <td><span style="color: ${isLeave ? '#64748b' : '#10b981'}; font-weight: 700;">${escapeHtml(ketText)}</span></td>
           <td>

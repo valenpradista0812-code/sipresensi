@@ -1,27 +1,37 @@
 const express = require('express');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const router = express.Router();
 const db = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { jakartaNow, readJamKerja, evaluasiTapAbsensi } = require('../utils/jam-kerja');
 
-// Satu sesi scan pada satu perangkat/server. Untuk multi-device, simpan sesi di DB/Redis.
-let scanSession = null;
+// shortcut: sesi scan disimpan di file temp agar terbaca lintas proses lokal; pindah ke DB/Redis kalau multi-host.
+const SCAN_STATE_FILE = path.join(os.tmpdir(), 'sipresensi-rfid-scan.json');
 const SCAN_WINDOW_MS = 30000;
-const MIN_TRACKER_MS = 60 * 1000; // Tracker hanya bisa dihentikan setelah 1 menit dari tap pertama.
 const recentScans = new Map();
+
+function readScanSession() {
+  try {
+    return JSON.parse(fs.readFileSync(SCAN_STATE_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeScanSession(session) {
+  try {
+    fs.writeFileSync(SCAN_STATE_FILE, JSON.stringify(session));
+  } catch (error) {
+    console.error('Gagal menyimpan sesi scan RFID:', error);
+  }
+}
 
 function normalizeUid(value) {
   if (value === undefined || value === null) return null;
   const uid = String(value).trim().toUpperCase().replace(/[:\s]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   return /^[0-9A-F]{2}(?:-[0-9A-F]{2}){3,9}$/.test(uid) ? uid : null;
-}
-
-function jakartaDateTime() {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
-  }).formatToParts(now).reduce((obj, p) => (obj[p.type] = p.value, obj), {});
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}:${parts.second}` };
 }
 
 function deviceAuthorized(req) {
@@ -36,21 +46,25 @@ function deviceAuthorized(req) {
 }
 
 function expireScanIfNeeded() {
-  if (scanSession && scanSession.status === 'waiting' && Date.now() >= scanSession.expiresAt) {
-    scanSession.status = 'timeout';
+  const session = readScanSession();
+  if (session && session.status === 'waiting' && Date.now() >= session.expiresAt) {
+    session.status = 'timeout';
+    writeScanSession(session);
   }
 }
 
 // Admin/guru menekan tombol "Baca Kartu" di halaman Data Siswa.
 router.post('/scan/start', authenticate, requireRole('guru', 'admin', 'petugas'), (req, res) => {
-  scanSession = { status: 'waiting', uid: null, message: 'Tempelkan kartu pada alat RFID.', expiresAt: Date.now() + SCAN_WINDOW_MS };
-  res.json({ success: true, message: scanSession.message, expiresIn: SCAN_WINDOW_MS / 1000 });
+  const session = { status: 'waiting', uid: null, message: 'Tempelkan kartu pada alat RFID.', expiresAt: Date.now() + SCAN_WINDOW_MS };
+  writeScanSession(session);
+  res.json({ success: true, message: session.message, expiresIn: SCAN_WINDOW_MS / 1000 });
 });
 
 router.get('/scan/status', authenticate, requireRole('guru', 'admin', 'petugas'), (req, res) => {
   expireScanIfNeeded();
-  if (!scanSession) return res.json({ success: true, status: 'idle' });
-  const { status, uid, message } = scanSession;
+  const session = readScanSession();
+  if (!session) return res.json({ success: true, status: 'idle' });
+  const { status, uid, message } = session;
   if (status === 'complete') {
     // Hanya satu browser yang perlu mengambil hasil; jangan menghapus sebelum client membacanya.
     return res.json({ success: true, status, uid, message: 'Kartu berhasil dibaca.' });
@@ -73,14 +87,20 @@ router.post('/rfid', async (req, res) => {
 
   try {
     expireScanIfNeeded();
-    if (scanSession && scanSession.status === 'waiting') {
-      scanSession.status = 'complete';
-      scanSession.uid = uid;
-      scanSession.message = 'Kartu berhasil dibaca.';
+    const pendingScan = readScanSession();
+    if (pendingScan && pendingScan.status === 'waiting') {
+      pendingScan.status = 'complete';
+      pendingScan.uid = uid;
+      pendingScan.message = 'Kartu berhasil dibaca.';
+      writeScanSession(pendingScan);
       return res.json({ success: true, mode: 'registration', uid, message: 'UID diterima untuk pendaftaran.' });
     }
 
     const nowMs = Date.now();
+    const settings = (await db.getPengaturan().catch(() => null)) || {};
+    const { jamMasuk, jamPulang, jamMasukLabel, jamPulangLabel } = readJamKerja(settings);
+    const nowClock = jakartaNow();
+    const nowMinutes = nowClock.minutes;
     const student = await db.findSiswaByRfidUid(uid);
     if (!student) return res.status(404).json({ success: false, mode: 'attendance', message: 'Kartu belum terdaftar.' });
     if (student.status && !['aktif', 'active'].includes(String(student.status).toLowerCase())) {
@@ -106,7 +126,7 @@ router.post('/rfid', async (req, res) => {
     }
     if (!dispensationEvent && dispensationContext) {
       recentScans.set(uid, nowMs);
-      const localDate = jakartaDateTime().date;
+      const localDate = nowClock.date;
       const isPending = dispensationContext.status === 'Disetujui - Menunggu Tap';
       const message = isPending && dispensationContext.start_date !== localDate
         ? `Dispensasi disetujui untuk ${dispensationContext.start_date}, bukan hari ini. Tap tidak mengubah timer absensi.`
@@ -183,7 +203,7 @@ router.post('/rfid', async (req, res) => {
       return res.status(429).json({ success: false, mode: 'attendance', message: 'Kartu baru saja dipindai. Tunggu sebentar.' });
     }
 
-    const { date, time } = jakartaDateTime();
+    const { date, time } = nowClock;
     const now = new Date();
     const startMs = nowMs;
     const timeStr = `${time} WIB`;
@@ -192,10 +212,13 @@ router.post('/rfid', async (req, res) => {
       month: 'long', year: 'numeric'
     }).format(now);
 
-    // Jika belum ada tracker aktif, tap pertama memulai tracker.
+    // Tap pertama memulai absensi masuk; tap berikutnya terkunci sampai jam pulang.
     let tracker = await db.getActiveStudentTracker(student.nis);
     let trackerStarted = false;
     let trackerStopped = false;
+
+    // Abaikan tracker sisa hari sebelumnya agar tidak memblokir absensi hari ini.
+    if (tracker && tracker.tgl && tracker.tgl !== dateStr) tracker = null;
 
     // Fallback: sebagian data lama bisa memiliki keluar = null, sehingga query tracker aktif
     // yang hanya mencari keluar='-' tidak menemukannya. Periksa juga ID harian lama.
@@ -207,86 +230,139 @@ router.post('/rfid', async (req, res) => {
       }
     }
 
-     if (!tracker) {
-       tracker = await db.addStudentLog({
-         id: `rfid-log-${student.nis}-${date}-${startMs}`,
-         nis: student.nis,
-         tgl: dateStr,
-         masuk: `${time} WIB`,
-         keluar: '-',
-         zona: 'RFID',
-         status: 'hadir',
-         statusText: 'Tracker Berjalan',
-         valid: true,
-         durasi: String(startMs)
-       });
-       trackerStarted = true;
+    const todayAbsensi = await db.findAbsensiByNisDate(student.nis, date, student.kelas);
+    const sudahMasuk = Boolean(tracker) || Boolean(todayAbsensi && todayAbsensi.check_in && todayAbsensi.check_in !== '-');
+    const sudahPulang = Boolean(todayAbsensi && todayAbsensi.check_out && todayAbsensi.check_out !== '-');
+    const masukTercatat = (todayAbsensi && todayAbsensi.check_in) || (tracker && tracker.masuk) || null;
+    const tap = evaluasiTapAbsensi({ nowMinutes, jamMasuk, jamPulang, sudahMasuk, sudahPulang });
 
-       await db.upsertAbsensi({
-         id: `rfid-${student.nis}-${date}`,
-         date,
-         kelas: student.kelas,
-         mapel: 'RFID',
-         nis: student.nis,
-         studentName: student.name,
-         status: 'hadir',
-         checkIn: time,
-         checkOut: '-'
-       });
+    if (tap.action === 'tolak-pulang') {
+      recentScans.set(uid, nowMs);
+      for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+      return res.status(409).json({
+        success: false, mode: 'attendance', name: student.name, nis: student.nis,
+        date, time, isRunning: false,
+        checkIn: masukTercatat, checkOut: todayAbsensi.check_out,
+        message: `Absensi pulang ${student.name} sudah tercatat hari ini pukul ${todayAbsensi.check_out}.`
+      });
+    }
 
-       recentScans.set(uid, nowMs);
-       for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+    if (sudahMasuk) {
+      if (tap.action === 'tolak-belum-pulang') {
+        recentScans.set(uid, nowMs);
+        for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+        return res.status(425).json({
+          success: false, mode: 'attendance', name: student.name, nis: student.nis,
+          date, time, trackerStarted: false, trackerStopped: false, isRunning: true,
+          checkIn: masukTercatat, checkOutAllowedAt: jamPulangLabel,
+          message: `${student.name} sudah absen masuk${masukTercatat ? ` pukul ${masukTercatat}` : ''}. Tap pulang baru diizinkan mulai ${jamPulangLabel}.`
+        });
+      }
 
-       return res.json({
-         success: true, mode: 'attendance', name: student.name, nis: student.nis,
-         kelas: student.kelas, date, time, trackerStarted: true, trackerStopped: false,
-         isRunning: true, startTime: startMs,
-         message: `Absensi berhasil. Tracker dimulai untuk ${student.name}`
-       });
-     }
+      let duration = '-';
+      if (tracker) {
+        const rawStart = tracker.durasi || tracker.created_at;
+        const trackerStartMs = /^\d{12,14}$/.test(String(rawStart || ''))
+          ? Number(rawStart)
+          : new Date(rawStart).getTime();
+        const elapsedMs = Number.isFinite(trackerStartMs) ? nowMs - trackerStartMs : 0;
+        const diffSec = Math.max(0, Math.floor(elapsedMs / 1000));
+        duration = `${Math.floor(diffSec / 3600)}j ${Math.floor((diffSec % 3600) / 60)}m`;
+        const isOvertime = nowMinutes > jamPulang;
+        const overtimeMinutes = Math.max(0, nowMinutes - jamPulang);
+        await db.stopStudentTracker(student.nis, timeStr, duration, {
+          isOvertime,
+          overtimeMinutes,
+          jadwalPulang: jamPulangLabel
+        });
+      }
 
-     const rawStart = tracker.durasi || tracker.created_at;
-     const trackerStartMs = /^\d{12,14}$/.test(String(rawStart || ''))
-       ? Number(rawStart)
-       : new Date(rawStart).getTime();
-     const elapsedMs = Number.isFinite(trackerStartMs) ? nowMs - trackerStartMs : 0;
+      const isOvertime = nowMinutes > jamPulang;
+      const overtimeMinutes = Math.max(0, nowMinutes - jamPulang);
+      await db.clearDispensationState(student.nis);
 
-     if (elapsedMs < MIN_TRACKER_MS) {
-       const secondsLeft = Math.max(1, Math.ceil((MIN_TRACKER_MS - elapsedMs) / 1000));
-       recentScans.set(uid, nowMs);
-       return res.json({
-         success: true, mode: 'attendance', name: student.name, nis: student.nis,
-         date, time, trackerStarted: false, trackerStopped: false, isRunning: true,
-         startTime: trackerStartMs, secondsUntilStopAllowed: secondsLeft,
-         message: `Tracker ${student.name} masih berjalan. Tap untuk menghentikan setelah 1 menit; tunggu ${secondsLeft} detik lagi.`
-       });
-     }
+      // Jangan kirim status/check-in: upsertAbsensi mempertahankan catatan masuk sebelumnya.
+      await db.upsertAbsensi({
+        id: (todayAbsensi && todayAbsensi.id) || `rfid-${student.nis}-${date}`,
+        date,
+        kelas: student.kelas,
+        mapel: 'RFID',
+        nis: student.nis,
+        studentName: student.name,
+        checkOut: time,
+        isOvertime,
+        overtimeMinutes,
+        jadwalPulang: jamPulangLabel
+      });
+      trackerStopped = true;
 
-     const diffSec = Math.max(0, Math.floor(elapsedMs / 1000));
-     const duration = `${Math.floor(diffSec / 3600)}j ${Math.floor((diffSec % 3600) / 60)}m`;
-     await db.stopStudentTracker(student.nis, `${time} WIB`, duration);
-     await db.clearDispensationState(student.nis);
-     await db.upsertAbsensi({
-       id: `rfid-${student.nis}-${date}`,
-       date,
-       kelas: student.kelas,
-       mapel: 'RFID',
-       nis: student.nis,
-       studentName: student.name,
-       status: 'hadir',
-       checkOut: time
-     });
-     trackerStopped = true;
+      recentScans.set(uid, nowMs);
+      for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
 
-     recentScans.set(uid, nowMs);
-     for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+      return res.json({
+        success: true, mode: 'attendance', name: student.name, nis: student.nis,
+        kelas: student.kelas, date, time, trackerStarted: false, trackerStopped: true,
+        isRunning: false, startTime: null,
+        status: (todayAbsensi && todayAbsensi.status) || (tracker && tracker.status) || 'hadir',
+        checkIn: masukTercatat, checkOut: time,
+        isOvertime, overtimeMinutes, jadwalPulang: jamPulangLabel,
+        message: isOvertime
+          ? `Absensi pulang ${student.name} tercatat pukul ${time} WIB. Overtime +${overtimeMinutes} menit.`
+          : `Absensi pulang ${student.name} tercatat pukul ${time} WIB.`
+      });
+    }
 
-     return res.json({
-       success: true, mode: 'attendance', name: student.name, nis: student.nis,
-       kelas: student.kelas, date, time, trackerStarted: false, trackerStopped: true,
-       isRunning: false, startTime: null,
-       message: `Tracker ${student.name} berhasil dihentikan.`
-     });
+    // Belum absen masuk. Tolak tap setelah jam pulang agar tracker tidak menggantung.
+    if (tap.action === 'tolak-lewat-pulang') {
+      recentScans.set(uid, nowMs);
+      for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+      return res.status(425).json({
+        success: false, mode: 'attendance', name: student.name, nis: student.nis,
+        date, time,
+        message: `Sudah melewati jam pulang (${jamPulangLabel}). Absensi masuk tidak dapat dimulai.`
+      });
+    }
+
+    const attendanceStatus = tap.status;
+    tracker = await db.addStudentLog({
+      id: `rfid-log-${student.nis}-${date}-${startMs}`,
+      nis: student.nis,
+      tgl: dateStr,
+      masuk: timeStr,
+      keluar: '-',
+      zona: 'RFID',
+      status: attendanceStatus,
+      statusText: attendanceStatus === 'terlambat' ? 'Terlambat' : 'Hadir Tepat Waktu',
+      valid: true,
+      durasi: String(startMs)
+    });
+    trackerStarted = true;
+
+    await db.upsertAbsensi({
+      id: `rfid-${student.nis}-${date}`,
+      date,
+      kelas: student.kelas,
+      mapel: 'RFID',
+      nis: student.nis,
+      studentName: student.name,
+      status: attendanceStatus,
+      checkIn: time,
+      checkOut: '-'
+    });
+
+    recentScans.set(uid, nowMs);
+    for (const [key, timestamp] of recentScans) if (nowMs - timestamp > 60000) recentScans.delete(key);
+
+    return res.json({
+      success: true, mode: 'attendance', name: student.name, nis: student.nis,
+      kelas: student.kelas, date, time, trackerStarted: true, trackerStopped: false,
+      isRunning: true, startTime: startMs,
+      attendanceStatus, status: attendanceStatus, late: attendanceStatus === 'terlambat',
+      checkIn: time, checkOut: null, batasMasuk: jamMasukLabel, jamPulang: jamPulangLabel,
+      message: attendanceStatus === 'terlambat'
+        ? `Absensi masuk ${student.name} tercatat TERLAMBAT pukul ${time} WIB (batas ${jamMasukLabel}).`
+        : `Absensi masuk ${student.name} tercatat HADIR pukul ${time} WIB.`
+    });
   } catch (err) {
     console.error('RFID endpoint error:', err);
     if (err.message && err.message.includes('DISPENSATION_DURATION_EXCEEDS_REMAINING_DAY')) {

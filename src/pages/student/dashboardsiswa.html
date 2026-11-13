@@ -1301,6 +1301,8 @@
 
         const statNotes = document.querySelectorAll('.stat .stat-note');
         if (statNotes.length >= 4) {
+          const statusMasuk = d.statusMasuk && d.statusMasuk !== 'Belum Absen' ? d.statusMasuk : 'Tepat Waktu';
+          statNotes[0].innerHTML = `<span class="${String(statusMasuk).toLowerCase() === 'terlambat' ? 'warn' : 'ok'}"><i class="dot hadir"></i>${escapeHtml(statusMasuk)}</span> (Batas ${escapeHtml(d.batasMasuk || '07:00')})`;
           statNotes[3].innerHTML = `<span class="ok">${d.hadirCount} Hadir</span> <span class="warn">${d.izinCount} Izin</span> <span class="danger">${d.alfaCount} Alfa</span>`;
         }
 
@@ -1316,9 +1318,9 @@
               item.innerHTML = `
                 <div>
                   <div class="log-date">${escapeHtml(l.tgl || 'Hari Ini')}</div>
-                  <div class="log-meta">${escapeHtml(l.masuk || '-')} - ${escapeHtml(l.keluar || '-')} (${escapeHtml(l.durasi || '-')})</div>
+                  <div class="log-meta">${escapeHtml(l.masuk || '-')} - ${escapeHtml(l.keluar || '-')} (${escapeHtml(l.durasi || '-')})${l.is_overtime ? ` <b style="color:#d97706;">+ OT ${l.overtime_minutes || 0} mnt</b>` : ''}</div>
                 </div>
-                <span class="badge b-${l.status || 'hadir'}">${escapeHtml((l.status || 'hadir').toUpperCase())}</span>
+                <span class="badge ${(l.status === 'terlambat' ? 'b-late' : `b-${l.status || 'hadir'}`)}">${escapeHtml((l.status || 'hadir').toUpperCase())}</span>
               `;
               logContainer.appendChild(item);
             });

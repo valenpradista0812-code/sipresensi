@@ -365,6 +365,8 @@ def proses_respons_backend(hasil):
         elif status == 429: tampilkan_pesan("TUNGGU", "COBA LAGI")
         elif status == 403: tampilkan_pesan("AKUN NONAKTIF", "HUBUNGI GURU")
         elif status == 503: tampilkan_pesan("SERVER ERROR", "CEK BACKEND/DB")
+        elif status == 409: tampilkan_pesan("SUDAH ABSEN", "HARI INI")
+        elif status == 425: tampilkan_pesan("BELUM", "WAKTUNYA")
         else: tampilkan_pesan("GAGAL DIPROSES", "COBA LAGI")
         aksi_error()
         return
@@ -381,7 +383,11 @@ def proses_respons_backend(hasil):
 
     if mode == "attendance":
         nama = data.get("name", "SISWA")
-        if data.get("trackerStarted") is True: tampilkan_pesan("ABSENSI MULAI", nama)
+        if data.get("trackerStarted") is True:
+            if data.get("attendanceStatus") == "terlambat":
+                tampilkan_pesan("TERLAMBAT", nama)
+            else:
+                tampilkan_pesan("ABSENSI MULAI", nama)
         elif data.get("trackerStopped") is True: tampilkan_pesan("ABSENSI SELESAI", nama)
         elif data.get("isRunning") is True:
             sisa = data.get("secondsUntilStopAllowed")

@@ -1,9 +1,11 @@
 from machine import Pin, SPI, I2C, PWM, reset
 import time
+import gc
 import ssd1306
 import framebuf
 import network
 import json
+import socket
 import urequests
 import urandom
 try:
@@ -18,29 +20,37 @@ from mfrc522 import MFRC522
 # =====================================
 
 SUARA_AKTIF = True
-DEBOUNCE_MS = 2500
+DEBOUNCE_MS = 2000
 LEBAR = 128
-TINGGI = 32                 # OLED 0,91" umumnya 128x32
+TINGGI = 32
 
 WIFI_CONFIG_FILE = "wifi_config.json"
-# Keep this file on the ESP32 only; it contains the device token.
 DEVICE_CONFIG_FILE = "device_config.json"
-WIFI_CONNECT_TIMEOUT = 8    # detik per jaringan
+WIFI_CONNECT_TIMEOUT = 8
 
 # =====================================
 # KONFIGURASI BACKEND SIPRESENSI
 # =====================================
-# Ganti IP di bawah dengan IPv4 laptop yang menjalankan Express.
-# Contoh: http://192.168.1.10:3000/api/iot/rfid
-SERVER_URL = "http://192.168.1.5:3000/api/iot/rfid"
-
-MONITOR_BASE_URL = SERVER_URL.rsplit("/api/iot/rfid", 1)[0] + "/api/iot-monitoring"
+# Alamat default. Bisa dioverride lewat device_config.json ("server_url")
+# atau per-SSID di wifi_config.json ("server_url"), dan diperbarui otomatis
+# lewat discovery UDP bila server berada di jaringan yang sama.
+DEFAULT_SERVER_URL = "http://192.168.1.5:3000"
+BACKEND_BASE_URL = DEFAULT_SERVER_URL
+SERVER_URL = BACKEND_BASE_URL + "/api/iot/rfid"
+MONITOR_BASE_URL = BACKEND_BASE_URL + "/api/iot-monitoring"
+DISCOVERY_PORT = 41234
+DISCOVERY_MESSAGE = b"SIPRESENSI_DISCOVER"
+DISCOVERY_REPLY_PREFIX = "SIPRESENSI_SERVER "
 FIRMWARE_VERSION = "2026.11.08"
 HEARTBEAT_INTERVAL_MS = 15000
 COMMAND_POLL_INTERVAL_MS = 5000
 MONITOR_TIMEOUT_SECONDS = 2
 
-HTTP_TIMEOUT_MS = 10000
+# [FIX] Timeout + retry untuk stres test
+RFID_HTTP_TIMEOUT_MS = 3000
+RFID_HTTP_RETRY = 1
+RFID_QUEUE_MAX = 2
+MONITOR_HTTP_TIMEOUT_MS = 2500
 
 
 def load_device_config():
@@ -67,8 +77,21 @@ if not isinstance(DEVICE_TOKEN, str):
 DEVICE_ID = DEVICE_CONFIG.get("device_id", "rfid-main")
 if not isinstance(DEVICE_ID, str) or not DEVICE_ID:
     DEVICE_ID = "rfid-main"
-HTTP_LOCK = _thread.allocate_lock() if _thread else None
+configured_server = DEVICE_CONFIG.get("server_url")
+if isinstance(configured_server, str) and configured_server.strip():
+    DEFAULT_SERVER_URL = configured_server.strip().rstrip("/")
+BACKEND_BASE_URL = DEFAULT_SERVER_URL
+SERVER_URL = BACKEND_BASE_URL + "/api/iot/rfid"
+MONITOR_BASE_URL = BACKEND_BASE_URL + "/api/iot-monitoring"
+configured_discovery_port = DEVICE_CONFIG.get("discovery_port")
+if isinstance(configured_discovery_port, int) and 0 < configured_discovery_port < 65536:
+    DISCOVERY_PORT = configured_discovery_port
+
 STATE_LOCK = _thread.allocate_lock() if _thread else None
+HTTP_LOCK_RFID = _thread.allocate_lock() if _thread else None
+HTTP_LOCK_MONITOR = _thread.allocate_lock() if _thread else None
+_BUZZ_LOCK = _thread.allocate_lock() if _thread else None
+
 monitor_state = {
     "rfid_initialized": False,
     "rfid_connected": None,
@@ -77,7 +100,15 @@ monitor_state = {
     "error": None
 }
 
-# Jeda awal agar tegangan dari baterai/adaptor stabil
+# [FIX] Antrean 2 slot agar tap cepat tidak langsung ditolak
+RFID_JOB_LOCK = _thread.allocate_lock() if _thread else None
+rfid_job = {
+    "queue": [],
+    "result": None,
+    "result_ready": False,
+    "busy": False,
+}
+
 time.sleep(1)
 
 
@@ -88,17 +119,23 @@ time.sleep(1)
 i2c = I2C(0, scl=Pin(27), sda=Pin(26), freq=400000)
 oled = ssd1306.SSD1306_I2C(LEBAR, TINGGI, i2c, 0x3C)
 
-# Canvas: semua gambar dibuat di sini, lalu disalin ke OLED
 canvas = framebuf.FrameBuffer(bytearray(LEBAR * TINGGI // 8),
                               LEBAR, TINGGI, framebuf.MONO_VLSB)
 
 
 def tampilkan():
-    """Salin canvas ke OLED."""
-    for x in range(LEBAR):
-        for y in range(TINGGI):
-            oled.pixel(x, y, canvas.pixel(x, y))
-    oled.show()
+    try:
+        oled.buffer[:] = canvas.buffer[:]
+        oled.show()
+    except AttributeError:
+        try:
+            oled.blit(canvas, 0, 0)
+            oled.show()
+        except AttributeError:
+            for y in range(TINGGI):
+                for x in range(LEBAR):
+                    oled.pixel(x, y, canvas.pixel(x, y))
+            oled.show()
 
 
 # =====================================
@@ -111,9 +148,8 @@ def x_tengah(teks, skala=1):
 
 
 def tulis_besar(teks, x, y, skala=2):
-    """Teks diperbesar, digambar ke canvas."""
     w = len(teks) * 8
-    buf = bytearray(w)                       # MONO_HLSB: 8 baris
+    buf = bytearray(w)
     fb = framebuf.FrameBuffer(buf, w, 8, framebuf.MONO_HLSB)
     fb.fill(0)
     fb.text(teks, 0, 0, 1)
@@ -157,7 +193,6 @@ def layar_error():
 
 
 def layar_wifi(teks_baris1, teks_baris2=""):
-    """Layar status WiFi saat boot."""
     canvas.fill(0)
     canvas.text(teks_baris1, x_tengah(teks_baris1, 1), 4, 1)
     if teks_baris2:
@@ -166,10 +201,8 @@ def layar_wifi(teks_baris1, teks_baris2=""):
 
 
 def gambar_sukses(nama, dx=0):
-    """Layar sukses: 'SUKSES' kecil di atas, nama besar di tengah."""
     canvas.fill(0)
     canvas.text("SUKSES", x_tengah("SUKSES", 1) + dx, 2, 1)
-
     if len(nama) <= 8:
         tulis_besar(nama, x_tengah(nama, 2) + dx, 12, 2)
     else:
@@ -177,7 +210,6 @@ def gambar_sukses(nama, dx=0):
 
 
 def gambar_gagal(dx=0):
-    """Layar gagal: 'GAGAL' besar di atas, pesan kecil di bawah."""
     canvas.fill(0)
     tulis_besar("GAGAL", x_tengah("GAGAL", 2) + dx, 3, 2)
     sub = "TIDAK TERDAFTAR"
@@ -185,30 +217,21 @@ def gambar_gagal(dx=0):
 
 
 # =====================================
-# ANIMASI (singkat, untuk antrian)
+# ANIMASI (single-frame)
 # =====================================
 
 def anim_sukses(nama):
-    """Wipe dari kiri ke kanan, total ~0.1 detik."""
-    for x0 in (32, 64, 96):
-        gambar_sukses(nama)
-        canvas.fill_rect(x0, 0, LEBAR - x0, TINGGI, 0)
-        tampilkan()
-        time.sleep(0.03)
     gambar_sukses(nama)
     tampilkan()
 
 
 def anim_gagal():
-    """Getar singkat, total ~0.25 detik."""
-    for dx in (-4, 4, -3, 3, -1, 1, 0):
-        gambar_gagal(dx)
-        tampilkan()
-        time.sleep(0.03)
+    gambar_gagal(0)
+    tampilkan()
 
 
 # =====================================
-# LED (Kuning=GPIO 4, Merah=GPIO 2)
+# LED
 # =====================================
 
 led_kuning = Pin(4, Pin.OUT)
@@ -226,7 +249,7 @@ def led_mati():
 
 
 # =====================================
-# BUZZER (2 buah, GPIO 32 & 33)
+# BUZZER (GPIO 32 & 33)
 # =====================================
 
 buzzer1 = PWM(Pin(32))
@@ -235,10 +258,7 @@ buzzer1.duty(0)
 buzzer2.duty(0)
 
 
-def bunyi(freq, durasi, volume=400):
-    if not SUARA_AKTIF:
-        time.sleep(durasi)
-        return
+def _bunyi_blocking(freq, durasi, volume):
     buzzer1.freq(freq)
     buzzer2.freq(freq)
     buzzer1.duty(volume)
@@ -248,36 +268,172 @@ def bunyi(freq, durasi, volume=400):
     buzzer2.duty(0)
 
 
-# SUKSES: dua nada NAIK, tinggi dan cerah ("ting-ting")
-NADA_SUKSES = [(1760, 0.08), (2637, 0.12)]
+def bunyi(freq, durasi, volume=400):
+    if not SUARA_AKTIF:
+        time.sleep(durasi)
+        return
+    _bunyi_blocking(freq, durasi, volume)
 
-# GAGAL: dua nada TURUN, rendah dan berat ("bzzt...")
-NADA_GAGAL = [(196, 0.20), (147, 0.40)]
+
+NADA_SUKSES = [(1760, 0.05), (2637, 0.07)]
+NADA_GAGAL = [(196, 0.07), (147, 0.09)]
+
+
+def _bunyi_async(notes, volume, led):
+    if not SUARA_AKTIF:
+        return
+    if _thread is None or _BUZZ_LOCK is None:
+        for freq, durasi in notes:
+            led.value(1)
+            _bunyi_blocking(freq, durasi, volume)
+            led.value(0)
+        return
+
+    def _run():
+        _BUZZ_LOCK.acquire()
+        try:
+            for freq, durasi in notes:
+                led.value(1)
+                _bunyi_blocking(freq, durasi, volume)
+                led.value(0)
+                time.sleep(0.02)
+        finally:
+            _BUZZ_LOCK.release()
+    _thread.start_new_thread(_run, ())
 
 
 def suara_sukses_led():
-    for freq, durasi in NADA_SUKSES:
-        led_kuning.value(1)
-        bunyi(freq, durasi)
-        led_kuning.value(0)
-        time.sleep(0.04)
+    _bunyi_async(NADA_SUKSES, 400, led_kuning)
+    led_standby()
 
 
 def suara_gagal_led():
-    led_kuning.value(0)
-    for freq, durasi in NADA_GAGAL:
-        led_merah.value(1)
-        bunyi(freq, durasi, volume=512)
-        led_merah.value(0)
-        time.sleep(0.05)
+    _bunyi_async(NADA_GAGAL, 512, led_merah)
+    led_standby()
 
 
 # =====================================
-# MANAJEMEN WIFI (MULTI-SSID, PILIH TERKUAT)
+# [BARU] NOTIFIKASI BUZZER WIFI
 # =====================================
+
+def notif_wifi_connect_attempt():
+    if not SUARA_AKTIF:
+        return
+    if _thread:
+        try:
+            _thread.start_new_thread(_bunyi_blocking, (1200, 0.05, 350))
+            return
+        except Exception:
+            pass
+    _bunyi_blocking(1200, 0.05, 350)
+
+
+def notif_wifi_terhubung():
+    if not SUARA_AKTIF:
+        return
+    notes = [(1760, 0.06), (2093, 0.06), (2637, 0.10)]
+    if _thread is None or _BUZZ_LOCK is None:
+        for freq, durasi in notes:
+            _bunyi_blocking(freq, durasi, 400)
+            time.sleep(0.03)
+        return
+
+    def _run():
+        _BUZZ_LOCK.acquire()
+        try:
+            for freq, durasi in notes:
+                _bunyi_blocking(freq, durasi, 400)
+                time.sleep(0.03)
+        finally:
+            _BUZZ_LOCK.release()
+    _thread.start_new_thread(_run, ())
+
+
+def notif_wifi_gagal():
+    if not SUARA_AKTIF:
+        return
+    notes = [(196, 0.10), (147, 0.14)]
+    if _thread is None or _BUZZ_LOCK is None:
+        for freq, durasi in notes:
+            _bunyi_blocking(freq, durasi, 512)
+            time.sleep(0.03)
+        return
+
+    def _run():
+        _BUZZ_LOCK.acquire()
+        try:
+            for freq, durasi in notes:
+                _bunyi_blocking(freq, durasi, 512)
+                time.sleep(0.03)
+        finally:
+            _BUZZ_LOCK.release()
+    _thread.start_new_thread(_run, ())
+
+
+# =====================================
+# MANAJEMEN WIFI
+# =====================================
+
+def set_backend_base(url):
+    """Ganti alamat backend saat runtime (konfigurasi per-SSID/hasil discovery)."""
+    global BACKEND_BASE_URL, SERVER_URL, MONITOR_BASE_URL
+    if not isinstance(url, str):
+        return False
+    url = url.strip().rstrip("/")
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return False
+    BACKEND_BASE_URL = url
+    SERVER_URL = url + "/api/iot/rfid"
+    MONITOR_BASE_URL = url + "/api/iot-monitoring"
+    return True
+
+
+def discover_backend(timeout=2):
+    """Cari alamat server Express di jaringan aktif lewat UDP broadcast."""
+    if not wlan or not wlan.isconnected():
+        return None
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(timeout)
+        targets = ["255.255.255.255"]
+        try:
+            ip_address, netmask = wlan.ifconfig()[0], wlan.ifconfig()[1]
+            ip_parts = [int(part) for part in ip_address.split(".")]
+            mask_parts = [int(part) for part in netmask.split(".")]
+            directed = ".".join(str(ip_parts[i] | (255 - mask_parts[i])) for i in range(4))
+            if directed not in targets:
+                targets.append(directed)
+        except Exception:
+            pass
+        for target in targets:
+            try:
+                sock.sendto(DISCOVERY_MESSAGE, (target, DISCOVERY_PORT))
+            except Exception as error:
+                print("Kirim discovery ke {} gagal: {}".format(target, error))
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                data, _ = sock.recvfrom(128)
+            except OSError:
+                break
+            text = data.decode("utf-8", "ignore").strip()
+            if text.startswith(DISCOVERY_REPLY_PREFIX):
+                url = text[len(DISCOVERY_REPLY_PREFIX):].strip()
+                if set_backend_base(url):
+                    print("Backend ditemukan via discovery:", url)
+                    return url
+    except Exception as error:
+        print("Discovery backend gagal:", error)
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+    return None
+
 
 def load_wifi_list():
-    """Baca daftar WiFi yang tersimpan dari file JSON."""
     try:
         with open(WIFI_CONFIG_FILE, "r") as f:
             data = json.load(f)
@@ -294,19 +450,18 @@ def load_wifi_list():
 
 
 def connect_best_wifi():
-    """
-    Pindai jaringan, cocokkan dengan daftar tersimpan,
-    urutkan berdasarkan RSSI (terkuat dulu), lalu hubungkan.
-    Mengembalikan objek WLAN jika berhasil, None jika gagal.
-    """
     saved = load_wifi_list()
     if not saved:
         print("Tidak ada WiFi tersimpan")
         layar_wifi("WIFI KOSONG", "MODE OFFLINE")
+        notif_wifi_gagal()
         time.sleep(1.5)
         return None
 
-    saved_map = {item["ssid"]: item["password"] for item in saved}
+    saved_map = {}
+    for item in saved:
+        if isinstance(item, dict) and item.get("ssid"):
+            saved_map[item["ssid"]] = item
 
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -318,6 +473,7 @@ def connect_best_wifi():
     except Exception as e:
         print("Pemindaian gagal:", e)
         layar_wifi("SCAN GAGAL", "MODE OFFLINE")
+        notif_wifi_gagal()
         time.sleep(1.5)
         return None
 
@@ -335,18 +491,20 @@ def connect_best_wifi():
     if not candidates:
         print("Tidak ada jaringan tersimpan di sekitar")
         layar_wifi("WIFI TAK ADA", "MODE OFFLINE")
+        notif_wifi_gagal()
         time.sleep(1.5)
         return None
 
-    # Urutkan RSSI dari kuat ke lemah
     candidates.sort(key=lambda x: x[1], reverse=True)
     print("Kandidat WiFi (urut RSSI):")
     for ssid, rssi, _ in candidates:
         print("  {}  RSSI={}".format(ssid, rssi))
 
-    for ssid, rssi, password in candidates:
+    for ssid, rssi, entry in candidates:
         print("Mencoba {} (RSSI={})...".format(ssid, rssi))
         layar_wifi("KONEK KE", ssid[:16])
+        notif_wifi_connect_attempt()
+
         try:
             wlan.disconnect()
         except Exception:
@@ -354,7 +512,7 @@ def connect_best_wifi():
         time.sleep(0.3)
 
         try:
-            wlan.connect(ssid, password)
+            wlan.connect(ssid, entry.get("password", ""))
         except Exception as e:
             print("  Panggilan connect error:", e)
             continue
@@ -366,7 +524,12 @@ def connect_best_wifi():
         if wlan.isconnected():
             ip = wlan.ifconfig()[0]
             print("  Terhubung, IP:", ip)
+            server_url = entry.get("server_url")
+            if isinstance(server_url, str) and server_url.strip():
+                set_backend_base(server_url)
+                print("  Backend untuk {}: {}".format(ssid, BACKEND_BASE_URL))
             layar_wifi("WIFI OK", ip)
+            notif_wifi_terhubung()
             time.sleep(1.0)
             return wlan
         else:
@@ -374,16 +537,55 @@ def connect_best_wifi():
 
     print("Semua jaringan tersimpan gagal")
     layar_wifi("WIFI GAGAL", "MODE OFFLINE")
+    notif_wifi_gagal()
     time.sleep(1.5)
     return None
 
 
 # =====================================
-# KOMUNIKASI BACKEND SIPRESENSI
+# KOMUNIKASI BACKEND
 # =====================================
 
+def _http_post_rfid(payload, headers, timeout_s):
+    """Satu percobaan POST. Return (status, data) atau None kalau error network."""
+    response = None
+    try:
+        response = urequests.post(
+            SERVER_URL,
+            data=json.dumps(payload),
+            headers=headers,
+            timeout=timeout_s
+        )
+        status = response.status_code
+        try:
+            raw = response.content
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            data = json.loads(raw) if raw.strip() else {}
+        except Exception:
+            data = {}
+        if 200 <= status < 300 and not data:
+            data = {"success": True, "_no_body": True}
+        return status, data
+    except OSError as e:
+        print("HTTP error (akan retry):", e)
+        return None
+    except Exception as e:
+        print("HTTP error non-retry:", e)
+        return None
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
+        try:
+            gc.collect()
+        except Exception:
+            pass
+
+
 def kirim_uid_backend(uid_string):
-    """Kirim UID ke Express dan kembalikan (HTTP status, JSON response)."""
     if not wlan or not wlan.isconnected():
         print("Backend tidak dapat dihubungi: WiFi terputus")
         return None
@@ -392,65 +594,48 @@ def kirim_uid_backend(uid_string):
         print("DEVICE_TOKEN belum dikonfigurasi")
         return None
 
-    # --- PERBAIKAN: event_id dengan nonce acak (aman setelah reboot) ---
+    # [FIX] event_id SAMA untuk semua retry -> idempotent di server
     event_id = "esp32-{}-{}-{}".format(
         uid_string.replace("-", ""),
         time.ticks_ms(),
         urandom.getrandbits(16)
     )
-    payload = {
-        "uid": uid_string,
-        "event_id": event_id
-    }
+    payload = {"uid": uid_string, "event_id": event_id}
     headers = {
         "Authorization": "Bearer " + DEVICE_TOKEN,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Connection": "close",
     }
 
-    response = None
-    if HTTP_LOCK:
-        HTTP_LOCK.acquire()
+    if HTTP_LOCK_RFID:
+        HTTP_LOCK_RFID.acquire()
     try:
-        response = urequests.post(
-            SERVER_URL,
-            data=json.dumps(payload),
-            headers=headers,
-            timeout=HTTP_TIMEOUT_MS // 1000
-        )
-        status = response.status_code
+        timeout_s = max(1, RFID_HTTP_TIMEOUT_MS // 1000)
+        attempts = 1 + RFID_HTTP_RETRY
 
-        # --- PERBAIKAN: parsing JSON manual + log detail ---
-        try:
-            raw = response.content
-            if isinstance(raw, bytes):
-                raw = raw.decode("utf-8")
-            print("BODY RAW:", repr(raw))
-            data = json.loads(raw) if raw.strip() else {}
-        except Exception as e:
-            print("GAGAL PARSE JSON:", repr(e))
-            data = {}
+        for attempt in range(attempts):
+            t0 = time.ticks_ms()
+            result = _http_post_rfid(payload, headers, timeout_s)
+            elapsed = time.ticks_diff(time.ticks_ms(), t0)
 
-        print("HTTP:", status)
-        print("RESPONS BACKEND:", data)
+            if result is not None:
+                status, data = result
+                print("RFID HTTP {} dalam {}ms (percobaan ke-{})".format(
+                    status, elapsed, attempt + 1))
+                return status, data
 
-        # --- PERBAIKAN: fallback jika HTTP 2xx tapi body kosong/rusak ---
-        if 200 <= status < 300 and not data:
-            data = {"success": True, "_no_body": True}
+            print("Percobaan ke-{} gagal ({}ms), retry...".format(
+                attempt + 1, elapsed))
 
-        return status, data
+            if attempt < attempts - 1:
+                time.sleep_ms(200)
 
-    except Exception as e:
-        print("Gagal mengirim UID ke backend:", e)
+        print("RFID gagal total setelah {} percobaan".format(attempts))
         return None
 
     finally:
-        if response is not None:
-            try:
-                response.close()
-            except Exception:
-                pass
-        if HTTP_LOCK:
-            HTTP_LOCK.release()
+        if HTTP_LOCK_RFID:
+            HTTP_LOCK_RFID.release()
 
 
 def update_monitor_state(**values):
@@ -530,46 +715,71 @@ def send_device_heartbeat():
         }
     }
     response = None
-    if HTTP_LOCK:
-        HTTP_LOCK.acquire()
+    if HTTP_LOCK_MONITOR:
+        HTTP_LOCK_MONITOR.acquire()
     try:
         response = urequests.post(
             MONITOR_BASE_URL + "/heartbeat",
             data=json.dumps(payload),
             headers={
                 "Authorization": "Bearer " + DEVICE_TOKEN,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Connection": "close",
             },
-            timeout=MONITOR_TIMEOUT_SECONDS
+            timeout=MONITOR_HTTP_TIMEOUT_MS // 1000
         )
         if response.status_code < 200 or response.status_code >= 300:
             raise OSError("Heartbeat HTTP {}".format(response.status_code))
         print("Heartbeat perangkat terkirim")
     except Exception as error:
         print("Gagal mengirim heartbeat:", error)
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
+            response = None
+        if discover_backend():
+            try:
+                response = urequests.post(
+                    MONITOR_BASE_URL + "/heartbeat",
+                    data=json.dumps(payload),
+                    headers={
+                        "Authorization": "Bearer " + DEVICE_TOKEN,
+                        "Content-Type": "application/json",
+                        "Connection": "close",
+                    },
+                    timeout=MONITOR_HTTP_TIMEOUT_MS // 1000
+                )
+                if response.status_code < 200 or response.status_code >= 300:
+                    raise OSError("Heartbeat HTTP {}".format(response.status_code))
+                print("Heartbeat perangkat terkirim setelah discovery")
+            except Exception as retry_error:
+                print("Gagal mengirim heartbeat setelah discovery:", retry_error)
     finally:
         if response is not None:
             try:
                 response.close()
             except Exception:
                 pass
-        if HTTP_LOCK:
-            HTTP_LOCK.release()
+        if HTTP_LOCK_MONITOR:
+            HTTP_LOCK_MONITOR.release()
 
 
 def acknowledge_restart(command_id):
     response = None
-    if HTTP_LOCK:
-        HTTP_LOCK.acquire()
+    if HTTP_LOCK_MONITOR:
+        HTTP_LOCK_MONITOR.acquire()
     try:
         response = urequests.post(
             MONITOR_BASE_URL + "/commands/{}/ack".format(command_id),
             data=json.dumps({"status": "acknowledged"}),
             headers={
                 "Authorization": "Bearer " + DEVICE_TOKEN,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Connection": "close",
             },
-            timeout=MONITOR_TIMEOUT_SECONDS
+            timeout=MONITOR_HTTP_TIMEOUT_MS // 1000
         )
         result = parse_json_response(response)
         if response.status_code < 200 or response.status_code >= 300 or not result.get("success"):
@@ -585,8 +795,8 @@ def acknowledge_restart(command_id):
                 response.close()
             except Exception:
                 pass
-        if HTTP_LOCK:
-            HTTP_LOCK.release()
+        if HTTP_LOCK_MONITOR:
+            HTTP_LOCK_MONITOR.release()
 
 
 def poll_device_commands():
@@ -594,13 +804,16 @@ def poll_device_commands():
         return
 
     response = None
-    if HTTP_LOCK:
-        HTTP_LOCK.acquire()
+    if HTTP_LOCK_MONITOR:
+        HTTP_LOCK_MONITOR.acquire()
     try:
         response = urequests.get(
             MONITOR_BASE_URL + "/commands",
-            headers={"Authorization": "Bearer " + DEVICE_TOKEN},
-            timeout=MONITOR_TIMEOUT_SECONDS
+            headers={
+                "Authorization": "Bearer " + DEVICE_TOKEN,
+                "Connection": "close",
+            },
+            timeout=MONITOR_HTTP_TIMEOUT_MS // 1000
         )
         result = parse_json_response(response)
         if response.status_code < 200 or response.status_code >= 300 or not result.get("success"):
@@ -617,8 +830,8 @@ def poll_device_commands():
                 response.close()
             except Exception:
                 pass
-        if HTTP_LOCK:
-            HTTP_LOCK.release()
+        if HTTP_LOCK_MONITOR:
+            HTTP_LOCK_MONITOR.release()
 
     for command in commands:
         if isinstance(command, dict) and command.get("command") == "restart" and command.get("id"):
@@ -626,6 +839,73 @@ def poll_device_commands():
             if acknowledge_restart(command.get("id")):
                 time.sleep_ms(100)
                 reset()
+
+
+def submit_rfid_job(uid_string):
+    if not _thread or not RFID_JOB_LOCK:
+        return False
+    RFID_JOB_LOCK.acquire()
+    try:
+        if len(rfid_job["queue"]) >= RFID_QUEUE_MAX:
+            return False
+        if uid_string in rfid_job["queue"]:
+            return True
+        rfid_job["queue"].append(uid_string)
+        return True
+    finally:
+        RFID_JOB_LOCK.release()
+
+
+def get_rfid_result():
+    if not RFID_JOB_LOCK:
+        return None
+    RFID_JOB_LOCK.acquire()
+    try:
+        if not rfid_job["result_ready"]:
+            return None
+        result = rfid_job["result"]
+        rfid_job["result"] = None
+        rfid_job["result_ready"] = False
+        return (True, result)
+    finally:
+        RFID_JOB_LOCK.release()
+
+
+def rfid_http_worker():
+    while True:
+        uid_to_send = None
+        RFID_JOB_LOCK.acquire()
+        try:
+            if rfid_job["queue"] and not rfid_job["busy"]:
+                uid_to_send = rfid_job["queue"].pop(0)
+                rfid_job["busy"] = True
+        finally:
+            RFID_JOB_LOCK.release()
+
+        if uid_to_send is not None:
+            print("Mengirim UID ke backend:", uid_to_send)
+            result = kirim_uid_backend(uid_to_send)
+            RFID_JOB_LOCK.acquire()
+            try:
+                rfid_job["result"] = result
+                rfid_job["result_ready"] = True
+                rfid_job["busy"] = False
+            finally:
+                RFID_JOB_LOCK.release()
+        time.sleep_ms(10)
+
+
+def start_rfid_worker():
+    if not _thread or not RFID_JOB_LOCK:
+        print("Thread RFID tidak tersedia; pengiriman async nonaktif")
+        return False
+    try:
+        _thread.start_new_thread(rfid_http_worker, ())
+        print("Worker HTTP RFID aktif")
+        return True
+    except Exception as error:
+        print("Gagal menjalankan worker RFID:", error)
+        return False
 
 
 def monitoring_worker():
@@ -637,10 +917,12 @@ def monitoring_worker():
             if last_heartbeat is None or time.ticks_diff(now, last_heartbeat) >= HEARTBEAT_INTERVAL_MS:
                 last_heartbeat = now
                 send_device_heartbeat()
+                time.sleep_ms(200)
+                continue
             if last_command_check is None or time.ticks_diff(now, last_command_check) >= COMMAND_POLL_INTERVAL_MS:
                 last_command_check = now
                 poll_device_commands()
-        time.sleep_ms(250)
+        time.sleep_ms(300)
 
 
 def start_monitoring():
@@ -657,7 +939,6 @@ def start_monitoring():
 
 
 def tampilkan_pesan(teks, baris_bawah=""):
-    """Tampilkan pesan pendek di OLED 128x32."""
     canvas.fill(0)
     teks = str(teks).upper()[:16]
     canvas.text(teks, x_tengah(teks), 4, 1)
@@ -668,7 +949,6 @@ def tampilkan_pesan(teks, baris_bawah=""):
 
 
 def proses_respons_backend(hasil):
-    """Terjemahkan respons endpoint RFID menjadi indikator OLED/LED/buzzer."""
     if hasil is None:
         tampilkan_pesan("KONEKSI GAGAL", "CEK WIFI/SERVER")
         aksi_error()
@@ -682,7 +962,6 @@ def proses_respons_backend(hasil):
     print("PESAN:", pesan)
 
     if not berhasil:
-        # Tampilkan penyebab dari server, bukan selalu menganggap kartu tidak terdaftar.
         if status == 401:
             tampilkan_pesan("TOKEN SALAH", "CEK KONFIGURASI")
         elif status == 404:
@@ -694,20 +973,20 @@ def proses_respons_backend(hasil):
         elif status == 503:
             tampilkan_pesan("SERVER ERROR", "CEK BACKEND/DB")
         elif status == 409:
-            tampilkan_pesan("DISPENSASI", "DURASI SALAH")
+            tampilkan_pesan("SUDAH ABSEN", "HARI INI")
+        elif status == 425:
+            tampilkan_pesan("BELUM", "WAKTUNYA")
         else:
             tampilkan_pesan("GAGAL DIPROSES", "COBA LAGI")
         aksi_error()
         return
 
-    # --- PERBAIKAN: kasus sukses tanpa body JSON ---
     if data.get("_no_body"):
         tampilkan_pesan("BERHASIL", "DATA TERKIRIM")
         aksi_sukses("BERHASIL")
         return
 
     if mode == "registration":
-        # UID sudah diterima oleh sesi Baca Kartu di halaman Data Siswa.
         tampilkan_pesan("KARTU TERBACA", "UID DITERIMA")
         aksi_sukses("TERBACA")
         return
@@ -715,7 +994,10 @@ def proses_respons_backend(hasil):
     if mode == "attendance":
         nama = data.get("name", "SISWA")
         if data.get("trackerStarted") is True:
-            tampilkan_pesan("ABSENSI MULAI", nama)
+            if data.get("attendanceStatus") == "terlambat":
+                tampilkan_pesan("TERLAMBAT", nama)
+            else:
+                tampilkan_pesan("ABSENSI MULAI", nama)
         elif data.get("trackerStopped") is True:
             tampilkan_pesan("ABSENSI SELESAI", nama)
         elif data.get("isRunning") is True:
@@ -752,30 +1034,21 @@ def proses_respons_backend(hasil):
 # =====================================
 
 def aksi_sukses(nama):
-    anim_sukses(nama)
     suara_sukses_led()
-    time.sleep(0.8)
     led_standby()
 
 
 def aksi_gagal():
-    anim_gagal()
-    gambar_gagal()
-    tampilkan()
     suara_gagal_led()
-    time.sleep(1.0)
     led_standby()
 
 
 def aksi_error():
-    """Bunyikan indikator gagal tanpa menimpa pesan spesifik dari backend."""
     suara_gagal_led()
-    time.sleep(1.0)
     led_standby()
 
 
 def tunggu_kartu_pergi(timeout_ms=2000):
-    """Tunggu kartu diangkat agar satu tap tidak terbaca dua kali."""
     kosong = 0
     mulai = time.ticks_ms()
     while time.ticks_diff(time.ticks_ms(), mulai) < timeout_ms:
@@ -790,8 +1063,7 @@ def tunggu_kartu_pergi(timeout_ms=2000):
 
 
 # =====================================
-# RFID SETUP (dengan percobaan ulang)
-# SDA/CS=13, SCK=21, MOSI=12, MISO=22, RST=5
+# RFID SETUP
 # =====================================
 
 def init_rfid(percobaan=5):
@@ -820,10 +1092,11 @@ def jalankan():
     layar_wifi("BOOT...", "CARI WIFI")
     time.sleep(0.4)
 
-    # --- WiFi: pilih yang terkuat dari daftar tersimpan ---
     wlan = connect_best_wifi()
     if wlan:
         print("WiFi siap, IP:", wlan.ifconfig()[0])
+        if not discover_backend():
+            print("Discovery tidak menemukan server; memakai", BACKEND_BASE_URL)
         print("Backend RFID:", SERVER_URL)
         try:
             import ntptime
@@ -835,7 +1108,6 @@ def jalankan():
 
     start_monitoring()
 
-    # --- RFID ---
     rfid = init_rfid()
 
     layar_splash()
@@ -843,11 +1115,19 @@ def jalankan():
 
     uid_terakhir = ""
     waktu_terakhir = 0
+    kartu_sudah_diproses = False
+    kartu_kosong_count = 0
+    worker_aktif = start_rfid_worker()
     perlu_gambar_idle = True
 
     while True:
+        if worker_aktif:
+            hasil = get_rfid_result()
+            if hasil is not None:
+                proses_respons_backend(hasil[1])
+                perlu_gambar_idle = True
 
-        if perlu_gambar_idle:
+        if perlu_gambar_idle and not kartu_sudah_diproses:
             led_standby()
             layar_idle()
             perlu_gambar_idle = False
@@ -855,39 +1135,56 @@ def jalankan():
         stat, _ = rfid.request(rfid.REQIDL)
 
         if stat == rfid.OK:
+            kartu_kosong_count = 0
             stat, uid = rfid.anticoll()
-
             if stat == rfid.OK:
                 uid_string = "-".join("{:02X}".format(x) for x in uid)
-                print("UID:", uid_string)
-                update_monitor_state(
-                    last_uid=uid_string,
-                    last_read_at=utc_now_iso(),
-                    rfid_initialized=True,
-                    rfid_connected=True
-                )
-
                 sekarang = time.ticks_ms()
-                if uid_string == uid_terakhir and \
-                   time.ticks_diff(sekarang, waktu_terakhir) < DEBOUNCE_MS:
-                    time.sleep_ms(50)
-                    continue
 
-                uid_terakhir = uid_string
-                waktu_terakhir = sekarang
+                if not kartu_sudah_diproses:
+                    kartu_sudah_diproses = True
 
-                print("  -> Mengirim UID ke backend...")
-                hasil = kirim_uid_backend(uid_string)
-                proses_respons_backend(hasil)
+                    update_monitor_state(
+                        last_uid=uid_string,
+                        last_read_at=utc_now_iso(),
+                        rfid_initialized=True,
+                        rfid_connected=True
+                    )
 
-                tunggu_kartu_pergi()
-                perlu_gambar_idle = True
+                    if uid_string == uid_terakhir and \
+                       time.ticks_diff(sekarang, waktu_terakhir) < DEBOUNCE_MS:
+                        pass
+                    else:
+                        uid_terakhir = uid_string
+                        waktu_terakhir = sekarang
 
-        time.sleep_ms(50)
+                        if SUARA_AKTIF and _thread:
+                            try:
+                                _thread.start_new_thread(
+                                    _bunyi_blocking, (2000, 0.03, 300)
+                                )
+                            except Exception:
+                                pass
+                        tampilkan_pesan("KARTU TERBACA", "MEMPROSES...")
+
+                        if worker_aktif:
+                            if not submit_rfid_job(uid_string):
+                                tampilkan_pesan("ANTREAN PENUH", "TUNGGU")
+                        else:
+                            hasil = kirim_uid_backend(uid_string)
+                            proses_respons_backend(hasil)
+                            perlu_gambar_idle = True
+        else:
+            kartu_kosong_count += 1
+            if kartu_kosong_count >= 2:
+                kartu_sudah_diproses = False
+                kartu_kosong_count = 2
+
+        time.sleep_ms(5)
 
 
 # =====================================
-# START OTOMATIS (dijalankan saat daya masuk)
+# START OTOMATIS
 # =====================================
 
 try:
@@ -901,4 +1198,4 @@ except Exception as e:
     except Exception:
         pass
     time.sleep(2)
-    reset()    # restart otomatis board
+    reset()

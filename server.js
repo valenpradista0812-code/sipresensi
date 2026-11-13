@@ -16,6 +16,7 @@ const notifikasiRoutes = require('./routes/notifikasi');
 const izinRoutes = require('./routes/izin');
 const jadwalRoutes = require('./routes/jadwal');
 const iotMonitoringRoutes = require('./routes/iot-monitoring');
+const { startDiscovery } = require('./utils/discovery');
 
 const { pageAuthGuard, optionalAuth } = require('./middleware/auth');
 
@@ -204,6 +205,7 @@ function startServer(port) {
     console.log(`  SiPresensi Backend Server is running!`);
     console.log(`  Local URL: http://localhost:${port}`);
     console.log(`=================================================`);
+    startDiscovery(port);
   });
 
   server.on('error', (err) => {

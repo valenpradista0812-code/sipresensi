@@ -3,7 +3,38 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { jakartaNow, readJamKerja, statusMasuk } = require('../utils/jam-kerja');
 let dispensasiSchemaWarningLogged = false;
+
+async function aturanJamKerja() {
+  const settings = await db.getPengaturan().catch(() => ({}));
+  return { now: jakartaNow(), ...readJamKerja(settings) };
+}
+
+async function validasiAbsenMasuk(nis, kelas) {
+  const aturan = await aturanJamKerja();
+  const todayAbsensi = await db.findAbsensiByNisDate(nis, aturan.now.date, kelas);
+  if (todayAbsensi && todayAbsensi.check_out && todayAbsensi.check_out !== '-') {
+    return { error: { status: 409, message: 'Absensi pulang hari ini sudah tercatat.' } };
+  }
+  const active = await db.getActiveStudentTracker(nis);
+  if (active || (todayAbsensi && todayAbsensi.check_in && todayAbsensi.check_in !== '-')) {
+    return { error: { status: 409, message: 'Siswa sudah absen masuk hari ini.' } };
+  }
+  if (aturan.now.minutes > aturan.jamPulang) {
+    return { error: { status: 425, message: `Sudah melewati jam pulang (${aturan.jamPulangLabel}).` } };
+  }
+  return { ...aturan, todayAbsensi, attendanceStatus: statusMasuk(aturan.now.minutes, aturan.jamMasuk) };
+}
+
+async function validasiAbsenPulang(nis, kelas) {
+  const aturan = await aturanJamKerja();
+  if (aturan.now.minutes < aturan.jamPulang) {
+    return { error: { status: 425, message: `Belum jam pulang (${aturan.jamPulangLabel}).` } };
+  }
+  const todayAbsensi = await db.findAbsensiByNisDate(nis, aturan.now.date, kelas);
+  return { ...aturan, todayAbsensi };
+}
 
 function normalizeRfidUid(value) {
   if (value === undefined || value === null || String(value).trim() === '') return null;
@@ -258,42 +289,37 @@ router.get('/tracker', authenticate, async (req, res) => {
 router.post('/tracker/start', authenticate, async (req, res) => {
   try {
     const nis = req.user.nis || '0089211478';
+    const kelas = req.user.kelas || 'XII IPA 1';
     const clientStartTime = Number(req.body.startTime) || Date.now();
-    let active = await db.getActiveStudentTracker(nis);
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} WIB`;
-    const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const cek = await validasiAbsenMasuk(nis, kelas);
+    if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
 
-    if (!active) {
-      active = await db.addStudentLog({
-        id: 'log-' + Date.now(),
-        nis,
-        tgl: dateStr,
-        masuk: timeStr,
-        keluar: '-',
-        zona: 'Gedung Kelas XII (GPS Valid)',
-        status: 'hadir',
-        statusText: 'Tracker Berjalan',
-        valid: true,
-        durasi: String(clientStartTime)
-      });
-    } else {
-      await db.supabase
-        .from('student_logs')
-        .update({ durasi: String(clientStartTime), masuk: timeStr })
-        .eq('id', active.id);
-    }
+    const timeStr = `${cek.now.time} WIB`;
+    const dateStr = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    }).format(new Date());
 
-    // Rekam juga ke absensi harian
+    const active = await db.addStudentLog({
+      id: 'log-' + Date.now(),
+      nis,
+      tgl: dateStr,
+      masuk: timeStr,
+      keluar: '-',
+      zona: 'Gedung Kelas XII (GPS Valid)',
+      status: cek.attendanceStatus,
+      statusText: cek.attendanceStatus === 'terlambat' ? 'Terlambat' : 'Hadir Tepat Waktu',
+      valid: true,
+      durasi: String(clientStartTime)
+    });
+
     try {
-      const todayYmd = now.toLocaleDateString('en-CA');
       await db.upsertAbsensi({
-        date: todayYmd,
-        kelas: req.user.kelas || 'XII IPA 1',
+        date: cek.now.date,
+        kelas,
         nis,
         studentName: req.user.name,
-        status: 'hadir',
-        checkIn: timeStr.split(' ')[0]
+        status: cek.attendanceStatus,
+        checkIn: cek.now.time
       });
     } catch (e) {}
 
@@ -302,6 +328,7 @@ router.post('/tracker/start', authenticate, async (req, res) => {
       message: `Tracker waktu dimulai (${timeStr})`,
       isRunning: true,
       startTime: clientStartTime,
+      status: cek.attendanceStatus,
       log: active
     });
   } catch (err) {
@@ -314,8 +341,10 @@ router.post('/tracker/start', authenticate, async (req, res) => {
 router.post('/tracker/stop', authenticate, async (req, res) => {
   try {
     const nis = req.user.nis || '0089211478';
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} WIB`;
+    const kelas = req.user.kelas || 'XII IPA 1';
+    const cek = await validasiAbsenPulang(nis, kelas);
+    if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
+    const timeStr = `${cek.now.time} WIB`;
 
     let active = await db.getActiveStudentTracker(nis);
     let durasi = '0j 0m';
@@ -329,16 +358,14 @@ router.post('/tracker/stop', authenticate, async (req, res) => {
 
     const updatedLog = await db.stopStudentTracker(nis, timeStr, durasi);
 
-    // Rekam juga checkout ke absensi harian
+    // Rekam checkout tanpa menimpa status/check-in sebelumnya.
     try {
-      const todayYmd = now.toLocaleDateString('en-CA');
       await db.upsertAbsensi({
-        date: todayYmd,
-        kelas: req.user.kelas || 'XII IPA 1',
+        date: cek.now.date,
+        kelas,
         nis,
         studentName: req.user.name,
-        status: 'hadir',
-        checkOut: timeStr.split(' ')[0]
+        checkOut: cek.now.time
       });
     } catch (e) {}
 
@@ -358,29 +385,36 @@ router.post('/tracker/stop', authenticate, async (req, res) => {
 // POST /api/siswa/absen-masuk
 router.post('/absen-masuk', authenticate, async (req, res) => {
   try {
-    const nis  = req.user.nis || '0089211478';
-    const now  = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} WIB`;
-    const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const nis = req.user.nis || '0089211478';
+    const kelas = req.user.kelas || 'XII IPA 1';
+    const cek = await validasiAbsenMasuk(nis, kelas);
+    if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
 
-    // Cek jika log hari ini sudah ada
-    const existing = await db.findStudentLogByNisAndDate(nis, dateStr);
+    const timeStr = `${cek.now.time} WIB`;
+    const dateStr = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    }).format(new Date());
 
-    let log;
-    if (existing) {
-      log = await db.updateStudentLogIn(existing.id, timeStr);
-    } else {
-      log = await db.addStudentLog({
-        id: 'log-' + Date.now(),
-        nis, tgl: dateStr,
-        masuk: timeStr, keluar: '-',
-        zona: 'Gedung Kelas XII (GPS Valid)',
-        status: 'hadir', statusText: 'Hadir Tepat Waktu',
-        valid: true, durasi: '0j 0m'
-      });
-    }
+    const log = await db.addStudentLog({
+      id: 'log-' + Date.now(),
+      nis, tgl: dateStr,
+      masuk: timeStr, keluar: '-',
+      zona: 'Gedung Kelas XII (GPS Valid)',
+      status: cek.attendanceStatus,
+      statusText: cek.attendanceStatus === 'terlambat' ? 'Terlambat' : 'Hadir Tepat Waktu',
+      valid: true, durasi: '0j 0m'
+    });
 
-    res.json({ success: true, message: `Absen masuk berhasil dicatat pada ${timeStr}`, data: log });
+    await db.upsertAbsensi({
+      date: cek.now.date,
+      kelas,
+      nis,
+      studentName: req.user.name,
+      status: cek.attendanceStatus,
+      checkIn: cek.now.time
+    });
+
+    res.json({ success: true, message: `Absen masuk berhasil dicatat pada ${timeStr}`, status: cek.attendanceStatus, data: log });
   } catch (err) {
     console.error('absenMasuk error:', err);
     res.status(500).json({ success: false, message: 'Gagal mencatat absen masuk.' });
@@ -390,26 +424,30 @@ router.post('/absen-masuk', authenticate, async (req, res) => {
 // POST /api/siswa/absen-keluar
 router.post('/absen-keluar', authenticate, async (req, res) => {
   try {
-    const nis     = req.user.nis || '0089211478';
-    const now     = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} WIB`;
+    const nis = req.user.nis || '0089211478';
+    const kelas = req.user.kelas || 'XII IPA 1';
+    const cek = await validasiAbsenPulang(nis, kelas);
+    if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
+    const timeStr = `${cek.now.time} WIB`;
 
-    const log = await db.updateStudentLogCheckOut(nis, timeStr);
-    if (!log) {
-      // Buat log baru
-      const newLog = await db.addStudentLog({
-        id: 'log-' + Date.now(),
-        nis,
-        tgl: now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-        masuk: '07:15:00 WIB', keluar: timeStr,
-        zona: 'Gedung Kelas XII',
-        status: 'hadir', statusText: 'Memenuhi Target (>8 Jam)',
-        valid: true, durasi: '08j 15m'
-      });
-      return res.json({ success: true, message: `Absen pulang berhasil dicatat pada ${timeStr}`, data: newLog });
+    if (!cek.todayAbsensi || !cek.todayAbsensi.check_in || cek.todayAbsensi.check_in === '-') {
+      return res.status(409).json({ success: false, message: 'Belum ada absensi masuk hari ini.' });
     }
 
-    res.json({ success: true, message: `Absen pulang berhasil dicatat pada ${timeStr}`, data: log });
+    const log = await db.stopStudentTracker(nis, timeStr, '-');
+    await db.upsertAbsensi({
+      date: cek.now.date,
+      kelas,
+      nis,
+      studentName: req.user.name,
+      checkOut: cek.now.time
+    });
+
+    res.json({
+      success: true,
+      message: `Absen pulang berhasil dicatat pada ${timeStr}`,
+      data: log || cek.todayAbsensi
+    });
   } catch (err) {
     console.error('absenKeluar error:', err);
     res.status(500).json({ success: false, message: 'Gagal mencatat absen keluar.' });

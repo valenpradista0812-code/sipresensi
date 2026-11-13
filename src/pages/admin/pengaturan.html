@@ -44,6 +44,7 @@
         <section class="card set-card">
           <h2 class="set-title"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Kebijakan Absensi</h2>
           <div class="set-field"><label class="label" for="jam">Jam Masuk Default</label><input class="input" id="jam" type="text" value="07:00 WIB"></div>
+          <div class="set-field"><label class="label" for="jam-pulang">Jam Pulang Default</label><input class="input" id="jam-pulang" type="text" value="15:00 WIB"></div>
           <div class="set-field"><label class="label" for="tol">Batas Toleransi Keterlambatan</label><input class="input" id="tol" type="text" value="15 Menit"></div>
         </section>
         <section class="card set-card">
@@ -74,6 +75,7 @@
   (function() {
     const taInput = document.getElementById('ta');
     const jamInput = document.getElementById('jam');
+    const jamPulangInput = document.getElementById('jam-pulang');
     const tolInput = document.getElementById('tol');
     const toggles = document.querySelectorAll('.toggle');
     const btnBackup = document.querySelector('.btn-outline-green');
@@ -86,6 +88,7 @@
           const d = json.data;
           if (taInput) taInput.value = d.ta || '2024/2025 Ganjil';
           if (jamInput) jamInput.value = d.jamMasuk || '07:00 WIB';
+          if (jamPulangInput) jamPulangInput.value = d.jamPulang || '15:00 WIB';
           if (tolInput) tolInput.value = d.toleransi || '15 Menit';
           if (toggles[0]) {
             if (d.emailNotif) toggles[0].classList.add('on');
@@ -103,6 +106,7 @@
       const payload = {
         ta: taInput ? taInput.value : '',
         jamMasuk: jamInput ? jamInput.value : '',
+        jamPulang: jamPulangInput ? jamPulangInput.value : '',
         toleransi: tolInput ? tolInput.value : '',
         emailNotif: toggles[0] ? toggles[0].classList.contains('on') : true,
         whatsappRekap: toggles[1] ? toggles[1].classList.contains('on') : false
@@ -123,7 +127,7 @@
       }
     }
 
-    [taInput, jamInput, tolInput].forEach(inp => {
+    [taInput, jamInput, jamPulangInput, tolInput].forEach(inp => {
       if (inp) inp.addEventListener('change', saveSettings);
     });
 

@@ -50,6 +50,16 @@
     </header>
     <main class="content">
       <section class="card" style="padding:18px;">
+        <h2 style="margin:0 0 6px; font-size:15px;">Jam Kerja Absensi Siswa</h2>
+        <p style="margin:0 0 12px; font-size:12px; color:var(--muted);">Acuan seluruh perangkat RFID. Tap sebelum/tepat jam masuk tercatat <b>Hadir</b>, tap setelah jam masuk tercatat <b>Terlambat</b>. Setelah absen masuk, tap berikutnya dikunci sampai jam pulang; tap mulai jam pulang mencatat absensi pulang.</p>
+        <div class="schedule-toolbar">
+          <div class="schedule-field"><label for="work-jam-masuk">Jam Masuk</label><input id="work-jam-masuk" type="time" value="07:00"></div>
+          <div class="schedule-field"><label for="work-jam-pulang">Jam Pulang</label><input id="work-jam-pulang" type="time" value="15:00"></div>
+          <button id="work-save" class="btn btn-primary" type="button">Simpan Jam Kerja</button>
+        </div>
+        <div id="work-feedback" style="min-height:18px; margin-top:8px; font-size:12px;"></div>
+      </section>
+      <section class="card" style="padding:18px;">
         <div class="schedule-toolbar">
           <select id="filter-day" aria-label="Filter hari"><option value="">Semua Hari</option></select>
           <select id="filter-class" aria-label="Filter kelas"><option value="">Semua Kelas</option></select>
@@ -327,6 +337,56 @@
   });
 
   initialize();
+
+  // Konfigurasi jam kerja absensi siswa
+  const workJamMasuk = document.getElementById('work-jam-masuk');
+  const workJamPulang = document.getElementById('work-jam-pulang');
+  const workSave = document.getElementById('work-save');
+  const workFeedback = document.getElementById('work-feedback');
+  const workClock = value => {
+    const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+    return match ? `${match[1]}:${match[2]}` : '';
+  };
+  const withWib = value => {
+    const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+    return match ? `${match[1]}:${match[2]} WIB` : value;
+  };
+  async function loadWorktime() {
+    try {
+      const { data } = await request('/api/pengaturan');
+      if (!data) return;
+      if (data.jamMasuk) workJamMasuk.value = workClock(data.jamMasuk) || workJamMasuk.value;
+      if (data.jamPulang) workJamPulang.value = workClock(data.jamPulang) || workJamPulang.value;
+    } catch (_) {}
+  }
+  if (workSave) {
+    workSave.addEventListener('click', async () => {
+      if (!workJamMasuk.value || !workJamPulang.value) {
+        workFeedback.innerHTML = '<span style="color:#b91c1c;font-weight:700;">Jam masuk dan jam pulang wajib diisi.</span>';
+        return;
+      }
+      if (workJamPulang.value <= workJamMasuk.value) {
+        workFeedback.innerHTML = '<span style="color:#b91c1c;font-weight:700;">Jam pulang harus lebih besar daripada jam masuk.</span>';
+        return;
+      }
+      workSave.disabled = true;
+      try {
+        const result = await request('/api/pengaturan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jamMasuk: withWib(workJamMasuk.value), jamPulang: withWib(workJamPulang.value) })
+        });
+        workFeedback.innerHTML = `<span style="color:#047857;font-weight:700;">${result.message}</span>`;
+        SiPresensi.showToast(result.message, 'success');
+        await loadWorktime();
+      } catch (error) {
+        workFeedback.innerHTML = `<span style="color:#b91c1c;font-weight:700;">${error.message}</span>`;
+      } finally {
+        workSave.disabled = false;
+      }
+    });
+    loadWorktime();
+  }
 })();
 </script>
 </body>

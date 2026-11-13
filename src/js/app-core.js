@@ -243,6 +243,9 @@ window.SiPresensi = (function () {
 
     // Global capture-phase click delegation for logout buttons
     document.addEventListener('click', function(e) {
+      // Biarkan tombol di dalam modal logout menangani kliknya sendiri.
+      if (e.target.closest('#lg-overlay')) return;
+
       const logoutBtn = e.target.closest('.btn-logout, [aria-label="Logout"], [aria-label="Keluar"], [title="Logout"], [title="Keluar"], #sidebar-logout-link');
       if (logoutBtn) {
         e.preventDefault();

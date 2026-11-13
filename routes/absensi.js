@@ -52,6 +52,11 @@ router.get('/', authenticate, async (req, res) => {
         status: existing ? existing.status : applicationOnly ? studentApplications[0].status : 'hadir',
         note:   existing ? (existing.note || '') : '',
         applicationOnly,
+        masuk:  existing ? existing.check_in : null,
+        keluar: existing ? existing.check_out : null,
+        is_overtime: existing ? (existing.is_overtime === true) : false,
+        overtime_minutes: existing ? (existing.overtime_minutes || 0) : 0,
+        jadwal_pulang: existing ? (existing.jadwal_pulang || null) : null,
         leaveApplications: studentApplications
       };
     });
@@ -66,6 +71,11 @@ router.get('/', authenticate, async (req, res) => {
         status: record.status,
         note: record.note || '',
         applicationOnly: false,
+        masuk: record.check_in,
+        keluar: record.check_out,
+        is_overtime: record.is_overtime === true,
+        overtime_minutes: record.overtime_minutes || 0,
+        jadwal_pulang: record.jadwal_pulang || null,
         leaveApplications: applicationsByNis.get(String(record.nis)) || []
       });
     });
@@ -141,7 +151,7 @@ router.get('/riwayat', authenticate, async (req, res) => {
           hadir: 0, izin: 0, sakit: 0, alfa: 0, total: 36
         };
       }
-      if      (a.status === 'hadir') groupedMap[key].hadir++;
+      if      (a.status === 'hadir' || a.status === 'terlambat') groupedMap[key].hadir++;
       else if (a.status === 'izin')  groupedMap[key].izin++;
       else if (a.status === 'sakit') groupedMap[key].sakit++;
       else if (a.status === 'alfa')  groupedMap[key].alfa++;
@@ -204,7 +214,7 @@ router.get('/rekap-bulanan', authenticate, async (req, res) => {
     const rekapList = [];
     for (const st of students) {
       const records = await db.getAbsensiByNisRange(st.nis, startDate, endDate);
-      const hadir = records.filter(r => r.status === 'hadir').length;
+      const hadir = records.filter(r => r.status === 'hadir' || r.status === 'terlambat').length;
       const izin  = records.filter(r => r.status === 'izin').length;
       const sakit = records.filter(r => r.status === 'sakit').length;
       const alfa  = records.filter(r => r.status === 'alfa').length;
