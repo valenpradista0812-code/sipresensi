@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "db:init": "node init-db.js"
+    "db:init": "node init-db.js",
+    "seed:dev": "node scripts/seed-dummy.js",
+    "seed:dev:dry": "node scripts/seed-dummy.js --dry-run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

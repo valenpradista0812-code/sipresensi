@@ -36,27 +36,13 @@
         <div class="toolbar-left">
           <!-- Dropdown Bulan Interaktif -->
           <div class="select" style="padding:0; border:1px solid var(--border); background:#fff; overflow:hidden;">
-            <select id="filter-rekap-bulan" style="border:none; background:transparent; padding:8px 14px; font:inherit; font-size:12px; font-weight:600; color:var(--text); outline:none; cursor:pointer;">
-              <option value="Oktober 2024">Oktober 2024</option>
-              <option value="September 2024">September 2024</option>
-              <option value="Agustus 2024">Agustus 2024</option>
-              <option value="Juli 2024">Juli 2024</option>
-            </select>
+            <select id="filter-rekap-bulan" style="border:none; background:transparent; padding:8px 14px; font:inherit; font-size:12px; font-weight:600; color:var(--text); outline:none; cursor:pointer;"></select>
           </div>
 
           <!-- Dropdown Kelas Interaktif -->
           <div class="select" style="padding:0; border:1px solid var(--border); background:#fff; overflow:hidden;">
             <select id="filter-rekap-kelas" style="border:none; background:transparent; padding:8px 14px; font:inherit; font-size:12px; font-weight:600; color:var(--text); outline:none; cursor:pointer;">
               <option value="Semua Kelas">Semua Kelas</option>
-              <option value="XII IPA 1">XII IPA 1</option>
-              <option value="XII IPA 2">XII IPA 2</option>
-              <option value="XII IPS 1">XII IPS 1</option>
-              <option value="XI IPA 1">XI IPA 1</option>
-              <option value="XI IPS 1">XI IPS 1</option>
-              <option value="XI IPS 2">XI IPS 2</option>
-              <option value="X IPA 1">X IPA 1</option>
-              <option value="X IPA 2">X IPA 2</option>
-              <option value="X IPS 1">X IPS 1</option>
             </select>
           </div>
 
@@ -84,9 +70,9 @@
       <section class="card table-card">
         <div class="table-scroll">
           <table>
-            <thead><tr><th>No</th><th>NIS</th><th>Nama Lengkap</th><th>Kelas</th><th>Rasio Kehadiran</th></tr></thead>
+            <thead><tr><th>No</th><th>NIS</th><th>Nama Lengkap</th><th>Kelas</th><th>Hadir</th><th>Terlambat</th><th>Izin</th><th>Sakit</th><th>Alfa</th><th>Rasio Kehadiran</th><th>Detail</th></tr></thead>
             <tbody id="rekap-tbody">
-              <tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Memuat rekap kehadiran bulanan...</td></tr>
+              <tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">Memuat rekap kehadiran bulanan...</td></tr>
             </tbody>
           </table>
         </div>
@@ -118,8 +104,30 @@
     const cardRajin = document.getElementById('card-rajin');
     const cardAlfa = document.getElementById('card-sering-alfa');
 
+    function buildMonthOptions() {
+      const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      const now = new Date();
+      const opts = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        opts.push(`${monthNames[d.getMonth()]} ${d.getFullYear()}`);
+      }
+      filterBulan.innerHTML = opts.map((v) => `<option value="${v}">${v}</option>`).join('');
+    }
+
+    async function loadKelas() {
+      try {
+        const res = await fetch('/api/kelas');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          filterKelas.innerHTML = '<option value="Semua Kelas">Semua Kelas</option>' +
+            json.data.map((k) => `<option value="${k.name}">${k.name}</option>`).join('');
+        }
+      } catch (e) {}
+    }
+
     async function loadRekap() {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Memuat data rekap...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">Memuat data rekap...</td></tr>';
 
       const bulan = filterBulan.value;
       const kelas = filterKelas.value;
@@ -136,51 +144,61 @@
         if (json.success) {
           renderData(json.data, json.summary, bulan);
         } else {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#ef4444;">Gagal memuat rekap.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:#ef4444;">Gagal memuat rekap.</td></tr>';
         }
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#ef4444;">Gagal terhubung ke backend server.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:#ef4444;">Gagal terhubung ke backend server.</td></tr>';
       }
     }
 
+    function fmtPct(v) { return v === null || v === undefined ? '-' : (v + '%'); }
+
     function renderData(list, summary, bulan) {
       if (summary) {
-        if (donutPct) donutPct.textContent = summary.kehadiranOverall || '0%';
-        if (pctHadir) pctHadir.textContent = summary.pctHadir || '0%';
-        if (pctIzin)  pctIzin.textContent  = summary.pctIzin || '0%';
-        if (pctSakit) pctSakit.textContent = summary.pctSakit || '0%';
-        if (pctAlfa)  pctAlfa.textContent  = summary.pctAlfa || '0%';
-        if (cardHari) cardHari.textContent = summary.totalHari || '-';
-        if (cardBulanLabel) cardBulanLabel.textContent = bulan;
-        if (cardRata)  cardRata.textContent = summary.kehadiranOverall || '0%';
+        if (donutPct) donutPct.textContent = fmtPct(summary.persentaseSekolah);
+        if (pctHadir) pctHadir.textContent = fmtPct(summary.persentaseSekolah);
+        if (pctIzin)  pctIzin.textContent  = summary.izin != null ? String(summary.izin) : '-';
+        if (pctSakit) pctSakit.textContent = summary.sakit != null ? String(summary.sakit) : '-';
+        if (pctAlfa)  pctAlfa.textContent  = summary.alfa != null ? String(summary.alfa) : '-';
+        if (cardHari) cardHari.textContent = summary.hariEfektif || '-';
+        if (cardBulanLabel) cardBulanLabel.textContent = bulan || '-';
+        if (cardRata)  cardRata.textContent = fmtPct(summary.persentaseSekolah);
         if (cardRajin) cardRajin.textContent = summary.siswaTerajin || '-';
         if (cardAlfa)  cardAlfa.textContent  = summary.siswaSeringAlfa || 'Nihil';
       }
 
       if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Tidak ada data rekap siswa yang cocok dengan filter.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">Tidak ada data rekap siswa yang cocok dengan filter.</td></tr>';
         return;
       }
 
       tbody.innerHTML = '';
       list.forEach((item, index) => {
-        const pctNum = parseFloat(item.persentase) || 0;
+        const pctNum = item.persentase === null ? 0 : (parseFloat(item.persentase) || 0);
         let colorClass = 'g';
         if (pctNum < 85) colorClass = 'r';
         else if (pctNum < 93) colorClass = 'y';
 
         const tr = document.createElement('tr');
+        const detailText = (item.details || []).map((d) => `${d.date}: ${d.status} (${d.masuk || '-'} / ${d.keluar || '-'})`).join('<br>') || '-';
         tr.innerHTML = `
           <td>${index + 1}</td>
           <td class="bold">${item.nis}</td>
           <td>${item.nama}</td>
           <td>${item.kelas}</td>
+          <td>${item.hadir ?? 0}</td>
+          <td>${item.terlambat ?? 0}</td>
+          <td>${item.izin ?? 0}</td>
+          <td>${item.sakit ?? 0}</td>
+          <td>${item.alfa ?? 0}</td>
           <td>
             <div class="ratio">
               <div class="ratio-track"><div class="ratio-fill ${colorClass}" style="width:${pctNum}%"></div></div>
-              <span class="ratio-pct">${item.persentase}</span>
+              <span class="ratio-pct">${fmtPct(item.persentase)}</span>
             </div>
+            <small style="color:#64748b;">Hadir saja: ${fmtPct(item.persentaseHadirSaja)}</small>
           </td>
+          <td style="font-size:11px; line-height:1.4;">${detailText}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -200,6 +218,8 @@
       });
     }
 
+    buildMonthOptions();
+    loadKelas();
     loadRekap();
   })();
 </script>

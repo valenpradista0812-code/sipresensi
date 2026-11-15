@@ -3,6 +3,8 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { effectiveRole } = require('../middleware/role');
+const { resolveTeacher, getTaughtClasses } = require('../utils/teacher-access');
 const { jakartaNow, readJamKerja, statusMasuk } = require('../utils/jam-kerja');
 let dispensasiSchemaWarningLogged = false;
 
@@ -49,11 +51,25 @@ function normalizeRfidUid(value) {
 
 // GET /api/siswa
 router.get('/', authenticate, async (req, res) => {
-  if (!['admin', 'guru', 'petugas'].includes(req.user.role)) {
-    return res.status(403).json({ success: false, message: 'Akses data siswa hanya untuk guru dan admin.' });
+  const role = effectiveRole(req.user);
+
+  if (role === 'siswa') {
+    return res.status(403).json({ success: false, message: 'Akses data siswa tidak tersedia untuk siswa.' });
   }
+
   try {
-    const list = await db.getSiswa(req.query);
+    let list = await db.getSiswa(req.query);
+
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      const taught = teacher ? await getTaughtClasses(teacher.id) : [];
+      const requested = typeof req.query.kelas === 'string' && req.query.kelas.trim() ? req.query.kelas.trim() : null;
+      if (requested && !taught.includes(requested)) {
+        return res.status(403).json({ success: false, message: 'Kelas tersebut bukan kelas yang Anda ampu.' });
+      }
+      list = taught.length === 0 ? [] : list.filter((s) => taught.includes(s.kelas));
+    }
+
     res.json({ success: true, count: list.length, data: list });
   } catch (err) {
     console.error('getSiswa error:', err);
@@ -61,61 +77,65 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/siswa
-router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
+// Membuat satu siswa + akun login. Dipakai POST / dan POST /bulk.
+async function createStudentAccount({ nis, name, kelas, gender, phone, email, password, rfid_uid }) {
+  if (!nis || !name || !kelas) {
+    const err = new Error('NIS, Nama, dan Kelas wajib diisi.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!password || password.trim().length < 4) {
+    const err = new Error('Kata sandi akun siswa wajib ditentukan (minimal 4 karakter).');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanNis = String(nis).trim();
+  const cleanName = name.trim();
+  const cleanKelas = kelas.trim();
+  const studentEmail = (email && email.trim()) ? email.trim() : `${cleanNis}@sman1jkt.sch.id`;
+
+  const existing = await db.findSiswaByNis(cleanNis);
+  if (existing) {
+    const err = new Error(`NIS ${cleanNis} sudah terdaftar dalam sistem.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (rfid_uid) {
+    const existingCard = await db.findSiswaByRfidUid(rfid_uid);
+    if (existingCard) {
+      const err = new Error(`UID RFID sudah terdaftar atas nama ${existingCard.name}.`);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const existingUser = await db.findUserByEmailOrNis(studentEmail, cleanNis);
+  if (existingUser) {
+    const err = new Error('Email atau NIS sudah digunakan oleh akun lain.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const sid = 'sis-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  const newStudent = await db.addSiswa({
+    id: sid,
+    nis: cleanNis,
+    name: cleanName,
+    kelas: cleanKelas,
+    gender: gender || 'Laki-laki',
+    phone: phone ? phone.trim() : '-',
+    email: studentEmail,
+    rfid_uid: rfid_uid || null
+  });
+
+  const salt = bcrypt.genSaltSync(10);
+  const hashedPassword = bcrypt.hashSync(password.trim(), salt);
+  const initials = cleanName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'S';
+
   try {
-    const { nis, name, kelas, gender, phone, email, password } = req.body;
-    const rfidUid = normalizeRfidUid(req.body.rfid_uid);
-    if (!nis || !name || !kelas) {
-      return res.status(400).json({ success: false, message: 'NIS, Nama, dan Kelas wajib diisi.' });
-    }
-
-    if (!password || password.trim().length < 4) {
-      return res.status(400).json({ success: false, message: 'Kata sandi akun siswa wajib ditentukan (minimal 4 karakter).' });
-    }
-
-    const cleanNis = String(nis).trim();
-    const cleanName = name.trim();
-    const cleanKelas = kelas.trim();
-    const studentEmail = (email && email.trim()) ? email.trim() : `${cleanNis}@sman1jkt.sch.id`;
-
-    // Cek NIS duplikat di tabel siswa
-    const existing = await db.findSiswaByNis(cleanNis);
-    if (existing) {
-      return res.status(400).json({ success: false, message: `NIS ${cleanNis} sudah terdaftar dalam sistem.` });
-    }
-
-    if (rfidUid) {
-      const existingCard = await db.findSiswaByRfidUid(rfidUid);
-      if (existingCard) {
-        return res.status(400).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
-      }
-    }
-
-    // Cek duplikat di tabel users
-    const existingUser = await db.findUserByEmailOrNis(studentEmail, cleanNis);
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: `Email atau NIS sudah digunakan oleh akun lain.` });
-    }
-
-    const sid = 'sis-' + Date.now();
-    const newStudent = await db.addSiswa({
-      id: sid,
-      nis: cleanNis,
-      name: cleanName,
-      kelas: cleanKelas,
-      gender: gender || 'Laki-laki',
-      phone: phone ? phone.trim() : '-',
-      email: studentEmail,
-      rfid_uid: rfidUid
-    });
-
-    // Hash kata sandi yang ditentukan guru
-    const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(password.trim(), salt);
-    const initials = cleanName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'S';
-
-    // Simpan akun ke tabel users agar siswa dapat langsung login
     await db.createUser({
       id: 'usr-' + sid,
       email: studentEmail,
@@ -129,10 +149,23 @@ router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (r
       phone: phone ? phone.trim() : '-',
       avatar: initials
     });
+  } catch (accountErr) {
+    try { await db.deleteSiswa(sid); } catch (cleanupErr) { console.error('rollback siswa error:', cleanupErr); }
+    throw accountErr;
+  }
+
+  return newStudent;
+}
+
+// POST /api/siswa
+router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
+  try {
+    const rfidUid = normalizeRfidUid(req.body.rfid_uid);
+    const newStudent = await createStudentAccount({ ...req.body, rfid_uid: rfidUid });
 
     res.status(201).json({
       success: true,
-      message: `Data siswa & akun login ${cleanName} berhasil ditambahkan ke database!`,
+      message: `Data siswa & akun login ${newStudent.name} berhasil ditambahkan ke database!`,
       data: newStudent
     });
   } catch (err) {
@@ -142,8 +175,45 @@ router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (r
   }
 });
 
+// POST /api/siswa/bulk - tambah banyak siswa sekaligus (multi-select)
+router.post('/bulk', authenticate, requireRole('petugas'), async (req, res) => {
+  try {
+    const students = Array.isArray(req.body.students) ? req.body.students : [];
+    if (students.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada siswa yang dikirim.' });
+    }
+    if (students.length > 100) {
+      return res.status(400).json({ success: false, message: 'Maksimal 100 siswa per permintaan.' });
+    }
+
+    const results = { created: [], failed: [] };
+    for (const item of students) {
+      try {
+        const rfidUid = item.rfid_uid ? normalizeRfidUid(item.rfid_uid) : null;
+        const created = await createStudentAccount({ ...item, rfid_uid: rfidUid });
+        results.created.push({ nis: created.nis, name: created.name, kelas: created.kelas });
+      } catch (err) {
+        results.failed.push({
+          nis: item.nis || '-',
+          name: item.name || '-',
+          reason: err.statusCode === 400 ? err.message : 'Gagal menyimpan ke database.'
+        });
+      }
+    }
+
+    const message = results.failed.length === 0
+      ? `${results.created.length} siswa berhasil ditambahkan.`
+      : `${results.created.length} siswa berhasil, ${results.failed.length} gagal.`;
+
+    res.status(201).json({ success: true, message, ...results });
+  } catch (err) {
+    console.error('addSiswaBulk error:', err);
+    res.status(500).json({ success: false, message: 'Gagal menambahkan siswa secara massal.' });
+  }
+});
+
 // PUT /api/siswa/:id
-router.put('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
+router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
     const rfidUid = normalizeRfidUid(req.body.rfid_uid);
@@ -221,7 +291,7 @@ router.put('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async 
 });
 
 // DELETE /api/siswa/:id
-router.delete('/:id', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
+router.delete('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const existing = await db.findSiswaByIdOrNis(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Data siswa tidak ditemukan.' });
@@ -467,3 +537,4 @@ router.get('/log', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+

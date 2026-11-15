@@ -67,7 +67,7 @@ const AdminSidebar = {
         </nav>
         <div class="sidebar-foot">
           v2.4.1 Stable<br>
-          SMA Negeri 1 Jakarta
+          SMKN 8 MALANG
         </div>
       </aside>
     `;

@@ -31,7 +31,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/pengaturan
-router.post('/', authenticate, requireRole('guru', 'admin', 'petugas'), async (req, res) => {
+router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const current = await db.getPengaturan();
     const validationError = validateJamKerja(req.body, current);
@@ -58,7 +58,7 @@ router.get('/profil-sekolah', authenticate, async (req, res) => {
 });
 
 // POST /api/pengaturan/profil-sekolah
-router.post('/profil-sekolah', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+router.post('/profil-sekolah', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const data = await db.saveProfilSekolah(req.body);
     res.json({ success: true, message: 'Profil sekolah berhasil diperbarui.', data });

@@ -2,6 +2,9 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../data/db');
 const { authenticate } = require('../middleware/auth');
+const { effectiveRole } = require('../middleware/role');
+const { resolveTeacher, getTaughtClasses } = require('../utils/teacher-access');
+const { jakartaNow } = require('../utils/jam-kerja');
 
 function getWeekDays() {
   const now = new Date();
@@ -33,14 +36,44 @@ function getWeekDays() {
   return { days, rangeText };
 }
 
-// GET /api/stats/overview (Guru/Admin Dashboard)
+// GET /api/stats/overview (Guru/Admin/Petugas Dashboard)
 router.get('/overview', authenticate, async (req, res) => {
   try {
-    const totalSiswa  = await db.countSiswa();
-    const totalGuru   = await db.countGuru();
+    const role = effectiveRole(req.user);
+    if (role === 'siswa') {
+      return res.status(403).json({ success: false, message: 'Statistik overview tidak tersedia untuk siswa.' });
+    }
 
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const todayRecords = await db.getAbsensi({ tanggal: todayStr });
+    const { days, rangeText } = getWeekDays();
+
+    let classFilter = null;
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      const taught = teacher ? await getTaughtClasses(teacher.id) : [];
+      if (taught.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            totalSiswa: 0, siswaAktif: 0, totalGuru: 0, guruAktif: 0,
+            persentaseHadir: 0, hadirSiswa: 0, alfaSiswa: 0, izinSiswa: 0, sakitSiswa: 0,
+            weeklyChart: days.map((d) => ({ day: d.day, date: d.date, hadir: 0, izin: 0, sakit: 0, alfa: 0, total: 0 })),
+            recentAbsensi: [], weekRangeText: rangeText, todayFormatted: '', user: req.user
+          }
+        });
+      }
+      classFilter = taught;
+    }
+
+    let totalSiswa = await db.countSiswa();
+    if (classFilter) {
+      const allStudents = await db.getSiswa({});
+      totalSiswa = allStudents.filter((st) => classFilter.includes(st.kelas)).length;
+    }
+    const totalGuru = await db.countGuru();
+
+    const todayStr = jakartaNow().date;
+    let todayRecords = await db.getAbsensi({ tanggal: todayStr });
+    if (classFilter) todayRecords = todayRecords.filter((r) => classFilter.includes(r.kelas));
 
     let hadirCount = 0, izinCount = 0, sakitCount = 0, alfaCount = 0;
     todayRecords.forEach(r => {
@@ -55,14 +88,13 @@ router.get('/overview', authenticate, async (req, res) => {
       ? Math.round((hadirCount / totalAbsen) * 100 * 10) / 10
       : 0;
 
-    // Weekly chart from real absensi in database
-    const { days, rangeText } = getWeekDays();
     const weekDates = days.map(d => d.date);
 
-    const { data: weekRecords } = await db.supabase
+    let { data: weekRecords } = await db.supabase
       .from('absensi')
       .select('*')
       .in('date', weekDates);
+    if (classFilter) weekRecords = (weekRecords || []).filter((r) => classFilter.includes(r.kelas));
 
     const weeklyChart = days.map(d => {
       const records = (weekRecords || []).filter(r => r.date === d.date);
@@ -71,25 +103,19 @@ router.get('/overview', authenticate, async (req, res) => {
       const s = records.filter(r => r.status === 'sakit').length;
       const a = records.filter(r => r.status === 'alfa').length;
       const tot = records.length;
-      return {
-        day: d.day,
-        date: d.date,
-        hadir: h,
-        izin: z,
-        sakit: s,
-        alfa: a,
-        total: tot
-      };
+      return { day: d.day, date: d.date, hadir: h, izin: z, sakit: s, alfa: a, total: tot };
     });
 
-    // Recent absensi from database
-    const { data: rawRecent } = await db.supabase
+    const { data: rawRecentAll } = await db.supabase
       .from('absensi')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(6);
+      .limit(classFilter ? 50 : 6);
+    const rawRecent = classFilter
+      ? (rawRecentAll || []).filter((r) => classFilter.includes(r.kelas)).slice(0, 6)
+      : (rawRecentAll || []);
 
-    const recentAbsensi = (rawRecent || []).map(r => ({
+    const recentAbsensi = rawRecent.map(r => ({
       name: r.student_name || 'Siswa',
       kelas: r.kelas || '-',
       time: (r.check_in && r.check_in !== '-') ? `${r.check_in} WIB` : r.date,
@@ -108,19 +134,10 @@ router.get('/overview', authenticate, async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalSiswa:      totalSiswa,
-        siswaAktif:      totalSiswa,
-        totalGuru:       totalGuru,
-        guruAktif:       totalGuru,
-        persentaseHadir: persentaseHadir,
-        hadirSiswa:      hadirCount,
-        alfaSiswa:       alfaCount,
-        izinSiswa:       izinCount,
-        sakitSiswa:      sakitCount,
-        weeklyChart:     weeklyChart,
-        recentAbsensi:   recentAbsensi,
-        weekRangeText:   rangeText,
-        todayFormatted:  todayFormatted,
+        totalSiswa, siswaAktif: totalSiswa, totalGuru, guruAktif: totalGuru,
+        persentaseHadir, hadirSiswa: hadirCount, alfaSiswa: alfaCount,
+        izinSiswa: izinCount, sakitSiswa: sakitCount,
+        weeklyChart, recentAbsensi, weekRangeText: rangeText, todayFormatted,
         user: req.user
       }
     });
@@ -133,12 +150,17 @@ router.get('/overview', authenticate, async (req, res) => {
 // GET /api/stats/siswa (Student Dashboard)
 router.get('/siswa', authenticate, async (req, res) => {
   try {
-    const nis      = req.user.nis || '0089211478';
-    const userLogs = await db.getStudentLogs(nis);
+    const role = effectiveRole(req.user);
+    const nis = req.user.nis;
+    if (role !== 'siswa' || !nis) {
+      return res.status(403).json({ success: false, message: 'Endpoint ini hanya untuk siswa.' });
+    }
+
     const settings = await db.getPengaturan();
+    const today = jakartaNow();
+    const todayRecord = await db.findAbsensiByNisDate(nis, today.date, req.user.kelas);
 
-    const todayLog = userLogs[0] || null;
-
+    const userLogs = await db.getStudentLogs(nis);
     const hadirDays = userLogs.filter(l => l.status === 'hadir' || l.status === 'terlambat').length;
     const izinDays  = userLogs.filter(l => l.status === 'izin' || l.status === 'sakit').length;
     const alfaDays  = userLogs.filter(l => l.status === 'alfa').length;
@@ -149,11 +171,13 @@ router.get('/siswa', authenticate, async (req, res) => {
       success: true,
       data: {
         studentName:         req.user.name,
-        kelas:               req.user.kelas || 'XII IPA 1',
-        jamMasuk:            todayLog ? (todayLog.masuk || '-') : '-',
+        kelas:               req.user.kelas || null,
+        jamMasuk:            settings.jamMasuk || '07:00 WIB',
         targetPulang:        settings.jamPulang || '15:30 WIB',
         batasMasuk:          (settings.jamMasuk || '07:00 WIB').replace(/\s*WIB/i, '').trim(),
-        statusMasuk:         todayLog ? (todayLog.status_text || 'Hadir Tepat Waktu') : 'Belum Absen',
+        checkIn:             todayRecord && todayRecord.check_in ? todayRecord.check_in : null,
+        checkOut:            todayRecord && todayRecord.check_out ? todayRecord.check_out : null,
+        statusMasuk:         todayRecord ? (todayRecord.status || 'Hadir') : 'Belum Absen',
         jamBelajarMingguIni: `${hadirDays * 7} Jam`,
         targetBelajar:       '40 Jam',
         kehadiranBulanIni:   `${pctKehadiran}%`,

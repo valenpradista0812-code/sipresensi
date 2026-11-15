@@ -1,36 +1,54 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../data/db');
-const { authenticate, optionalAuth, requireRole } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
+const { effectiveRole } = require('../middleware/role');
+const { resolveTeacher, getTaughtClasses, canAccessClass } = require('../utils/teacher-access');
+const { jakartaNow } = require('../utils/jam-kerja');
 
-// GET /api/absensi - Daftar siswa di kelas beserta status absensi hari ini
+// GET /api/absensi
 router.get('/', authenticate, async (req, res) => {
   try {
-    if (req.user.role === 'siswa') {
+    const role = effectiveRole(req.user);
+
+    if (role === 'siswa') {
       if (!req.user.nis) {
         return res.status(403).json({ success: false, message: 'Akun siswa belum terhubung dengan NIS.' });
       }
-
       const records = await db.getAbsensiByNis(req.user.nis);
       return res.json({ success: true, count: records.length, data: records });
     }
-    if (!['guru', 'admin'].includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Akses riwayat absensi hanya untuk siswa, guru, dan admin.' });
+
+    if (role !== 'guru' && role !== 'petugas') {
+      return res.status(403).json({ success: false, message: 'Akses riwayat absensi hanya untuk siswa, guru, dan petugas.' });
     }
 
-    const kelas   = req.query.kelas   || 'XII IPA 1';
-    const tanggal = req.query.tanggal || new Date().toISOString().slice(0, 10);
-    const mapel   = req.query.mapel   || 'Matematika';
+    const today = jakartaNow().date;
+    const kelas = req.query.kelas || null;
+    const tanggal = req.query.tanggal || today;
+    const mapel = req.query.mapel || null;
 
-    // Ambil siswa di kelas ini
-    let students = await db.getSiswa({ kelas });
-    if (students.length === 0) {
-      students = await db.getSiswaLimit(8);
+    let teacher = null;
+    let taught = null;
+    if (role === 'guru') {
+      teacher = await resolveTeacher(req.user);
+      taught = teacher ? await getTaughtClasses(teacher.id) : [];
+      if (taught.length === 0) {
+        return res.json({ success: true, filter: { kelas, tanggal, mapel }, count: 0, data: [] });
+      }
+      if (kelas && !taught.includes(kelas) && !(await canAccessClass(req.user, teacher && teacher.id, kelas, { allowWali: true }))) {
+        return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
+      }
     }
 
-    // Ambil record absensi yang sudah ada untuk kelas & tanggal ini
-    const existingRecords = await db.getAbsensi({ kelas, tanggal });
-    const leaveApplications = await db.getIzinApplicationsForAttendanceDate(tanggal, kelas);
+    const targetKelas = kelas || (role === 'guru' ? taught[0] : null);
+    if (!targetKelas) {
+      return res.json({ success: true, filter: { kelas: null, tanggal, mapel }, count: 0, data: [] });
+    }
+
+    const students = await db.getSiswa({ kelas: targetKelas });
+    const existingRecords = await db.getAbsensi({ kelas: targetKelas, tanggal });
+    const leaveApplications = await db.getIzinApplicationsForAttendanceDate(tanggal, targetKelas);
     const applicationsByNis = new Map();
     leaveApplications.forEach(application => {
       const key = String(application.nis);
@@ -80,15 +98,15 @@ router.get('/', authenticate, async (req, res) => {
       });
     });
 
-    res.json({ success: true, filter: { kelas, tanggal, mapel }, count: result.length, data: result });
+    res.json({ success: true, filter: { kelas: targetKelas, tanggal, mapel }, count: result.length, data: result });
   } catch (err) {
     console.error('getAbsensi error:', err);
     res.status(500).json({ success: false, message: 'Gagal memuat data absensi.' });
   }
 });
 
-// POST /api/absensi/save - Simpan absensi sekelompok siswa
-router.post('/save', authenticate, requireRole('guru', 'admin'), async (req, res) => {
+// POST /api/absensi/save
+router.post('/save', authenticate, requireRole('guru', 'petugas'), async (req, res) => {
   try {
     const { date, kelas, mapel, records } = req.body;
 
@@ -96,12 +114,28 @@ router.post('/save', authenticate, requireRole('guru', 'admin'), async (req, res
       return res.status(400).json({ success: false, message: 'Data absensi tidak valid.' });
     }
 
-    const targetDate  = date  || new Date().toISOString().slice(0, 10);
-    const targetKelas = kelas || 'XII IPA 1';
-    const targetMapel = mapel || 'Matematika';
+    const role = effectiveRole(req.user);
+    const targetDate  = date  || jakartaNow().date;
+    const targetKelas = kelas || null;
+    const targetMapel = mapel || 'Umum';
 
-    // Upsert setiap record ke MySQL
+    if (!targetKelas) {
+      return res.status(400).json({ success: false, message: 'Kelas wajib dipilih.' });
+    }
+
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      const allowed = await canAccessClass(req.user, teacher && teacher.id, targetKelas, { allowWali: true });
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses menyimpan absensi kelas ini.' });
+      }
+    } else if (role !== 'petugas') {
+      return res.status(403).json({ success: false, message: 'Akses simpan absensi tidak tersedia.' });
+    }
+
     for (const rec of records) {
+      const checkIn  = rec.check_in  !== undefined && rec.check_in  !== '' ? rec.check_in  : (rec.masuk  || '-');
+      const checkOut = rec.check_out !== undefined && rec.check_out !== '' ? rec.check_out : (rec.keluar || '-');
       await db.upsertAbsensi({
         id:          'abs-' + Date.now() + '-' + rec.nis,
         date:        targetDate,
@@ -111,8 +145,8 @@ router.post('/save', authenticate, requireRole('guru', 'admin'), async (req, res
         studentName: rec.name || 'Siswa',
         status:      rec.status,
         note:        rec.note || '',
-        checkIn:     rec.status === 'hadir' ? '07:15:00' : '-',
-        checkOut:    rec.status === 'hadir' ? '15:30:00' : '-'
+        checkIn,
+        checkOut
       });
     }
 
@@ -123,15 +157,38 @@ router.post('/save', authenticate, requireRole('guru', 'admin'), async (req, res
   }
 });
 
-// GET /api/absensi/riwayat - Riwayat absensi dikelompokkan per kelas & tanggal
+// GET /api/absensi/riwayat
 router.get('/riwayat', authenticate, async (req, res) => {
   try {
+    const role = effectiveRole(req.user);
+    if (role === 'siswa') {
+      return res.status(403).json({ success: false, message: 'Riwayat absensi kelas hanya untuk guru dan petugas.' });
+    }
+    if (role !== 'guru' && role !== 'petugas') {
+      return res.status(403).json({ success: false, message: 'Akses ditolak.' });
+    }
+
     const { kelas, tanggal, startDate, endDate, q } = req.query;
+    const targetKelas = kelas || null;
+    let taught = null;
 
-    // Ambil dari Supabase dan kelompokkan
-    const rows = await db.getAbsensiRiwayat({ kelas, tanggal, startDate, endDate });
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      taught = teacher ? await getTaughtClasses(teacher.id) : [];
+      if (targetKelas && !taught.includes(targetKelas)) {
+        return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
+      }
+    }
 
-    // Kelompokkan per date+kelas+mapel
+    let rows;
+    if (role === 'guru' && !targetKelas) {
+      if (taught.length === 0) return res.json({ success: true, count: 0, data: [] });
+      const chunks = await Promise.all(taught.map((k) => db.getAbsensiRiwayat({ kelas: k, tanggal, startDate, endDate })));
+      rows = chunks.flat();
+    } else {
+      rows = await db.getAbsensiRiwayat({ kelas: targetKelas, tanggal, startDate, endDate });
+    }
+
     const groupedMap = {};
     const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -148,9 +205,10 @@ router.get('/riwayat', authenticate, async (req, res) => {
           date: rawDate, tanggal: formattedDate,
           kelas: a.kelas, mapel: a.mapel || 'Umum',
           guru: 'Guru Pengampu',
-          hadir: 0, izin: 0, sakit: 0, alfa: 0, total: 36
+          hadir: 0, izin: 0, sakit: 0, alfa: 0, total: 0
         };
       }
+      groupedMap[key].total++;
       if      (a.status === 'hadir' || a.status === 'terlambat') groupedMap[key].hadir++;
       else if (a.status === 'izin')  groupedMap[key].izin++;
       else if (a.status === 'sakit') groupedMap[key].sakit++;
@@ -158,13 +216,6 @@ router.get('/riwayat', authenticate, async (req, res) => {
     });
 
     let allList = Object.values(groupedMap);
-
-    // If database still empty, return empty list
-    if (allList.length === 0) {
-      allList = [];
-    }
-
-    // Filter pencarian
     if (q && q.trim() !== '') {
       const qLow = q.trim().toLowerCase();
       allList = allList.filter(item =>
@@ -181,82 +232,160 @@ router.get('/riwayat', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/absensi/rekap-bulanan - Rekap bulanan siswa
+// GET /api/absensi/rekap-bulanan
 router.get('/rekap-bulanan', authenticate, async (req, res) => {
-  if (!['admin', 'guru'].includes(req.user.role)) {
-    return res.status(403).json({ success: false, message: 'Akses rekap bulanan hanya untuk guru dan admin.' });
-  }
   try {
+    const role = effectiveRole(req.user);
+    if (role === 'siswa') {
+      return res.status(403).json({ success: false, message: 'Rekap bulanan hanya untuk guru dan petugas.' });
+    }
+    if (role !== 'guru' && role !== 'petugas') {
+      return res.status(403).json({ success: false, message: 'Akses ditolak.' });
+    }
+
     const { kelas, bulan, q } = req.query;
+    const now = jakartaNow();
 
-    // Ambil semua siswa dengan filter kelas & pencarian
-    let students = await db.getSiswa({ kelas: kelas && kelas !== 'Semua Kelas' ? kelas : undefined, q });
+    let taught = null;
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      taught = teacher ? await getTaughtClasses(teacher.id) : [];
+      if (kelas && kelas !== 'Semua Kelas' && !taught.includes(kelas) && !(await canAccessClass(req.user, teacher && teacher.id, kelas, { allowWali: true }))) {
+        return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
+      }
+    }
 
-    // Tentukan rentang tanggal berdasarkan nama bulan (misal: "Oktober 2024")
-    let startDate = '2024-10-01', endDate = '2024-10-31', totalHari = 22;
+    let startDate, endDate;
     if (bulan) {
       const monthMap = {
         'Januari': '01', 'Februari': '02', 'Maret': '03', 'April': '04',
         'Mei': '05', 'Juni': '06', 'Juli': '07', 'Agustus': '08',
         'September': '09', 'Oktober': '10', 'November': '11', 'Desember': '12'
       };
-      const parts = bulan.split(' '); // ['Oktober', '2024']
-      if (parts.length === 2) {
-        const mm   = monthMap[parts[0]] || '10';
+      const parts = String(bulan).split(' ');
+      if (parts.length === 2 && monthMap[parts[0]]) {
+        const mm = monthMap[parts[0]];
         const yyyy = parts[1];
-        startDate  = `${yyyy}-${mm}-01`;
-        const lastDay = new Date(parseInt(yyyy), parseInt(mm), 0).getDate();
-        endDate    = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+        startDate = `${yyyy}-${mm}-01`;
+        const lastDay = new Date(parseInt(yyyy, 10), parseInt(mm, 10), 0).getDate();
+        endDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
       }
     }
+    if (!startDate || !endDate) {
+      const [yyyy, mm] = now.date.split('-');
+      startDate = `${yyyy}-${mm}-01`;
+      const lastDay = new Date(parseInt(yyyy, 10), parseInt(mm, 10), 0).getDate();
+      endDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+    }
 
-    // Hitung rekap per siswa
+    let students;
+    if (role === 'guru') {
+      if (taught.length === 0) {
+        return res.json({
+          success: true,
+          filter: { kelas: kelas || 'Semua Kelas', bulan: bulan || null, startDate, endDate },
+          summary: {
+            kehadiranOverall: null, persentaseSekolah: null, hariEfektif: '0 hari',
+            hadir: 0, terlambat: 0, izin: 0, sakit: 0, alfa: 0, dispensasi: 0, totalHadir: 0,
+            pctHadir: null, siswaTerajin: '-', siswaSeringAlfa: '-'
+          },
+          count: 0, data: []
+        });
+      }
+      const all = await db.getSiswa({ q });
+      students = all.filter((s) => taught.includes(s.kelas));
+    } else {
+      students = await db.getSiswa({ kelas: kelas && kelas !== 'Semua Kelas' ? kelas : undefined, q });
+    }
+
     const rekapList = [];
+    const allDates = new Set();
+    let sumStudentDays = 0;
+    let sumNonAlfaDays = 0;
+
     for (const st of students) {
       const records = await db.getAbsensiByNisRange(st.nis, startDate, endDate);
-      const hadir = records.filter(r => r.status === 'hadir' || r.status === 'terlambat').length;
-      const izin  = records.filter(r => r.status === 'izin').length;
-      const sakit = records.filter(r => r.status === 'sakit').length;
-      const alfa  = records.filter(r => r.status === 'alfa').length;
-      const pct   = totalHari > 0 ? Math.round(((hadir + izin) / totalHari) * 1000) / 10 : 100;
+      const dateMap = new Map();
+      for (const r of records) {
+        const d = r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date);
+        allDates.add(d);
+        if (!dateMap.has(d)) dateMap.set(d, []);
+        dateMap.get(d).push(r);
+      }
+
+      const counts = { hadir: 0, terlambat: 0, izin: 0, sakit: 0, alfa: 0, dispensasi: 0 };
+      for (const r of records) {
+        if (r.status === 'hadir') counts.hadir += 1;
+        else if (r.status === 'terlambat') counts.terlambat += 1;
+        else if (r.status === 'izin') counts.izin += 1;
+        else if (r.status === 'sakit') counts.sakit += 1;
+        else if (r.status === 'alfa') counts.alfa += 1;
+        else if (r.status === 'dispensasi') counts.dispensasi += 1;
+      }
+
+      const studentDays = dateMap.size;
+      let nonAlfaDays = 0;
+      let hadirSajaDays = 0;
+      const details = [];
+      for (const [d, rs] of dateMap.entries()) {
+        if (rs.some((r) => r.status !== 'alfa')) nonAlfaDays += 1;
+        if (rs.every((r) => r.status === 'hadir' || r.status === 'terlambat')) hadirSajaDays += 1;
+        const first = rs[0];
+        details.push({ date: d, status: rs.map((r) => r.status).join(','), masuk: first.check_in || '-', keluar: first.check_out || '-' });
+      }
+      sumStudentDays += studentDays;
+      sumNonAlfaDays += nonAlfaDays;
+
+      const persentase = studentDays > 0 ? Math.round((nonAlfaDays / studentDays) * 1000) / 10 : null;
+      const persentaseHadirSaja = studentDays > 0 ? Math.round((hadirSajaDays / studentDays) * 1000) / 10 : null;
+
+      if (persentase !== null && (persentase < 0 || persentase > 100)) {
+        throw new Error(`persentase out of range untuk ${st.nis}: ${persentase}`);
+      }
+      if (counts.hadir + counts.terlambat + counts.izin + counts.sakit + counts.alfa + counts.dispensasi !== records.length) {
+        throw new Error(`jumlah status tidak sama dengan record untuk ${st.nis}`);
+      }
 
       rekapList.push({
         nis: st.nis, nama: st.name, kelas: st.kelas,
-        hadir, izin, sakit, alfa,
-        persentase: pct + '%'
+        hadir: counts.hadir, terlambat: counts.terlambat, izin: counts.izin,
+        sakit: counts.sakit, alfa: counts.alfa, dispensasi: counts.dispensasi,
+        totalHadir: counts.hadir + counts.terlambat,
+        studentDays, persentase, persentaseHadirSaja,
+        totalRecord: records.length, details
       });
     }
 
-    // Hitung summary
-    const totalSlots   = (rekapList.length * totalHari) || 1;
-    const totalHadir   = rekapList.reduce((s, r) => s + r.hadir, 0);
-    const totalIzin    = rekapList.reduce((s, r) => s + r.izin,  0);
-    const totalSakit   = rekapList.reduce((s, r) => s + r.sakit, 0);
-    const totalAlfa    = rekapList.reduce((s, r) => s + r.alfa,  0);
-    const pctHadir     = totalSlots > 0 ? Math.round((totalHadir / totalSlots) * 1000) / 10 : 0;
-    const pctIzin      = totalSlots > 0 ? Math.round((totalIzin  / totalSlots) * 1000) / 10 : 0;
-    const pctSakit     = totalSlots > 0 ? Math.round((totalSakit / totalSlots) * 1000) / 10 : 0;
-    const pctAlfa      = totalSlots > 0 ? Math.round((totalAlfa  / totalSlots) * 1000) / 10 : 0;
-    const overall      = totalSlots > 0 ? Math.round(((totalHadir + totalIzin) / totalSlots) * 1000) / 10 : 0;
+    const sumHadir = rekapList.reduce((s, r) => s + r.hadir, 0);
+    const sumTerlambat = rekapList.reduce((s, r) => s + r.terlambat, 0);
+    const sumIzin = rekapList.reduce((s, r) => s + r.izin, 0);
+    const sumSakit = rekapList.reduce((s, r) => s + r.sakit, 0);
+    const sumAlfa = rekapList.reduce((s, r) => s + r.alfa, 0);
+    const sumDispensasi = rekapList.reduce((s, r) => s + r.dispensasi, 0);
 
-    const sorted       = [...rekapList].sort((a, b) => parseFloat(b.persentase) - parseFloat(a.persentase));
-    const siswaTerajin = (sorted[0] && totalHadir > 0) ? `${sorted[0].nama} (${sorted[0].persentase})` : '-';
-    const alfaSorted   = [...rekapList].sort((a, b) => b.alfa - a.alfa);
+    const persentaseSekolah = sumStudentDays > 0
+      ? Math.round((sumNonAlfaDays / sumStudentDays) * 1000) / 10
+      : null;
+
+    const sorted = [...rekapList].filter((r) => r.persentase !== null).sort((a, b) => b.persentase - a.persentase);
+    const siswaTerajin = sorted[0] ? `${sorted[0].nama} (${sorted[0].persentase}%)` : '-';
+    const alfaSorted = [...rekapList].sort((a, b) => b.alfa - a.alfa);
     const siswaSeringAlfa = alfaSorted[0] && alfaSorted[0].alfa > 0
       ? `${alfaSorted[0].nama} (${alfaSorted[0].alfa} Absen)` : 'Nihil';
 
     res.json({
       success: true,
-      filter: { kelas: kelas || 'Semua Kelas', bulan: bulan || 'Oktober 2024' },
+      filter: { kelas: kelas || 'Semua Kelas', bulan: bulan || null, startDate, endDate },
       summary: {
-        kehadiranOverall: overall + '%',
-        pctHadir: pctHadir + '%', pctIzin: pctIzin + '%',
-        pctSakit: pctSakit + '%', pctAlfa: pctAlfa + '%',
-        totalHari: totalHari + ' Hari',
+        kehadiranOverall: persentaseSekolah, persentaseSekolah,
+        hariEfektif: `${allDates.size} hari`,
+        hadir: sumHadir, terlambat: sumTerlambat, izin: sumIzin,
+        sakit: sumSakit, alfa: sumAlfa, dispensasi: sumDispensasi,
+        totalHadir: sumHadir + sumTerlambat, pctHadir: persentaseSekolah,
         siswaTerajin, siswaSeringAlfa
       },
       count: rekapList.length,
-      data:  rekapList
+      data: rekapList
     });
   } catch (err) {
     console.error('rekap-bulanan error:', err);

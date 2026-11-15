@@ -357,16 +357,6 @@
       line-height: 1.4;
       padding: 0 8px;
     }
-    .clock-loc {
-      display: flex; align-items: center; gap: 8px;
-      justify-content: center; flex-wrap: wrap;
-      margin: 1.25rem 0 1.5rem;
-      font-size: 12px; color: var(--muted);
-      text-align: center;
-    }
-    .clock-loc .valid { color: var(--green); font-weight: 700; }
-    .clock-loc .i { color: var(--green); }
-
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
       gap: 8px;
@@ -482,7 +472,6 @@
       .clock-box { min-height: 220px; padding: 1rem 0.5rem; }
       .clock-time { font-size: clamp(2.25rem, 13vw, 3.5rem); }
       #tracker-hint { font-size: 12px; }
-      .clock-loc { font-size: 11px; }
 
       .week-bars {
         min-height: 180px; height: 180px;
@@ -1117,9 +1106,9 @@
 <main class="content">
 
       <!-- Banner sambutan -->
-      <section class="welcome">
-        <h2>Selamat Pagi, Rizky Pratama!</h2>
-        <p>Hari ini: Senin, 14 Oktober 2024. Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+      <section class="welcome" id="greeting-section">
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
       </section>
 
       <!-- Kartu statistik -->
@@ -1167,11 +1156,6 @@
                 <div id="tracker-hint">
                   👇 Ketuk di sini atau tombol di bawah untuk <b>Mulai</b>
                 </div>
-              </div>
-
-              <div class="clock-loc">
-                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>Lokasi: <b>SMA Negeri 1 Jakarta</b> <span class="valid">(Radius 12m - Valid)</span></span>
               </div>
 
               <button class="btn btn-primary btn-checkout" id="btn-toggle-tracker" type="button">
@@ -1277,6 +1261,13 @@
   })();
 </script>
 
+<script src="/public/components/shared/greeting.js"></script>
+<script>
+  if (window.StudentGreeting) {
+    StudentGreeting.init();
+  }
+</script>
+
 <script>
   (async function() {
     function escapeHtml(str) {
@@ -1291,6 +1282,11 @@
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
+
+        if (d.studentName && window.StudentGreeting) {
+          StudentGreeting.init({ name: d.studentName });
+        }
+
         const statValues = document.querySelectorAll('.stat .stat-value');
         if (statValues.length >= 4) {
           statValues[0].innerHTML = escapeHtml(d.jamMasuk.split(' ')[0]) + '<small> WIB</small>';

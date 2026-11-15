@@ -31,9 +31,9 @@
     </header>
 
     <main class="content">
-      <section class="welcome">
-        <h2>Selamat Pagi!</h2>
-        <p id="welcome-sub-text">Memuat informasi sistem...</p>
+      <section class="welcome" id="greeting-section">
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Memuat informasi sistem...</p>
       </section>
 
       <section class="stats">
@@ -91,6 +91,14 @@
 <script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
+<script src="/public/components/shared/greeting.js"></script>
+<script>
+  SiGreeting.init({
+    fallbackName: 'Guru',
+    subtitle: 'Semua sistem pelaporan berjalan dengan normal.',
+    cacheKey: 'guru_name'
+  });
+</script>
 <script>
   (async function() {
     function escapeHtml(str) {
@@ -105,11 +113,6 @@
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
-
-        const subText = document.getElementById('welcome-sub-text');
-        if (subText) {
-          subText.textContent = `Hari ini: ${d.todayFormatted || 'Hari Ini'}. Semua sistem pelaporan berjalan dengan normal.`;
-        }
 
         const elTotalSiswa = document.getElementById('val-total-siswa');
         const elNoteSiswa  = document.getElementById('note-total-siswa');

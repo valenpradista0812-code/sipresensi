@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../data/db');
+const { effectiveRole } = require('./role');
 
 const JWT_SECRET = process.env.JWT_SECRET || (
   process.env.NODE_ENV === 'production'
@@ -82,7 +83,7 @@ function requireRole(...roles) {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Silakan login terlebih dahulu.' });
     }
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(effectiveRole(req.user))) {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke halaman atau aksi ini.' });
     }
     next();
@@ -106,11 +107,12 @@ function pageAuthGuard(allowedRoles = []) {
       }
 
       req.user = user;
+      const role = effectiveRole(user);
 
       // If specific roles are required
-      if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        const target = user.role === 'siswa' ? '/dashboard-siswa.html'
-          : user.role === 'petugas' ? '/src/pages/petugas/dashboard.html'
+      if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+        const target = role === 'siswa' ? '/dashboard-siswa.html'
+          : role === 'petugas' ? '/src/pages/petugas/dashboard.html'
           : '/dashboard.html';
         if (req.path === target) {
           return res.status(403).send('Akses ditolak: peran tidak sesuai.');

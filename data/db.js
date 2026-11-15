@@ -12,6 +12,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
+let jadwalSiswaWarningLogged = false;
+
+function isMissingJadwalSiswaSchema(error) {
+  return Boolean(error) && (
+    ['42P01', 'PGRST205', 'PGRST204'].includes(error.code) ||
+    /jadwal_siswa/i.test(error.message || '')
+  );
+}
+
 // Test koneksi ke Supabase saat module dimuat
 (async () => {
   try {
@@ -179,13 +188,37 @@ async function deleteUserByNisOrEmail(nis, email) {
   }
 }
 
+async function getUsers({ role, q } = {}) {
+  let query = supabase.from('users').select('id,email,name,role,title,nip,nis,kelas,phone,avatar,created_at');
+  if (role && role !== 'semua') query = query.eq('role', role);
+  if (q) {
+    query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,nip.ilike.%${q}%,nis.ilike.%${q}%,kelas.ilike.%${q}%`);
+  }
+  const { data, error } = await query.order('role', { ascending: true }).order('name', { ascending: true });
+  if (error) {
+    console.error('getUsers error:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+async function deleteUserById(id) {
+  if (!id) return false;
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
 // ─── SISWA ────────────────────────────────────────────────────────
 
-async function getSiswa({ kelas, status, q } = {}) {
+async function getSiswa({ kelas, status, q, kelasList } = {}) {
+  if (Array.isArray(kelasList) && kelasList.length === 0) return [];
   let query = supabase.from('siswa').select('*');
 
   if (kelas && kelas !== 'Semua Kelas' && kelas !== 'all') {
     query = query.ilike('kelas', kelas);
+  } else if (Array.isArray(kelasList) && kelasList.length > 0) {
+    query = query.in('kelas', kelasList);
   }
   if (status && status !== 'Semua') {
     query = query.ilike('status', status);
@@ -352,6 +385,51 @@ async function findGuruByNip(nip) {
   return data || null;
 }
 
+async function findGuruByUserId(userId) {
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('guru')
+    .select('*')
+    .eq('user_id', String(userId))
+    .maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
+async function listTaughtClasses(guruId) {
+  if (!guruId) return [];
+  const { data, error } = await supabase
+    .from('jadwal_mapel')
+    .select('kelas')
+    .eq('guru_id', String(guruId))
+    .eq('aktif', true);
+  if (error) return [];
+  return [...new Set((data || []).map((row) => row.kelas).filter(Boolean))];
+}
+
+async function isWaliKelas(guruId, name) {
+  if (!guruId || !name) return null;
+  const { data, error } = await supabase
+    .from('kelas')
+    .select('id,name,wali_kelas_id')
+    .eq('wali_kelas_id', String(guruId))
+    .eq('name', String(name))
+    .maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
+async function getKelasWaliId(id) {
+  if (!id) return null;
+  const { data, error } = await supabase
+    .from('kelas')
+    .select('wali_kelas_id')
+    .eq('id', String(id))
+    .maybeSingle();
+  if (error) return null;
+  return data ? data.wali_kelas_id : null;
+}
+
 async function findGuruByIdOrNip(idOrNip) {
   const clean = String(idOrNip).trim();
   const { data, error } = await supabase
@@ -374,6 +452,7 @@ async function addGuru(data) {
     phone: data.phone ? data.phone.trim() : '-',
     email: data.email || null
   };
+  if (data.user_id !== undefined) payload.user_id = data.user_id || null;
 
   const { data: created, error } = await supabase
     .from('guru')
@@ -396,6 +475,7 @@ async function updateGuru(id, data) {
     phone: data.phone !== undefined ? data.phone.trim() : existing.phone,
     email: data.email !== undefined ? data.email.trim() : existing.email
   };
+  if (data.user_id !== undefined) payload.user_id = data.user_id || null;
 
   const { data: updated, error } = await supabase
     .from('guru')
@@ -1040,12 +1120,13 @@ async function createIzinApplication(application) {
   return data;
 }
 
-async function reviewIzinApplication(id, status, reviewer, reviewNote) {
+async function reviewIzinApplication(id, status, reviewer, reviewNote, reviewerId) {
   const { data, error } = await supabase.rpc('review_pengajuan_izin', {
     p_id: id,
     p_status: status,
     p_reviewer: reviewer,
-    p_review_note: reviewNote || null
+    p_review_note: reviewNote || null,
+    p_reviewer_id: reviewerId || null
   });
 
   if (error) throw error;
@@ -1190,6 +1271,76 @@ module.exports = {
     if (error) throw error;
     return data || [];
   },
+  async findJadwalById(id) {
+    if (!id) return null;
+    const { data, error } = await supabase
+      .from('jadwal_mapel')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  },
+  async getSiswaForScheduleOptions() {
+    const { data, error } = await supabase
+      .from('siswa')
+      .select('id,nis,name,kelas')
+      .order('kelas', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+  async getJadwalSiswaLinks(jadwalIds) {
+    const ids = [...new Set((jadwalIds || []).filter(Boolean))];
+    if (ids.length === 0) return [];
+    const { data, error } = await supabase
+      .from('jadwal_siswa')
+      .select('jadwal_id,siswa_id')
+      .in('jadwal_id', ids);
+    if (error) {
+      if (isMissingJadwalSiswaSchema(error)) {
+        if (!jadwalSiswaWarningLogged) {
+          console.warn('Tabel jadwal_siswa belum tersedia. Jalankan migrasi 2026111401_jadwal_siswa.sql untuk mengaktifkan penugasan siswa per jadwal.');
+          jadwalSiswaWarningLogged = true;
+        }
+        return [];
+      }
+      throw error;
+    }
+    return data || [];
+  },
+  async replaceJadwalSiswaLinks(jadwalId, siswaIds) {
+    if (!jadwalId) throw new Error('ID jadwal wajib diisi.');
+    const ids = [...new Set((siswaIds || []).filter(Boolean))];
+
+    const { data: existing, error: readError } = await supabase
+      .from('jadwal_siswa')
+      .select('siswa_id')
+      .eq('jadwal_id', jadwalId);
+    if (readError) throw readError;
+
+    if (ids.length > 0) {
+      const rows = ids.map((siswaId) => ({ jadwal_id: jadwalId, siswa_id: siswaId }));
+      const { error: upsertError } = await supabase
+        .from('jadwal_siswa')
+        .upsert(rows, { onConflict: 'jadwal_id,siswa_id' });
+      if (upsertError) throw upsertError;
+    }
+
+    const removed = (existing || [])
+      .map((row) => row.siswa_id)
+      .filter((siswaId) => !ids.includes(siswaId));
+    if (removed.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('jadwal_siswa')
+        .delete()
+        .eq('jadwal_id', jadwalId)
+        .in('siswa_id', removed);
+      if (deleteError) throw deleteError;
+    }
+
+    return ids.map((siswaId) => ({ jadwal_id: jadwalId, siswa_id: siswaId }));
+  },
   async findSiswaByNis(nis) {
     const { data, error } = await supabase
       .from('siswa')
@@ -1241,6 +1392,8 @@ module.exports = {
   deleteUserByNis,
   deleteUserByNip,
   deleteUserByNisOrEmail,
+  getUsers,
+  deleteUserById,
   // Siswa
   getSiswa,
   getSiswaLimit,
@@ -1254,6 +1407,10 @@ module.exports = {
   // Guru
   getGuru,
   findGuruByNip,
+  findGuruByUserId,
+  listTaughtClasses,
+  isWaliKelas,
+  getKelasWaliId,
   findGuruByIdOrNip,
   addGuru,
   updateGuru,

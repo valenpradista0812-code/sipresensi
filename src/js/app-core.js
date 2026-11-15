@@ -55,6 +55,119 @@ window.SiPresensi = (function () {
     }, 3500);
   }
 
+  // Reusable confirmation dialog
+  const confirmIcons = {
+    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+    restart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>',
+    save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
+
+  let confirmElements = null;
+  let confirmResolver = null;
+  let confirmLastFocus = null;
+
+  function ensureConfirmDialog() {
+    if (confirmElements) return confirmElements;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.id = 'sipresensi-confirm-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+      <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="sipresensi-confirm-title" aria-describedby="sipresensi-confirm-desc" data-variant="danger">
+        <div class="confirm-icon" aria-hidden="true"></div>
+        <h2 class="confirm-title" id="sipresensi-confirm-title">Konfirmasi</h2>
+        <p class="confirm-desc" id="sipresensi-confirm-desc"></p>
+        <div class="confirm-actions">
+          <button class="confirm-btn confirm-btn--cancel" type="button">Batal</button>
+          <button class="confirm-btn confirm-btn--confirm" type="button">Ya, Lanjutkan</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const dialog = overlay.querySelector('.confirm-dialog');
+    const title = overlay.querySelector('.confirm-title');
+    const desc = overlay.querySelector('.confirm-desc');
+    const icon = overlay.querySelector('.confirm-icon');
+    const cancel = overlay.querySelector('.confirm-btn--cancel');
+    const confirm = overlay.querySelector('.confirm-btn--confirm');
+
+    function settle(value) {
+      if (!overlay.classList.contains('show')) return;
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+      const resolver = confirmResolver;
+      confirmResolver = null;
+      if (confirmLastFocus && typeof confirmLastFocus.focus === 'function') {
+        confirmLastFocus.focus({ preventScroll: true });
+      }
+      if (resolver) resolver(value);
+    }
+
+    cancel.addEventListener('click', () => settle(false));
+    confirm.addEventListener('click', () => settle(true));
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) settle(false);
+    });
+    overlay.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        settle(false);
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        (document.activeElement === cancel ? confirm : cancel).focus();
+      }
+    });
+
+    confirmElements = { overlay, dialog, title, desc, icon, cancel, confirm };
+    return confirmElements;
+  }
+
+  function showConfirm(options = {}) {
+    const {
+      title = 'Konfirmasi',
+      message = '',
+      confirmText = 'Ya, Lanjutkan',
+      cancelText = 'Batal',
+      variant = 'danger',
+      icon = ''
+    } = options;
+    const elements = ensureConfirmDialog();
+
+    // Tutup dialog sebelumnya (jika ada) agar tidak menumpuk.
+    if (confirmResolver) {
+      const previous = confirmResolver;
+      confirmResolver = null;
+      previous(false);
+      elements.overlay.classList.remove('show');
+      elements.overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    const iconName = icon || (variant === 'warning' ? 'warning' : variant === 'success' ? 'save' : 'trash');
+    elements.dialog.dataset.variant = variant;
+    elements.icon.innerHTML = confirmIcons[iconName] || confirmIcons.info;
+    elements.title.textContent = title;
+    elements.desc.textContent = message;
+    elements.cancel.textContent = cancelText;
+    elements.confirm.textContent = confirmText;
+
+    confirmLastFocus = document.activeElement;
+    elements.overlay.classList.add('show');
+    elements.overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      if (elements.overlay.classList.contains('show')) {
+        elements.cancel.focus({ preventScroll: true });
+      }
+    });
+
+    return new Promise(resolve => {
+      confirmResolver = resolve;
+    });
+  }
+
   // Fetch current logged in user and update header
   async function syncCurrentUser() {
     try {
@@ -282,6 +395,7 @@ window.SiPresensi = (function () {
     getUser: () => currentUser,
     logout,
     showToast,
+    confirm: showConfirm,
     syncCurrentUser
   };
 })();

@@ -16,6 +16,7 @@ const notifikasiRoutes = require('./routes/notifikasi');
 const izinRoutes = require('./routes/izin');
 const jadwalRoutes = require('./routes/jadwal');
 const iotMonitoringRoutes = require('./routes/iot-monitoring');
+const akunRoutes = require('./routes/akun');
 const { startDiscovery } = require('./utils/discovery');
 
 const { pageAuthGuard, optionalAuth } = require('./middleware/auth');
@@ -45,6 +46,7 @@ app.use('/api/notifikasi', notifikasiRoutes);
 app.use('/api/izin', izinRoutes);
 app.use('/api/jadwal', jadwalRoutes);
 app.use('/api/iot-monitoring', iotMonitoringRoutes);
+app.use('/api/akun', akunRoutes);
 
 // Root Route handler
 app.get('/', optionalAuth, (req, res) => {
@@ -114,7 +116,7 @@ const adminPages = [
 // Register both old and new paths for admin pages
 adminPages.forEach(page => {
   // Old path (for backward compatibility)
-  app.get(page.old, pageAuthGuard(['guru', 'admin']), (req, res) => {
+  app.get(page.old, pageAuthGuard(['guru']), (req, res) => {
     const filePath = path.join(__dirname, 'src/pages/admin', path.basename(page.old));
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Halaman tidak ditemukan');
@@ -123,7 +125,7 @@ adminPages.forEach(page => {
   });
 
   // New path
-  app.get(page.new, pageAuthGuard(['guru', 'admin']), (req, res) => {
+  app.get(page.new, pageAuthGuard(['guru']), (req, res) => {
     const filePath = path.join(__dirname, page.new);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Halaman tidak ditemukan');
@@ -139,6 +141,7 @@ const petugasPages = [
   { old: '/petugas-dashboard.html', new: '/src/pages/petugas/dashboard.html' },
   { old: '/data-siswa.html', new: '/src/pages/petugas/data-siswa.html' },
   { old: '/data-guru.html', new: '/src/pages/petugas/data-guru.html' },
+  { old: '/data-akun.html', new: '/src/pages/petugas/data-akun.html' },
   { old: '/jadwal.html', new: '/src/pages/petugas/jadwal.html' },
   { old: '/perangkat-rfid.html', new: '/src/pages/petugas/perangkat-rfid.html' }
 ];
@@ -169,7 +172,7 @@ const studentPages = [
 // Register both old and new paths for student pages
 studentPages.forEach(page => {
   // Old path (for backward compatibility)
-  app.get(page.old, pageAuthGuard(['siswa', 'guru', 'admin']), (req, res) => {
+  app.get(page.old, pageAuthGuard(['siswa', 'guru']), (req, res) => {
     const filePath = path.join(__dirname, page.new);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Halaman tidak ditemukan');
@@ -178,7 +181,7 @@ studentPages.forEach(page => {
   });
 
   // New path
-  app.get(page.new, pageAuthGuard(['siswa', 'guru', 'admin']), (req, res) => {
+  app.get(page.new, pageAuthGuard(['siswa', 'guru']), (req, res) => {
     const filePath = path.join(__dirname, page.new);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Halaman tidak ditemukan');

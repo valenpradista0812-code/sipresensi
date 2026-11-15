@@ -180,7 +180,7 @@ BEGIN
     AND public.check_time_overlap(NEW.jam_mulai, NEW.jam_selesai, jam_mulai, jam_selesai);
   
   IF v_guru_conflict > 0 THEN
-    RAISE EXCEPTION 'JADWAL_GURU_CONFLICT: Guru ID "%" sudah memiliki jadwal pada %:%-%:% di hari %', NEW.guru_id, NEW.jam_mulai, NEW.jam_selesai, NEW.hari;
+    RAISE EXCEPTION 'JADWAL_GURU_CONFLICT: Guru ID "%" sudah memiliki jadwal pada % - % di hari %', NEW.guru_id, NEW.jam_mulai, NEW.jam_selesai, NEW.hari;
   END IF;
 
   -- Check kelas conflict
@@ -193,7 +193,7 @@ BEGIN
     AND public.check_time_overlap(NEW.jam_mulai, NEW.jam_selesai, jam_mulai, jam_selesai);
   
   IF v_kelas_conflict > 0 THEN
-    RAISE EXCEPTION 'JADWAL_KELAS_CONFLICT: Kelas "%" sudah memiliki pelajaran pada %:%-%:% di hari %', NEW.kelas, NEW.jam_mulai, NEW.jam_selesai, NEW.hari;
+    RAISE EXCEPTION 'JADWAL_KELAS_CONFLICT: Kelas "%" sudah memiliki pelajaran pada % - % di hari %', NEW.kelas, NEW.jam_mulai, NEW.jam_selesai, NEW.hari;
   END IF;
 
   -- Version increment

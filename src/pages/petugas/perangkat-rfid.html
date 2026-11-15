@@ -213,21 +213,38 @@
 
   restartButton.addEventListener('click', async () => {
     if (loading || activeCommand) return;
+    const confirmed = await SiPresensi.confirm({
+      title: 'Restart ESP32?',
+      message: online
+        ? 'Perangkat ESP32 akan direstart. Koneksi perangkat akan terputus sementara dan kembali online setelah proses boot ulang selesai.'
+        : 'Perangkat ESP32 sedang offline. Perintah restart hanya dapat dijalankan setelah perangkat kembali terhubung. Tetap lanjutkan?',
+      confirmText: 'Ya, Restart',
+      cancelText: 'Batal',
+      variant: 'warning',
+      icon: 'restart'
+    });
+    if (!confirmed) return;
     if (!online) {
       const message = 'Perangkat sedang offline (tidak ada heartbeat). Periksa daya/Wi-Fi ESP32 lalu coba lagi.';
       errorBox.textContent = message;
       SiPresensi.showToast(message, 'error');
       return;
     }
-    if (!window.confirm('Restart ESP32 sekarang? Perangkat akan terputus sementara dan kembali online setelah boot ulang.')) return;
+
+    const originalLabel = restartButton.textContent;
     restartButton.disabled = true;
+    restartButton.setAttribute('aria-busy', 'true');
+    restartButton.textContent = 'Merestart...';
     try {
       const result = await getJson('/api/iot-monitoring/restart', { method: 'POST' });
       SiPresensi.showToast(result.message, 'success');
       await refresh();
     } catch (error) {
       SiPresensi.showToast(error.message || 'Perintah restart gagal dikirim.', 'error');
-      restartButton.disabled = false;
+    } finally {
+      restartButton.textContent = originalLabel;
+      restartButton.removeAttribute('aria-busy');
+      if (!activeCommand && !loading) restartButton.disabled = false;
     }
   });
 

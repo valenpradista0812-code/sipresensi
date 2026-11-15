@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const router = express.Router();
 const db = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { effectiveRole } = require('../middleware/role');
+const { resolveTeacher, getTaughtClasses, isWaliOf } = require('../utils/teacher-access');
 
 const MAX_PROOF_BYTES = 2 * 1024 * 1024;
 const MAX_LEAVE_DAYS = 90;
@@ -27,7 +29,6 @@ function isValidDate(value) {
 function isValidProof(value) {
   if (value === undefined || value === null || value === '') return true;
   if (typeof value !== 'string') return false;
-
   const match = value.match(/^data:image\/(?:jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/);
   if (!match) return false;
   return Buffer.from(match[1], 'base64').length <= MAX_PROOF_BYTES;
@@ -35,7 +36,9 @@ function isValidProof(value) {
 
 router.get('/', authenticate, requireServiceRoleKey, async (req, res) => {
   try {
-    if (req.user.role === 'siswa') {
+    const role = effectiveRole(req.user);
+
+    if (role === 'siswa') {
       if (!req.user.nis) {
         return res.status(403).json({ success: false, message: 'Akun siswa belum terhubung dengan NIS.' });
       }
@@ -43,12 +46,33 @@ router.get('/', authenticate, requireServiceRoleKey, async (req, res) => {
       return res.json({ success: true, data });
     }
 
-    if (!['guru', 'admin'].includes(req.user.role)) {
+    if (role === 'petugas') {
+      return res.status(403).json({ success: false, message: 'Petugas tidak memiliki akses ke pengajuan izin.' });
+    }
+
+    if (role !== 'guru') {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke pengajuan izin.' });
     }
 
+    const teacher = await resolveTeacher(req.user);
+    if (!teacher) return res.json({ success: true, data: [] });
+    const taught = await getTaughtClasses(teacher.id);
+    const waliMap = {};
+
     const data = await db.getIzinApplications(undefined, { excludeApproved: true });
-    return res.json({ success: true, data });
+    const visible = [];
+    for (const app of (data || [])) {
+      if (!app.kelas) continue;
+      let canReview = waliMap[app.kelas];
+      if (canReview === undefined) {
+        canReview = await isWaliOf(teacher.id, app.kelas);
+        waliMap[app.kelas] = canReview;
+      }
+      if (taught.includes(app.kelas) || canReview) {
+        visible.push({ ...app, canReview });
+      }
+    }
+    return res.json({ success: true, data: visible });
   } catch (error) {
     console.error('getIzinApplications error:', error);
     if (error.code === '42703' || error.code === 'PGRST204') {
@@ -63,12 +87,13 @@ router.get('/', authenticate, requireServiceRoleKey, async (req, res) => {
 
 router.get('/:id', authenticate, requireServiceRoleKey, async (req, res) => {
   try {
-    if (!['siswa', 'guru', 'admin'].includes(req.user.role)) {
+    const role = effectiveRole(req.user);
+    if (!['siswa', 'guru'].includes(role)) {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke pengajuan izin.' });
     }
 
     const application = await db.getIzinApplicationById(req.params.id);
-    if (!application || (req.user.role === 'siswa' && application.nis !== req.user.nis)) {
+    if (!application || (role === 'siswa' && application.nis !== req.user.nis)) {
       return res.status(404).json({ success: false, message: 'Pengajuan izin tidak ditemukan.' });
     }
     return res.json({ success: true, data: application });
@@ -144,7 +169,7 @@ router.post('/', authenticate, requireRole('siswa'), requireServiceRoleKey, asyn
   }
 });
 
-router.post('/:id/review', authenticate, requireRole('guru', 'admin'), requireServiceRoleKey, async (req, res) => {
+router.post('/:id/review', authenticate, requireRole('guru'), requireServiceRoleKey, async (req, res) => {
   const { status, reviewNote } = req.body;
   if (!['Disetujui', 'Ditolak'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Status konfirmasi tidak valid.' });
@@ -154,11 +179,25 @@ router.post('/:id/review', authenticate, requireRole('guru', 'admin'), requireSe
   }
 
   try {
+    const application = await db.getIzinApplicationById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Pengajuan izin tidak ditemukan.' });
+    }
+    const teacher = await resolveTeacher(req.user);
+    if (!teacher) {
+      return res.status(403).json({ success: false, message: 'Akun guru belum terhubung dengan profil guru.' });
+    }
+    const wali = await isWaliOf(teacher.id, application.kelas);
+    if (!wali) {
+      return res.status(403).json({ success: false, message: 'Hanya wali kelas yang dapat mengonfirmasi pengajuan ini.' });
+    }
+
     const data = await db.reviewIzinApplication(
       req.params.id,
       status,
       req.user.name || req.user.id,
-      reviewNote ? reviewNote.trim() : null
+      reviewNote ? reviewNote.trim() : null,
+      req.user.id
     );
     return res.json({
       success: true,
@@ -207,12 +246,6 @@ router.post('/:id/review', authenticate, requireRole('guru', 'admin'), requireSe
       return res.status(503).json({
         success: false,
         message: 'Kolom dispensasi belum tersedia. Jalankan migrasi 2026110707_dispensasi_fields_and_status.sql di Supabase.'
-      });
-    }
-    if (error.code === 'PGRST202') {
-      return res.status(503).json({
-        success: false,
-        message: 'Fungsi workflow dispensasi belum tersedia. Jalankan migrasi 2026110708_rfid_dispensasi_workflow.sql di Supabase.'
       });
     }
     return res.status(500).json({ success: false, message: 'Gagal mengonfirmasi pengajuan izin.' });

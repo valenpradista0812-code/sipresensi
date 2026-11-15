@@ -28,8 +28,8 @@
   <div class="main">
     <main class="content">
       <header class="student-page-header">
-        <h2 id="greeting-title">Selamat Pagi, Rizky Pratama!</h2>
-        <p id="greeting-subtitle">Hari ini: Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
       </header>
       <h1 class="student-page-title">Profil Pengguna</h1>
       <section class="profile-grid">
@@ -40,16 +40,16 @@
           <div class="profile-kv">
             <div><span>NIS</span><b id="profile-nis-val">—</b></div>
             <div><span>Kelas</span><b id="profile-class-val">—</b></div>
-            <div><span>Sekolah</span><b>SMA Negeri 1 Jakarta</b></div>
+            <div><span>Sekolah</span><b>SMKN 8 MALANG</b></div>
           </div>
         </aside>
         <div>
           <section class="card form-card">
             <h2 class="form-title">Informasi Pribadi Siswa</h2>
             <div class="form-grid">
-              <div><label class="label" for="nama">Nama Lengkap</label><input class="input sm" id="nama" type="text" required></div>
-              <div><label class="label" for="mail">Alamat E-mail</label><input class="input sm" id="mail" type="email"></div>
-              <div><label class="label" for="tel">No. Telepon / WA</label><input class="input sm" id="tel" type="text"></div>
+              <div><label class="label" for="nama">Nama Lengkap</label><input class="input sm" id="nama" type="text" required readonly aria-readonly="true"></div>
+              <div><label class="label" for="mail">Alamat E-mail</label><input class="input sm" id="mail" type="email" readonly aria-readonly="true"></div>
+              <div><label class="label" for="tel">No. Telepon / WA</label><input class="input sm" id="tel" type="text" readonly aria-readonly="true"></div>
               <div><label class="label" for="kelas">Kelas</label><input class="input sm" id="kelas" type="text" readonly aria-readonly="true"></div>
             </div>
           </section>
@@ -71,7 +71,7 @@
 
 </div>
 <script src="/src/js/student-glass-sidebar.js"></script>
-<script src="/public/components/student/greeting.js"></script>
+<script src="/public/components/shared/greeting.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
 <script src="/src/js/script-siswa.js"></script>

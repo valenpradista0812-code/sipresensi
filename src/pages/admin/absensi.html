@@ -133,12 +133,7 @@
           <span class="label">Kelas</span>
           <div class="field-select">
             <select id="filter-kelas" style="background:transparent; border:none; font:inherit; font-weight:600; color:inherit; outline:none; cursor:pointer; width:100%;">
-              <option value="XII IPA 1">XII IPA 1</option>
-              <option value="XII IPA 2">XII IPA 2</option>
-              <option value="XII IPS 1">XII IPS 1</option>
-              <option value="XI IPA 1">XI IPA 1</option>
-              <option value="XI IPS 2">XI IPS 2</option>
-              <option value="X IPA 1">X IPA 1</option>
+              <option value="">Memuat kelas...</option>
             </select>
           </div>
         </div>
@@ -146,10 +141,7 @@
           <span class="label">Mata Pelajaran</span>
           <div class="field-select">
             <select id="filter-mapel" style="background:transparent; border:none; font:inherit; font-weight:600; color:inherit; outline:none; cursor:pointer; width:100%;">
-              <option value="Matematika (Drs. Heri S)">Matematika (Drs. Heri S)</option>
-              <option value="B. Indonesia (Sri Wahyuni)">B. Indonesia (Sri Wahyuni)</option>
-              <option value="Fisika (Bambang H)">Fisika (Bambang H)</option>
-              <option value="Biologi (Dewi Lestari)">Biologi (Dewi Lestari)</option>
+              <option value="">Semua Mapel</option>
             </select>
           </div>
         </div>
@@ -330,10 +322,26 @@
     }
     sessionStorage.setItem('adminAbsensiDate', filterDate.value);
     const savedClass = sessionStorage.getItem('adminAbsensiClass');
-    if (savedClass && filterKelas && !Array.from(filterKelas.options).some(option => option.value === savedClass)) {
-      filterKelas.add(new Option(savedClass, savedClass));
+    let initialClassLoaded = false;
+
+    async function loadKelasOptions() {
+      if (initialClassLoaded) return;
+      initialClassLoaded = true;
+      try {
+        const res = await fetch('/api/kelas');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          filterKelas.innerHTML = json.data.map((k) => `<option value="${k.name}">${k.name}</option>`).join('');
+          if (savedClass && Array.from(filterKelas.options).some((o) => o.value === savedClass)) {
+            filterKelas.value = savedClass;
+          }
+        } else if (savedClass) {
+          filterKelas.innerHTML = `<option value="${savedClass}">${savedClass}</option>`;
+        }
+      } catch (e) {
+        if (savedClass) filterKelas.innerHTML = `<option value="${savedClass}">${savedClass}</option>`;
+      }
     }
-    if (savedClass && filterKelas) filterKelas.value = savedClass;
 
     let leaveApplications = [];
 
@@ -377,7 +385,8 @@
         returnedAt: item.returned_at,
         actualSeconds: item.actual_seconds,
         reviewedAt: item.reviewed_at,
-        proof: item.proof_data || ''
+        proof: item.proof_data || '',
+        canReview: item.canReview === true
       };
     }
 
@@ -484,7 +493,7 @@
 
         const confirmationCell = document.createElement('td');
         confirmationCell.className = 'leave-confirmation-cell';
-        if (application.status === 'Menunggu') {
+        if (application.status === 'Menunggu' && application.canReview === true) {
           const reviewActions = document.createElement('div');
           reviewActions.className = 'leave-review-actions';
           [
@@ -499,6 +508,10 @@
             reviewActions.appendChild(button);
           });
           confirmationCell.appendChild(reviewActions);
+        } else if (application.status === 'Menunggu') {
+          confirmationCell.textContent = 'Hanya wali kelas';
+          confirmationCell.style.color = '#64748b';
+          confirmationCell.style.fontSize = '12px';
         } else if (application.status === 'Disetujui - Menunggu Tap') {
           confirmationCell.textContent = 'Menunggu tap RFID siswa';
         }
@@ -749,7 +762,11 @@
       }
     });
 
-    loadLeaveApplications();
+    (async () => {
+      await loadKelasOptions();
+      loadLeaveApplications();
+      loadAbsensi();
+    })();
 
     let currentRecords = [];
     async function loadAbsensi() {
@@ -873,8 +890,6 @@
       sessionStorage.setItem('adminAbsensiDate', filterDate.value);
       loadAbsensi();
     });
-
-    loadAbsensi();
   })();
 </script>
 </body>

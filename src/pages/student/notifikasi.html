@@ -28,8 +28,8 @@
   <div class="main">
     <main class="content">
       <header class="student-page-header">
-        <h2 id="greeting-title">Selamat Pagi, Rizky Pratama!</h2>
-        <p id="greeting-subtitle">Hari ini: Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
       </header>
       <h1 class="student-page-title">Notifikasi</h1>
       <div class="toolbar">
@@ -44,7 +44,7 @@
 
 </div>
 <script src="/src/js/student-glass-sidebar.js"></script>
-<script src="/public/components/student/greeting.js"></script>
+<script src="/public/components/shared/greeting.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
 <script src="/src/js/script-siswa.js"></script>
@@ -52,8 +52,7 @@
   (async function() {
     const container = document.getElementById('notif-list-container');
     const markReadButton = document.getElementById('btn-mark-read');
-    const storedName = sessionStorage.getItem('student_name');
-    StudentGreeting.init({ name: storedName || 'Rizky Pratama' });
+    StudentGreeting.init();
 
     async function loadNotifikasi() {
       container.innerHTML = '<div style="text-align:center; padding:32px; color:#64748b;">Memuat notifikasi dari database...</div>';

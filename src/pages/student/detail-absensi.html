@@ -545,82 +545,9 @@
 
       .layout-left #btn-ajukan-izin {
         order: 2;
+        width: 100%;
+        margin-top: 0;
       }
-
-       /* ===== Liquid Glass Button ===== */
-       .glass-btn {
-         position: relative;
-         isolation: isolate;
-         display: inline-flex;
-         align-items: center;
-         justify-content: center;
-         gap: 10px;
-         height: 52px;
-         width: 100%;
-         padding: 0 26px;
-         border: none;
-         border-radius: 999px;
-         font: inherit;
-         font-size: 15px;
-         font-weight: 600;
-         letter-spacing: -0.01em;
-         color: var(--ink, #1e293b);
-         cursor: pointer;
-         overflow: hidden;
-         background-color: color-mix(in srgb, var(--c-glass, #bbbbbc) 18%, transparent);
-         -webkit-backdrop-filter: blur(10px) saturate(150%);
-         backdrop-filter: url(#liquid-btn) blur(10px) saturate(150%);
-         box-shadow: var(--glass-shadow);
-         -webkit-tap-highlight-color: transparent;
-         transform: scale(1);
-         transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 300ms ease, box-shadow 300ms ease;
-       }
-       .glass-btn::before {
-         content: "";
-         position: absolute;
-         inset: 0;
-         border-radius: inherit;
-         padding: 1px;
-         background: conic-gradient(from var(--shine-angle), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.9) 10%, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.1));
-         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-         -webkit-mask-composite: xor;
-         mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-         pointer-events: none;
-         transition: --shine-angle 700ms ease;
-         z-index: 0;
-       }
-       .glass-btn:hover::before { --shine-angle: 120deg; }
-       .glass-btn::after {
-         content: "";
-         position: absolute;
-         inset: 0;
-         border-radius: inherit;
-         background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%);
-         opacity: 0.8;
-         pointer-events: none;
-         z-index: 0;
-       }
-       .glass-btn > * { position: relative; z-index: 1; }
-       .glass-btn:hover {
-         transform: scale(1.02);
-         background-color: color-mix(in srgb, var(--c-glass, #bbbbbc) 28%, transparent);
-       }
-       .glass-btn:active {
-         transform: scale(0.96);
-         transition-duration: 120ms;
-       }
-       .glass-btn svg {
-         width: 20px;
-         height: 20px;
-         flex-shrink: 0;
-         fill: none;
-         stroke: var(--icon, #22c55e);
-         stroke-width: 2;
-         stroke-linecap: round;
-         stroke-linejoin: round;
-         transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-       }
-       .glass-btn:hover svg { transform: rotate(-12deg) scale(1.1); }
 
        /* ============================================================
           LIQUID GLASS LOGOUT MODAL
@@ -761,72 +688,59 @@
         .lg-btn--confirm:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 10px 22px rgba(239,68,68,.36); }
 
        /* ============================================================
-          LIQUID GLASS PERMISSION FORM MODAL (AJUKAN IZIN)
+          FORM MODAL PENGAJUAN IZIN
           ============================================================ */
        .fi-overlay {
          position: fixed;
          inset: 0;
          z-index: 200;
-         display: grid;
-         place-items: center;
+         display: flex;
+         align-items: center;
+         justify-content: center;
          padding: 20px;
-         background: rgba(15,23,42,.14);
-         -webkit-backdrop-filter: blur(8px) saturate(140%);
-         backdrop-filter: blur(8px) saturate(140%);
+         background: rgba(15,23,42,.5);
          opacity: 0;
          visibility: hidden;
-         transition: opacity .3s ease, visibility 0s linear .3s;
+         transition: opacity .2s ease, visibility 0s linear .2s;
        }
        .fi-overlay.show {
          opacity: 1;
          visibility: visible;
-         transition: opacity .3s ease, visibility 0s;
+         transition: opacity .2s ease, visibility 0s;
        }
 
        .fi-dialog {
          position: relative;
          width: min(480px, 100%);
+         max-width: calc(100vw - 40px);
          max-height: calc(100vh - 40px);
          overflow-y: auto;
-         padding: 28px 26px 24px;
-         border-radius: 28px;
-         background: linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,255,255,.5));
-         border: 1px solid rgba(255,255,255,.8);
-         -webkit-backdrop-filter: blur(20px) saturate(160%);
-         backdrop-filter: blur(20px) saturate(160%);
-         box-shadow: var(--glass-shadow);
-         transform: translateY(18px) scale(.92);
+         padding: 24px;
+         border-radius: 16px;
+         background: #fff;
+         border: 1px solid var(--border);
+         box-shadow: 0 20px 50px rgba(15,23,42,.2);
+         transform: translateY(12px) scale(.98);
          opacity: 0;
-         transition: transform .45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s ease;
+         transition: transform .2s ease, opacity .2s ease;
          scrollbar-width: thin;
-       }
-       .fi-dialog::after {
-         content: "";
-         position: absolute;
-         inset: 0;
-         border-radius: inherit;
-         background: linear-gradient(160deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 40%);
-         pointer-events: none;
        }
        .fi-overlay.show .fi-dialog {
          transform: none;
          opacity: 1;
-         transition: transform .55s cubic-bezier(0.34, 1.56, 0.64, 1) .04s, opacity .3s ease .04s;
        }
 
        .fi-head { position: relative; z-index: 1; margin-bottom: 20px; }
-       .fi-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; color: #1e293b; }
-       .fi-head p { margin: 0; font-size: 13px; color: #64748b; }
+       .fi-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: var(--navy-2); }
+       .fi-head p { margin: 0; font-size: 13px; color: var(--muted); }
 
-       .fi-field { position: relative; z-index: 1; margin-bottom: 18px; }
+       .fi-field { position: relative; z-index: 1; margin-bottom: 16px; }
        .fi-label {
          display: block;
-         margin-bottom: 8px;
+         margin-bottom: 6px;
          font-size: 12px;
          font-weight: 700;
-         letter-spacing: .4px;
-         text-transform: uppercase;
-         color: #64748b;
+         color: #334155;
        }
 
        .fi-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -837,46 +751,44 @@
          align-items: center;
          gap: 6px;
          padding: 9px 14px;
-         border-radius: 999px;
+         border-radius: 8px;
          font-size: 13px;
-         font-weight: 700;
-         color: #1e293b;
+         font-weight: 600;
+         color: #334155;
          cursor: pointer;
-         background: rgba(255,255,255,.55);
-         border: 1px solid rgba(255,255,255,.9);
-         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.05);
-         transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease;
+         background: #fff;
+         border: 1px solid var(--border);
+         transition: background-color .15s ease, border-color .15s ease, color .15s ease;
          user-select: none;
        }
-       .fi-chip span:hover { background: rgba(255,255,255,.85); transform: translateY(-1px); }
+       .fi-chip span:hover { background: #f8fafc; border-color: #cbd5e1; }
        .fi-chip input:checked + span {
          color: #fff;
-         background: linear-gradient(180deg, #34d399, #10b981);
-         border-color: rgba(255,255,255,.4);
-         box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(16,185,129,.28);
+         background: var(--green);
+         border-color: var(--green);
        }
-       .fi-chip input:focus-visible + span { outline: 2px solid #0052f5; outline-offset: 2px; }
-       .fi-chip input[type="checkbox"] { position: static; opacity: 1; pointer-events: auto; accent-color: #10b981; }
+       .fi-chip input:focus-visible + span { outline: 2px solid var(--green); outline-offset: 2px; }
+       .fi-chip input[type="checkbox"] { position: static; opacity: 1; pointer-events: auto; accent-color: var(--green); }
 
        .fi-input, .fi-textarea, .fi-date {
          width: 100%;
          font: inherit;
-         font-size: 14px;
-         color: #1e293b;
-         padding: 12px 16px;
-         border-radius: 16px;
-         border: 1px solid rgba(255,255,255,.9);
-         background: rgba(255,255,255,.55);
-         box-shadow: inset 0 1px 2px rgba(15,23,42,.05);
+         font-size: 13px;
+         color: var(--navy-2);
+         padding: 10px 12px;
+         border-radius: 8px;
+         border: 1px solid var(--border);
+         background: #fff;
          outline: none;
-         transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+         transition: border-color .15s ease, box-shadow .15s ease;
        }
        .fi-textarea { min-height: 84px; resize: vertical; }
        .fi-input:focus, .fi-textarea:focus, .fi-date:focus {
-         background: rgba(255,255,255,.8);
-         border-color: rgba(16,185,129,.5);
-         box-shadow: 0 0 0 4px rgba(16,185,129,.15);
+         border-color: var(--green);
+         box-shadow: 0 0 0 3px rgba(16,185,129,.12);
        }
+       .fi-date:disabled { background: #f8fafc; color: var(--muted); }
+       .fi-hint { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
 
        .fi-hidden { display: none; }
        .fi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -887,57 +799,63 @@
          align-items: center;
          gap: 14px;
          padding: 14px;
-         border-radius: 18px;
-         border: 1.5px dashed rgba(16,185,129,.45);
-         background: rgba(255,255,255,.4);
+         border-radius: 10px;
+         border: 1.5px dashed #cbd5e1;
+         background: #f8fafc;
          cursor: pointer;
          transition: background-color .2s ease, border-color .2s ease;
        }
-       .fi-upload:hover { background: rgba(255,255,255,.7); border-color: rgba(16,185,129,.7); }
+       .fi-upload:hover { background: #f1f5f9; border-color: var(--green); }
        .fi-upload input {
          position: absolute; inset: 0; width: 100%; height: 100%;
          opacity: 0; cursor: pointer;
        }
        .fi-thumb {
          width: 56px; height: 56px; flex-shrink: 0;
-         border-radius: 14px;
-         background: rgba(16,185,129,.12) center/cover no-repeat;
+         border-radius: 8px;
+         background: var(--green-soft) center/cover no-repeat;
          display: grid; place-items: center;
-         color: #10b981;
+         color: var(--green);
        }
        .fi-thumb svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-       .fi-upload-text { font-size: 13px; color: #1e293b; font-weight: 600; }
-       .fi-upload-text small { display: block; margin-top: 2px; font-size: 12px; color: #64748b; font-weight: 500; }
-       .fi-error { display: none; margin-top: 6px; font-size: 12px; color: #ef4444; font-weight: 600; }
+       .fi-upload-text { font-size: 13px; color: var(--navy-2); font-weight: 600; }
+       .fi-upload-text small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); font-weight: 500; }
+       .fi-error { display: none; margin-top: 6px; font-size: 12px; color: var(--danger); font-weight: 600; }
        .fi-error.show { display: block; }
 
-       .fi-actions { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+       .fi-actions { position: relative; z-index: 1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
        .fi-btn {
-         height: 50px;
-         border: none;
-         border-radius: 999px;
+         height: 42px;
+         padding: 0 18px;
+         border: 1px solid transparent;
+         border-radius: 8px;
          font: inherit;
-         font-size: 15px;
+         font-size: 13px;
          font-weight: 700;
          cursor: pointer;
-         transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease, opacity .2s;
+         transition: background-color .15s ease, filter .15s ease, opacity .2s;
        }
-       .fi-btn:hover { transform: translateY(-1px); }
-       .fi-btn:active { transform: scale(.96); }
-       .fi-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-       .fi-btn:focus-visible { outline: 2px solid #0052f5; outline-offset: 3px; }
+       .fi-btn:disabled { opacity: .6; cursor: not-allowed; }
+       .fi-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 
        .fi-btn--cancel {
-         color: #1e293b;
-         background: rgba(255,255,255,.6);
-         border: 1px solid rgba(255,255,255,.9);
-         box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 10px rgba(15,23,42,.06);
+         color: var(--navy-2);
+         background: #fff;
+         border-color: var(--border);
        }
-       .fi-btn--cancel:hover { background: rgba(255,255,255,.85); }
+       .fi-btn--cancel:hover { background: #f8fafc; }
        .fi-btn--submit {
          color: #fff;
-         background: linear-gradient(180deg, #34d399, #10b981);
-         box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px rgba(16,185,129,.3);
+         background: var(--green);
+         box-shadow: 0 1px 2px rgba(16,185,129,.25);
+       }
+       .fi-btn--submit:hover { background: #059669; }
+
+       @media (max-width: 640px) {
+         .fi-overlay { padding: 12px; }
+         .fi-dialog { max-width: calc(100vw - 24px); padding: 18px; border-radius: 14px; }
+         .fi-row { grid-template-columns: 1fr; }
+         .fi-actions .fi-btn { flex: 1; }
        }
 
       /* ============================================================
@@ -1801,11 +1719,6 @@
         <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" result="noise"/>
         <feDisplacementMap id="disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
-      <filter id="liquid-btn" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="5" result="noise"/>
-        <feGaussianBlur in="noise" stdDeviation="2" result="smooth"/>
-        <feDisplacementMap id="btn-disp" in="SourceGraphic" in2="smooth" scale="0" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
     </defs>
   </svg>
   <div class="glass-group-wrapper">
@@ -1867,8 +1780,8 @@
 
       <!-- Greeting Section -->
       <section class="welcome" id="greeting-section">
-        <h2 id="greeting-title">Selamat Siang, Rizky Pratama!</h2>
-        <p id="greeting-subtitle">Hari ini: Sabtu, 7 November 2026. Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Sistem presensi geo-tagging mencatat kehadiranmu dengan akurat.</p>
       </section>
 
       <section class="content-layout">
@@ -1898,9 +1811,9 @@
             </div>
           </section>
 
-          <!-- Tombol Ajukan Izin dengan Liquid Glass Style -->
-          <button class="glass-btn" id="btn-ajukan-izin" type="button">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <!-- Tombol Ajukan Izin -->
+          <button class="btn btn-primary" id="btn-ajukan-izin" type="button">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             <span>Ajukan Izin</span>
           </button>
         </div>
@@ -2223,42 +2136,13 @@
 })();
 </script>
 
-<script src="/public/components/student/greeting.js"></script>
+<script src="/public/components/shared/greeting.js"></script>
 <script>
 // Initialize Greeting Component
 document.addEventListener('DOMContentLoaded', function() {
-  // Data siswa - dapat diambil dari session/API
-  const studentData = {
-    name: sessionStorage.getItem('student_name') || 'Rizky Pratama'
-  };
-
-  // Inisialisasi greeting component
+  // Nama diambil dari sesi tersimpan, lalu disinkronkan dengan akun aktif.
   if (window.StudentGreeting) {
-    StudentGreeting.init(studentData);
-  }
-
-  // Liquid pulse effect untuk tombol ajukan izin
-  const btnDisp = document.getElementById('btn-disp');
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  function liquidPulse(duration = 600, peak = 14) {
-    if (reduceMotion || !btnDisp) return;
-    const start = performance.now();
-    function frame(now) {
-      const p = Math.min((now - start) / duration, 1);
-      const eased = Math.sin(p * Math.PI) * (1 - p * 0.4);
-      btnDisp.setAttribute('scale', (eased * peak).toFixed(2));
-      if (p < 1) requestAnimationFrame(frame);
-      else btnDisp.setAttribute('scale', '0');
-    }
-    requestAnimationFrame(frame);
-  }
-
-  const ajukanBtn = document.getElementById('btn-ajukan-izin');
-  if (ajukanBtn) {
-    ajukanBtn.addEventListener('click', function() {
-      liquidPulse();
-    });
+    StudentGreeting.init();
   }
 });
 </script>

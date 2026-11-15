@@ -31,9 +31,9 @@
     </header>
 
     <main class="content">
-      <section class="welcome">
-        <h2>Selamat Datang, Petugas!</h2>
-        <p id="welcome-sub-text">Memuat informasi sistem...</p>
+      <section class="welcome" id="greeting-section">
+        <h2 id="greeting-title">Selamat Datang!</h2>
+        <p id="greeting-subtitle">Memuat informasi sistem...</p>
       </section>
 
       <section class="stats">
@@ -91,6 +91,14 @@
 <script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
+<script src="/public/components/shared/greeting.js"></script>
+<script>
+  SiGreeting.init({
+    fallbackName: 'Petugas',
+    subtitle: 'Gunakan modul di bawah untuk mengelola data operasional.',
+    cacheKey: 'petugas_name'
+  });
+</script>
 <script>
   (async function() {
     try {
@@ -98,8 +106,6 @@
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
-        const subText = document.getElementById('welcome-sub-text');
-        if (subText) subText.textContent = `Hari ini: ${d.todayFormatted || 'Hari Ini'}. Gunakan modul di bawah untuk mengelola data operasional.`;
         const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
         set('val-total-siswa', (d.totalSiswa || 0).toLocaleString());
         set('val-total-guru', (d.totalGuru || 0).toLocaleString());

@@ -2,6 +2,14 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { effectiveRole } = require('../middleware/role');
+const { resolveTeacher } = require('../utils/teacher-access');
+const {
+  normalizeSiswaIds,
+  validateStudentSelection,
+  groupSiswaIdsByJadwal,
+  isScheduleVisibleToStudent
+} = require('../utils/jadwal-siswa');
 
 const router = express.Router();
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -12,7 +20,20 @@ function isMissingScheduleSchema(error) {
     /jadwal_mapel|jam_pelajaran/i.test(error.message || '');
 }
 
+function isMissingSiswaAssignmentSchema(error) {
+  return Boolean(error) && (
+    /jadwal_siswa/i.test(error.message || '') ||
+    ['42P01', 'PGRST205'].includes(error.code) && !/jadwal_mapel|jam_pelajaran/i.test(error.message || '')
+  );
+}
+
 function sendScheduleError(res, error, fallback) {
+  if (isMissingSiswaAssignmentSchema(error)) {
+    return res.status(503).json({
+      success: false,
+      message: 'Skema penugasan siswa per jadwal belum tersedia. Admin database perlu meninjau dan menerapkan 2026111401_jadwal_siswa.sql.'
+    });
+  }
   if (isMissingScheduleSchema(error)) {
     return res.status(503).json({
       success: false,
@@ -91,14 +112,32 @@ async function buildScheduleRecord(body, userId) {
   };
 }
 
-router.get('/options', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
+async function validateScheduledStudents(siswaIds, kelas) {
+  if (!Array.isArray(siswaIds) || siswaIds.length === 0) return { valid: true };
+  const students = await db.getSiswaForScheduleOptions();
+  return validateStudentSelection(students, siswaIds, kelas);
+}
+
+/**
+ * Semua siswa pada kelas terpilih otomatis menjadi peserta jadwal.
+ * Dipakai saat client tidak mengirim daftar siswa atau mengirim array kosong.
+ */
+async function resolveClassStudentIds(kelas) {
+  const students = await db.getSiswaForScheduleOptions();
+  return students
+    .filter((student) => String(student.kelas || '').trim() === String(kelas || '').trim())
+    .map((student) => student.id);
+}
+
+router.get('/options', authenticate, requireRole('petugas'), async (req, res) => {
   try {
-    const [teachers, classes] = await Promise.all([
+    const [teachers, classes, students] = await Promise.all([
       db.getGuru(),
-      db.getKelas()
+      db.getKelas(),
+      db.getSiswaForScheduleOptions()
     ]);
     const subjects = [...new Set(teachers.flatMap(subjectsForTeacher))].sort((a, b) => a.localeCompare(b, 'id'));
-    return res.json({ success: true, data: { teachers, classes, subjects } });
+    return res.json({ success: true, data: { teachers, classes, subjects, students } });
   } catch (error) {
     return sendScheduleError(res, error, 'Gagal memuat pilihan jadwal.');
   }
@@ -106,69 +145,150 @@ router.get('/options', authenticate, requireRole('admin', 'petugas'), async (req
 
 router.get('/', authenticate, async (req, res) => {
   try {
+    const role = effectiveRole(req.user);
     const filters = {
       hari: DAYS.includes(req.query.hari) ? req.query.hari : undefined,
       kelas: typeof req.query.kelas === 'string' ? req.query.kelas : undefined,
       mapel: typeof req.query.mapel === 'string' ? req.query.mapel : undefined,
-      guruId: (req.user.role === 'admin' || req.user.role === 'petugas') && typeof req.query.guruId === 'string' ? req.query.guruId : undefined
+      guruId: role === 'petugas' && typeof req.query.guruId === 'string' ? req.query.guruId : undefined
     };
     let activeOnly = false;
+    let studentProfile = null;
 
-    if (req.user.role === 'guru') {
-      if (!req.user.nip) {
-        return res.status(403).json({ success: false, message: 'Akun guru belum memiliki NIP untuk menghubungkan jadwal.' });
-      }
-      const teacher = await db.findGuruByNip(req.user.nip);
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
       if (!teacher) {
         return res.status(403).json({ success: false, message: 'Akun guru tidak terhubung dengan data guru.' });
       }
       filters.guruId = teacher.id;
       activeOnly = true;
-    } else if (req.user.role === 'siswa') {
+    } else if (role === 'siswa') {
       if (!req.user.nis) {
         return res.status(403).json({ success: false, message: 'Akun siswa belum memiliki NIS.' });
       }
-      const student = await db.findSiswaByNis(req.user.nis);
-      if (!student?.kelas) {
+      studentProfile = await db.findSiswaByNis(req.user.nis);
+      if (!studentProfile?.kelas) {
         return res.status(403).json({ success: false, message: 'Akun siswa belum terhubung dengan data kelas.' });
       }
-      filters.kelas = student.kelas;
+      filters.kelas = studentProfile.kelas;
       activeOnly = true;
-    } else if (req.user.role !== 'admin' && req.user.role !== 'petugas') {
+    } else if (role !== 'petugas') {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke jadwal.' });
     }
 
-    const data = await db.getJadwal({ ...filters, activeOnly });
+    let data = await db.getJadwal({ ...filters, activeOnly });
+
+    // Jadwal tanpa link siswa tetap berlaku untuk seluruh kelas (data lama).
+    // Jadwal dengan link siswa hanya terlihat oleh siswa yang ditugaskan.
+    if (role === 'petugas' || role === 'siswa') {
+      let links = [];
+      try {
+        links = await db.getJadwalSiswaLinks(data.map((item) => item.id));
+      } catch (error) {
+        if (!isMissingSiswaAssignmentSchema(error)) throw error;
+      }
+      const linksByJadwal = groupSiswaIdsByJadwal(links);
+
+      if (role === 'siswa') {
+        data = data.filter((item) => isScheduleVisibleToStudent(item.id, linksByJadwal, studentProfile.id));
+      } else {
+        data = data.map((item) => {
+          const siswaIds = linksByJadwal.get(item.id) || [];
+          return { ...item, siswa_ids: siswaIds, siswa_count: siswaIds.length };
+        });
+      }
+    }
+
     return res.json({ success: true, count: data.length, data });
   } catch (error) {
     return sendScheduleError(res, error, 'Gagal memuat jadwal.');
   }
 });
 
-router.post('/', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
+router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
+  let created = null;
   try {
+    const selection = normalizeSiswaIds(req.body.siswaIds);
+    if (selection.error) return res.status(400).json({ success: false, message: selection.error });
+
     const result = await buildScheduleRecord(req.body, req.user.id);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
-    const data = await db.createJadwal({ id: `jadwal-${crypto.randomUUID()}`, ...result.record });
+
+    let siswaIds = selection.ids;
+    if (siswaIds.length === 0) {
+      const classSelection = normalizeSiswaIds(await resolveClassStudentIds(result.record.kelas));
+      if (classSelection.error) return res.status(400).json({ success: false, message: classSelection.error });
+      siswaIds = classSelection.ids;
+    }
+
+    const studentCheck = await validateScheduledStudents(siswaIds, result.record.kelas);
+    if (studentCheck.error) return res.status(400).json({ success: false, message: studentCheck.error });
+
+    created = await db.createJadwal({ id: `jadwal-${crypto.randomUUID()}`, ...result.record });
+    if (siswaIds.length > 0) {
+      await db.replaceJadwalSiswaLinks(created.id, siswaIds);
+    }
+    const data = { ...created, siswa_ids: siswaIds, siswa_count: siswaIds.length };
     return res.status(201).json({ success: true, message: 'Jadwal berhasil ditambahkan.', data });
   } catch (error) {
+    if (created?.id) {
+      try { await db.deleteJadwal(created.id); } catch (rollbackError) { console.error('rollback jadwal error:', rollbackError); }
+    }
     return sendScheduleError(res, error, 'Gagal menambahkan jadwal.');
   }
 });
 
-router.put('/:id', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
+router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   try {
+    const existing = await db.findJadwalById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Jadwal tidak ditemukan.' });
+
+    const selection = normalizeSiswaIds(req.body.siswaIds);
+    if (selection.error) return res.status(400).json({ success: false, message: selection.error });
+
     const result = await buildScheduleRecord(req.body, req.user.id);
     if (result.error) return res.status(400).json({ success: false, message: result.error });
+
+    const classChanged = existing.kelas !== result.record.kelas;
+    const syncClassWide = selection.provided || classChanged;
+    let siswaIds = selection.ids;
+    if (syncClassWide && siswaIds.length === 0) {
+      const classSelection = normalizeSiswaIds(await resolveClassStudentIds(result.record.kelas));
+      if (classSelection.error) return res.status(400).json({ success: false, message: classSelection.error });
+      siswaIds = classSelection.ids;
+    }
+
+    const studentCheck = await validateScheduledStudents(siswaIds, result.record.kelas);
+    if (studentCheck.error) return res.status(400).json({ success: false, message: studentCheck.error });
+
     const data = await db.updateJadwal(req.params.id, result.record);
     if (!data) return res.status(404).json({ success: false, message: 'Jadwal tidak ditemukan.' });
-    return res.json({ success: true, message: 'Jadwal berhasil diperbarui.', data });
+
+    if (syncClassWide) {
+      try {
+        await db.replaceJadwalSiswaLinks(req.params.id, siswaIds);
+      } catch (error) {
+        // Saat kelas berubah, link lama tetap harus dibersihkan. Jika tabel
+        // relasi belum ada, tidak ada link yang perlu dibersihkan.
+        const clearingOnly = siswaIds.length === 0;
+        if (!(clearingOnly && isMissingSiswaAssignmentSchema(error))) throw error;
+      }
+    } else {
+      const links = await db.getJadwalSiswaLinks([req.params.id]);
+      siswaIds = links.map((row) => row.siswa_id);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Jadwal berhasil diperbarui.',
+      data: { ...data, siswa_ids: siswaIds, siswa_count: siswaIds.length }
+    });
   } catch (error) {
     return sendScheduleError(res, error, 'Gagal memperbarui jadwal.');
   }
 });
 
-router.delete('/:id', authenticate, requireRole('admin', 'petugas'), async (req, res) => {
+router.delete('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const deleted = await db.deleteJadwal(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: 'Jadwal tidak ditemukan.' });

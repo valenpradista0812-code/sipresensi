@@ -54,13 +54,13 @@ function expireScanIfNeeded() {
 }
 
 // Admin/guru menekan tombol "Baca Kartu" di halaman Data Siswa.
-router.post('/scan/start', authenticate, requireRole('guru', 'admin', 'petugas'), (req, res) => {
+router.post('/scan/start', authenticate, requireRole('guru', 'petugas'), (req, res) => {
   const session = { status: 'waiting', uid: null, message: 'Tempelkan kartu pada alat RFID.', expiresAt: Date.now() + SCAN_WINDOW_MS };
   writeScanSession(session);
   res.json({ success: true, message: session.message, expiresIn: SCAN_WINDOW_MS / 1000 });
 });
 
-router.get('/scan/status', authenticate, requireRole('guru', 'admin', 'petugas'), (req, res) => {
+router.get('/scan/status', authenticate, requireRole('guru', 'petugas'), (req, res) => {
   expireScanIfNeeded();
   const session = readScanSession();
   if (!session) return res.json({ success: true, status: 'idle' });

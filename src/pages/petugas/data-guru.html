@@ -8,9 +8,160 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .teacher-page {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+    }
+
+    .teacher-page .main {
+      height: 100%;
+      min-height: 0;
+    }
+
+    .teacher-page .content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .teacher-toolbar {
+      flex: 0 0 auto;
+      margin-bottom: 0;
+    }
+
+    .teacher-toolbar .toolbar-left { width: 100%; }
+
+    .teacher-filter-wrap,
+    .teacher-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+    }
+
+    .teacher-filter-wrap { position: relative; }
+
+    .teacher-filter-wrap select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: 10px 22px 10px 0;
+      min-width: 180px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      cursor: pointer;
+    }
+
+    .teacher-filter-wrap .chevron {
+      position: absolute;
+      right: 10px;
+      width: 14px;
+      height: 14px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .teacher-search {
+      flex: 1 1 240px;
+      max-width: 380px;
+    }
+
+    .teacher-search svg.i {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+      color: var(--muted);
+    }
+
+    .teacher-search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: 10px 0;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .teacher-search input::placeholder { color: var(--muted); }
+
+    .teacher-filter-wrap:focus-within,
+    .teacher-search:focus-within {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+
+    .teacher-table-card {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tabel mengisi sisa ruang layar; scroll tetap di dalam tabel. */
+    .teacher-table-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .teacher-table-scroll::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    .teacher-table-scroll:focus-visible {
+      outline: 2px solid var(--green);
+      outline-offset: -2px;
+    }
+
+    .guru-table { min-width: 760px; }
+
+    .guru-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #fff;
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+
+    /* Baris penutup agar tinggi tabel tetap stabil saat hasil filter sedikit. */
+    .teacher-filler-row td {
+      height: 45px;
+      padding-top: 13px;
+      padding-bottom: 13px;
+      color: transparent;
+      pointer-events: none;
+    }
+
+    .teacher-foot {
+      flex: 0 0 auto;
+      min-height: 51px;
+    }
+
+    @media (max-width: 640px) {
+      .teacher-toolbar .toolbar-left { flex-direction: column; align-items: stretch; gap: 10px; }
+      .teacher-filter-wrap, .teacher-search { width: 100%; max-width: none; flex: 0 0 auto; }
+    }
+  </style>
 </head>
 <body class="petugas admin">
-<div class="app">
+<div class="app teacher-page">
 
   <div id="sidebar-container"></div>
 
@@ -19,7 +170,6 @@
     <header class="topbar">
       <h1 class="page-title">Data Guru</h1>
       <div class="topbar-right">
-        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari siswa, guru, kelas..."></label>
         <a class="bell" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
         <div class="user">
           <div class="avatar"><svg viewBox="0 0 40 40" role="img" aria-label="Foto Hj. Endang Triwati"><rect width="40" height="40" fill="#cbd5e1"/><path d="M6 40c1-9 7-13 14-13s13 4 14 13z" fill="#1f2937"/><ellipse cx="20" cy="17" rx="10" ry="11" fill="#1f2937"/><ellipse cx="20" cy="18" rx="6.5" ry="7.5" fill="#f1c9a5"/><path d="M13.5 15c2-4 11-4 13 0-3-1.5-10-1.5-13 0z" fill="#1f2937"/></svg></div>
@@ -32,44 +182,44 @@
     </header>
 
     <main class="content">
-      <div class="toolbar">
+      <div class="toolbar teacher-toolbar">
         <div class="toolbar-left">
-          <select id="filter-guru-mapel" class="select" style="cursor:pointer; font-weight:600; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff;">
-            <option value="Semua Mata Pelajaran">Semua Mata Pelajaran</option>
-            <option value="Matematika">Matematika</option>
-            <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-            <option value="Fisika">Fisika</option>
-            <option value="Biologi">Biologi</option>
-            <option value="Kimia">Kimia</option>
-            <option value="Sejarah">Sejarah</option>
-            <option value="PJOK">PJOK</option>
-          </select>
-          <input type="text" id="search-guru-input" placeholder="Cari nama atau NIP..." style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none; min-width:200px;">
+          <div class="teacher-filter-wrap">
+            <select id="filter-guru-mapel" aria-label="Filter guru berdasarkan mata pelajaran">
+              <option value="Semua Mata Pelajaran">Semua Mata Pelajaran</option>
+            </select>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="teacher-search">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="search-guru-input" placeholder="Cari nama atau NIP..." aria-label="Cari guru berdasarkan nama atau NIP" autocomplete="off">
+          </div>
         </div>
-        <button class="btn btn-primary" id="btn-add-guru" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah Guru</button>
       </div>
-      <section class="card table-card">
-        <div class="table-scroll">
-          <table>
+      <section class="card table-card teacher-table-card">
+        <div class="table-scroll teacher-table-scroll" id="guru-table-scroll" tabindex="0" aria-label="Daftar guru. Gulir di dalam tabel untuk melihat data lainnya.">
+          <table class="guru-table" id="guru-table">
             <thead><tr><th>No</th><th>NIP</th><th>Nama Lengkap</th><th>Mata Pelajaran</th><th>No. Telepon</th><th>Alamat Email</th><th class="right">Aksi</th></tr></thead>
-            <tbody id="guru-tbody">
+            <tbody id="guru-tbody" aria-live="polite">
               <tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">Memuat data guru...</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="table-foot"><span id="guru-foot-count">Menampilkan data guru</span></div>
+        <div class="table-foot teacher-foot">
+          <span id="guru-foot-count">Menampilkan data guru</span>
+        </div>
       </section>
     </main>
   </div>
 
 </div>
 
-<!-- Modal Tambah / Edit Guru -->
-<div id="modal-guru" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#fff; width:90%; max-width:480px; border-radius:12px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
+<!-- Modal Ubah Guru -->
+<div id="modal-guru" role="dialog" aria-modal="true" aria-labelledby="modal-guru-title" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+  <div style="background:#fff; width:100%; max-width:480px; max-height:90vh; overflow:auto; border-radius:12px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <h3 id="modal-guru-title" style="margin:0; font-size:18px;">Tambah Guru Baru</h3>
-      <button type="button" id="modal-guru-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
+      <h3 id="modal-guru-title" style="margin:0; font-size:18px;">Ubah Data Guru</h3>
+      <button type="button" id="modal-guru-close" aria-label="Tutup" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
     </div>
     <form id="form-guru">
       <input type="hidden" id="guru-edit-id">
@@ -110,71 +260,147 @@
     const filterMapel = document.getElementById('filter-guru-mapel');
     const searchInput = document.getElementById('search-guru-input');
     const footCount = document.getElementById('guru-foot-count');
+    const tableScroll = document.getElementById('guru-table-scroll');
     const modal = document.getElementById('modal-guru');
     const modalTitle = document.getElementById('modal-guru-title');
     const modalClose = document.getElementById('modal-guru-close');
     const modalCancel = document.getElementById('modal-guru-cancel');
-    const btnAdd = document.getElementById('btn-add-guru');
     const form = document.getElementById('form-guru');
     const editId = document.getElementById('guru-edit-id');
+    const ROW_FALLBACK_HEIGHT = 45;
+    let requestSeq = 0;
+    let searchTimer = null;
 
-    async function loadTeachers() {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">Memuat data guru...</td></tr>';
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+
+    function messageRow(message, color = '#64748b') {
+      return `<tr class="teacher-message-row"><td colspan="7" style="text-align:center; padding:24px; color:${color};">${escapeHtml(message)}</td></tr>`;
+    }
+
+    function createFillerRow() {
+      const tr = document.createElement('tr');
+      tr.className = 'teacher-filler-row';
+      tr.setAttribute('aria-hidden', 'true');
+      tr.innerHTML = '<td colspan="7">&nbsp;</td>';
+      return tr;
+    }
+
+    async function loadMapelOptions() {
       try {
-        const mapel = filterMapel.value;
-        const q = searchInput.value.trim();
-        const url = `/api/guru?mapel=${encodeURIComponent(mapel)}&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url);
+        const res = await fetch('/api/guru', { cache: 'no-store' });
         const json = await res.json();
-        if (json.success) {
-          renderTable(json.data);
+        if (!res.ok || !json.success || !Array.isArray(json.data)) return;
+
+        const names = [...new Set(json.data.map((g) => g && g.mapel).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'id'));
+
+        const selected = filterMapel.value;
+        filterMapel.replaceChildren(new Option('Semua Mata Pelajaran', 'Semua Mata Pelajaran'));
+        names.forEach((name) => filterMapel.appendChild(new Option(name, name)));
+        filterMapel.value = names.includes(selected) ? selected : 'Semua Mata Pelajaran';
+      } catch (_) {
+        // Biarkan opsi default agar daftar guru tetap dapat dimuat.
+      }
+    }
+
+    function fitTableHeight() {
+      const savedScrollTop = tableScroll.scrollTop;
+      tbody.querySelectorAll('tr.teacher-filler-row').forEach((row) => row.remove());
+
+      const header = document.querySelector('#guru-table thead');
+      if (!header) return;
+
+      let rowHeight = 0;
+      const dataRow = tbody.querySelector('tr.teacher-row');
+      if (dataRow) {
+        rowHeight = dataRow.getBoundingClientRect().height;
+      } else {
+        const probe = createFillerRow();
+        tbody.appendChild(probe);
+        rowHeight = probe.getBoundingClientRect().height;
+        probe.remove();
+      }
+
+      const headerHeight = header.getBoundingClientRect().height;
+      const bodyHeight = tbody.getBoundingClientRect().height;
+      const available = tableScroll.clientHeight - headerHeight - bodyHeight;
+      const fillerCount = Math.max(0, Math.floor(available / (rowHeight || ROW_FALLBACK_HEIGHT)));
+
+      if (fillerCount > 0) {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < fillerCount; i += 1) {
+          fragment.appendChild(createFillerRow());
         }
+        tbody.appendChild(fragment);
+      }
+
+      tableScroll.scrollTop = savedScrollTop;
+    }
+
+    async function loadTeachers({ showLoading = false } = {}) {
+      const seq = ++requestSeq;
+      if (showLoading || !tbody.querySelector('tr.teacher-row')) {
+        tbody.innerHTML = messageRow('Memuat data guru...');
+        requestAnimationFrame(fitTableHeight);
+      }
+
+      try {
+        const params = new URLSearchParams({
+          mapel: filterMapel.value || 'Semua Mata Pelajaran',
+          q: searchInput.value.trim()
+        });
+        const res = await fetch(`/api/guru?${params.toString()}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (seq !== requestSeq) return;
+        if (!res.ok || !json.success) throw new Error(json.message || 'Gagal memuat data guru.');
+        renderTable(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#ef4444;">Gagal memuat data guru.</td></tr>';
+        if (seq !== requestSeq) return;
+        footCount.textContent = 'Gagal memuat data guru';
+        tbody.innerHTML = messageRow(err.message || 'Gagal memuat data guru.', '#ef4444');
+        requestAnimationFrame(fitTableHeight);
       }
     }
 
     function renderTable(list) {
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">Tidak ada data guru yang cocok.</td></tr>';
-        footCount.textContent = 'Menampilkan 0 Guru';
+        tbody.innerHTML = messageRow('Tidak ada data guru yang cocok.');
+        footCount.textContent = 'Menampilkan 0 guru';
+        tableScroll.scrollTop = 0;
+        requestAnimationFrame(fitTableHeight);
         return;
       }
-      tbody.innerHTML = '';
+
+      const fragment = document.createDocumentFragment();
       list.forEach((g, idx) => {
         const tr = document.createElement('tr');
+        tr.className = 'teacher-row';
         tr.innerHTML = `
           <td>${idx + 1}</td>
-          <td class="bold">${g.nip}</td>
-          <td>${g.name}</td>
-          <td>${g.mapel}</td>
-          <td>${g.phone || '-'}</td>
-          <td>${g.email || '-'}</td>
+          <td class="bold">${escapeHtml(g.nip)}</td>
+          <td>${escapeHtml(g.name)}</td>
+          <td>${escapeHtml(g.mapel)}</td>
+          <td>${escapeHtml(g.phone || '-')}</td>
+          <td>${escapeHtml(g.email || '-')}</td>
           <td class="right">
             <div class="actions">
-              <button type="button" class="btn-edit-g" data-id="${g.id}" aria-label="Ubah"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
-              <button type="button" class="del btn-del-g" data-id="${g.id}" data-name="${g.name}" aria-label="Hapus"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              <button type="button" class="btn-edit-g" data-id="${escapeHtml(g.id)}" aria-label="Ubah ${escapeHtml(g.name)}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+              <button type="button" class="del btn-del-g" data-id="${escapeHtml(g.id)}" data-name="${escapeHtml(g.name)}" aria-label="Hapus ${escapeHtml(g.name)}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
             </div>
           </td>
         `;
 
         tr.querySelector('.btn-edit-g').addEventListener('click', () => openEditModal(g));
-        tr.querySelector('.btn-del-g').addEventListener('click', () => deleteTeacher(g.id, g.name));
-
-        tbody.appendChild(tr);
+        tr.querySelector('.btn-del-g').addEventListener('click', (event) => deleteTeacher(g.id, g.name, event.currentTarget));
+        fragment.appendChild(tr);
       });
-      footCount.textContent = `Menampilkan ${list.length} Guru & Tenaga Pendidik`;
-    }
 
-    function openAddModal() {
-      modalTitle.textContent = 'Tambah Guru Baru';
-      editId.value = '';
-      document.getElementById('g-nip').value = '';
-      document.getElementById('g-name').value = '';
-      document.getElementById('g-mapel').value = '';
-      document.getElementById('g-phone').value = '';
-      document.getElementById('g-email').value = '';
-      modal.style.display = 'flex';
+      tbody.replaceChildren(fragment);
+      tableScroll.scrollTop = 0;
+      footCount.textContent = `Menampilkan ${list.length} guru`;
+      requestAnimationFrame(fitTableHeight);
     }
 
     function openEditModal(g) {
@@ -192,8 +418,15 @@
       modal.style.display = 'none';
     }
 
-    async function deleteTeacher(id, name) {
-      if (!confirm(`Apakah Anda yakin ingin menghapus guru ${name}?`)) return;
+    async function deleteTeacher(id, name, button) {
+      const confirmed = await SiPresensi.confirm({
+        title: 'Hapus Data Guru?',
+        message: `Data guru ${name} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`,
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal'
+      });
+      if (!confirmed) return;
+      if (button) button.disabled = true;
       try {
         const res = await fetch(`/api/guru/${id}`, { method: 'DELETE' });
         const json = await res.json();
@@ -205,11 +438,20 @@
         }
       } catch (err) {
         SiPresensi.showToast('Gagal terhubung ke server.', 'error');
+      } finally {
+        if (button) button.disabled = false;
       }
     }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const id = editId.value;
+
+      if (!id) {
+        closeModal();
+        return;
+      }
+
       const payload = {
         nip: document.getElementById('g-nip').value.trim(),
         name: document.getElementById('g-name').value.trim(),
@@ -218,13 +460,9 @@
         email: document.getElementById('g-email').value.trim()
       };
 
-      const isEdit = !!editId.value;
-      const url = isEdit ? `/api/guru/${editId.value}` : '/api/guru';
-      const method = isEdit ? 'PUT' : 'POST';
-
       try {
-        const res = await fetch(url, {
-          method,
+        const res = await fetch(`/api/guru/${encodeURIComponent(id)}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
@@ -241,16 +479,47 @@
       }
     });
 
-    btnAdd.addEventListener('click', openAddModal);
     modalClose.addEventListener('click', closeModal);
     modalCancel.addEventListener('click', closeModal);
-    filterMapel.addEventListener('change', loadTeachers);
-    searchInput.addEventListener('input', () => {
-      clearTimeout(window._searchTimer);
-      window._searchTimer = setTimeout(loadTeachers, 300);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
     });
 
-    loadTeachers();
+    filterMapel.addEventListener('change', () => loadTeachers());
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => loadTeachers(), 300);
+    });
+    searchInput.addEventListener('search', () => loadTeachers());
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitTableHeight, 120);
+    });
+
+    if ('ResizeObserver' in window) {
+      let resizeFrame = null;
+      const tableObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(fitTableHeight);
+      });
+      tableObserver.observe(tableScroll);
+    }
+
+    async function init() {
+      await loadMapelOptions();
+      await loadTeachers({ showLoading: true });
+    }
+
+    init();
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => requestAnimationFrame(fitTableHeight));
+    }
   })();
 </script>
 </body>

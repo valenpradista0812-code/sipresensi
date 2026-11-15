@@ -8,9 +8,160 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .student-page {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+    }
+
+    .student-page .main {
+      height: 100%;
+      min-height: 0;
+    }
+
+    .student-page .content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .student-toolbar {
+      flex: 0 0 auto;
+      margin-bottom: 0;
+    }
+
+    .student-toolbar .toolbar-left { width: 100%; }
+
+    .student-filter-wrap,
+    .student-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+    }
+
+    .student-filter-wrap { position: relative; }
+
+    .student-filter-wrap select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: 10px 22px 10px 0;
+      min-width: 150px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      cursor: pointer;
+    }
+
+    .student-filter-wrap .chevron {
+      position: absolute;
+      right: 10px;
+      width: 14px;
+      height: 14px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .student-search {
+      flex: 1 1 240px;
+      max-width: 380px;
+    }
+
+    .student-search svg.i {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+      color: var(--muted);
+    }
+
+    .student-search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: 10px 0;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .student-search input::placeholder { color: var(--muted); }
+
+    .student-filter-wrap:focus-within,
+    .student-search:focus-within {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+
+    .student-table-card {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tabel mengisi sisa ruang layar; scroll tetap di dalam tabel. */
+    .student-table-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .student-table-scroll::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    .student-table-scroll:focus-visible {
+      outline: 2px solid var(--green);
+      outline-offset: -2px;
+    }
+
+    .siswa-table { min-width: 860px; }
+
+    .siswa-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #fff;
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+
+    /* Baris penutup agar tinggi tabel tetap stabil saat hasil filter sedikit. */
+    .student-filler-row td {
+      height: 45px;
+      padding-top: 13px;
+      padding-bottom: 13px;
+      color: transparent;
+      pointer-events: none;
+    }
+
+    .student-foot {
+      flex: 0 0 auto;
+      min-height: 51px;
+    }
+
+    @media (max-width: 640px) {
+      .student-toolbar .toolbar-left { flex-direction: column; align-items: stretch; gap: 10px; }
+      .student-filter-wrap, .student-search { width: 100%; max-width: none; flex: 0 0 auto; }
+    }
+  </style>
 </head>
 <body class="petugas admin">
-<div class="app">
+<div class="app student-page">
 
   <div id="sidebar-container"></div>
 
@@ -19,7 +170,6 @@
     <header class="topbar">
       <h1 class="page-title">Data Siswa</h1>
       <div class="topbar-right">
-        <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Cari siswa, guru, kelas..."></label>
         <a class="bell" href="/src/pages/admin/notifikasi.html" aria-label="Notifikasi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
         <div class="user">
           <div class="avatar"><svg viewBox="0 0 40 40" role="img" aria-label="Foto Hj. Endang Triwati"><rect width="40" height="40" fill="#cbd5e1"/><path d="M6 40c1-9 7-13 14-13s13 4 14 13z" fill="#1f2937"/><ellipse cx="20" cy="17" rx="10" ry="11" fill="#1f2937"/><ellipse cx="20" cy="18" rx="6.5" ry="7.5" fill="#f1c9a5"/><path d="M13.5 15c2-4 11-4 13 0-3-1.5-10-1.5-13 0z" fill="#1f2937"/></svg></div>
@@ -32,43 +182,44 @@
     </header>
 
     <main class="content">
-      <div class="toolbar">
+      <div class="toolbar student-toolbar">
         <div class="toolbar-left">
-          <select id="filter-siswa-kelas" class="select" style="cursor:pointer; font-weight:600; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff;">
-            <option value="Semua Kelas">Semua Kelas</option>
-            <option value="XII IPA 1">XII IPA 1</option>
-            <option value="XII IPA 2">XII IPA 2</option>
-            <option value="XII IPS 1">XII IPS 1</option>
-            <option value="XI IPA 1">XI IPA 1</option>
-            <option value="XI IPS 2">XI IPS 2</option>
-            <option value="X IPA 1">X IPA 1</option>
-          </select>
-          <input type="text" id="search-siswa-input" placeholder="Cari nama atau NIS..." style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none; min-width:200px;">
+          <div class="student-filter-wrap">
+            <select id="filter-siswa-kelas" aria-label="Filter siswa berdasarkan kelas">
+              <option value="Semua Kelas">Semua Kelas</option>
+            </select>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="student-search">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="search-siswa-input" placeholder="Cari nama atau NIS..." aria-label="Cari siswa berdasarkan nama atau NIS" autocomplete="off">
+          </div>
         </div>
-        <button class="btn btn-primary" id="btn-add-siswa" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah Siswa</button>
       </div>
-      <section class="card table-card">
-        <div class="table-scroll">
-          <table>
+      <section class="card table-card student-table-card">
+        <div class="table-scroll student-table-scroll" id="siswa-table-scroll" tabindex="0" aria-label="Daftar siswa. Gulir di dalam tabel untuk melihat data lainnya.">
+          <table class="siswa-table" id="siswa-table">
             <thead><tr><th>No</th><th>NIS</th><th>Nama Lengkap</th><th>Kelas</th><th>Jenis Kelamin</th><th>No. Telepon</th><th>UID RFID</th><th class="right">Aksi</th></tr></thead>
-            <tbody id="siswa-tbody">
+            <tbody id="siswa-tbody" aria-live="polite">
               <tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">Memuat data siswa...</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="table-foot"><span id="siswa-foot-count">Menampilkan data siswa</span></div>
+        <div class="table-foot student-foot">
+          <span id="siswa-foot-count">Menampilkan data siswa</span>
+        </div>
       </section>
     </main>
   </div>
 
 </div>
 
-<!-- Modal Tambah / Edit Siswa -->
-<div id="modal-siswa" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#fff; width:90%; max-width:480px; border-radius:12px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
+<!-- Modal Ubah Siswa -->
+<div id="modal-siswa" role="dialog" aria-modal="true" aria-labelledby="modal-title" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+  <div style="background:#fff; width:100%; max-width:480px; max-height:90vh; overflow:auto; border-radius:12px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <h3 id="modal-title" style="margin:0; font-size:18px;">Tambah Siswa Baru</h3>
-      <button type="button" id="modal-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
+      <h3 id="modal-title" style="margin:0; font-size:18px;">Ubah Data Siswa</h3>
+      <button type="button" id="modal-close" aria-label="Tutup" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
     </div>
     <form id="form-siswa">
       <input type="hidden" id="siswa-edit-id">
@@ -83,13 +234,7 @@
       <div style="margin-bottom:12px;">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Kelas</label>
         <select id="m-kelas" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; box-sizing:border-box;">
-          <option value="XII IPA 1">XII IPA 1</option>
-          <option value="XII IPA 2">XII IPA 2</option>
-          <option value="XII IPS 1">XII IPS 1</option>
-          <option value="XI IPA 1">XI IPA 1</option>
-          <option value="XI IPS 2">XI IPS 2</option>
-          <option value="X IPA 1">X IPA 1</option>
-          <option value="X IPS 1">X IPS 1</option>
+          <option value="">Memuat kelas...</option>
         </select>
       </div>
       <div style="margin-bottom:12px;">
@@ -123,7 +268,7 @@
             <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
-        <small id="m-password-help" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Digunakan siswa untuk login ke sistem.</small>
+        <small id="m-password-help" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Kosongkan jika tidak ingin mengubah kata sandi siswa ini.</small>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px;">
         <button type="button" id="modal-btn-cancel" style="padding:8px 16px; border:1px solid #cbd5e1; background:#fff; border-radius:6px; cursor:pointer;">Batal</button>
@@ -142,70 +287,161 @@
     const filterKelas = document.getElementById('filter-siswa-kelas');
     const searchInput = document.getElementById('search-siswa-input');
     const footCount = document.getElementById('siswa-foot-count');
+    const tableScroll = document.getElementById('siswa-table-scroll');
     const modal = document.getElementById('modal-siswa');
     const modalTitle = document.getElementById('modal-title');
     const modalClose = document.getElementById('modal-close');
     const modalCancel = document.getElementById('modal-btn-cancel');
-    const btnAdd = document.getElementById('btn-add-siswa');
     const form = document.getElementById('form-siswa');
     const editId = document.getElementById('siswa-edit-id');
+    const mKelas = document.getElementById('m-kelas');
     const rfidInput = document.getElementById('m-rfid-uid');
     const rfidHelp = document.getElementById('m-rfid-help');
     const btnReadRfid = document.getElementById('btn-read-rfid');
+    const ROW_FALLBACK_HEIGHT = 45;
     let scanInProgress = false;
+    let requestSeq = 0;
 
-    let allStudents = [];
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
 
-    async function loadStudents() {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">Memuat data siswa...</td></tr>';
+    function messageRow(message, color = '#64748b') {
+      return `<tr class="student-message-row"><td colspan="8" style="text-align:center; padding:24px; color:${color};">${escapeHtml(message)}</td></tr>`;
+    }
+
+    function createFillerRow() {
+      const tr = document.createElement('tr');
+      tr.className = 'student-filler-row';
+      tr.setAttribute('aria-hidden', 'true');
+      tr.innerHTML = '<td colspan="8">&nbsp;</td>';
+      return tr;
+    }
+
+    async function loadClasses() {
       try {
-        const kelas = filterKelas.value;
-        const q = searchInput.value.trim();
-        const url = `/api/siswa?kelas=${encodeURIComponent(kelas)}&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url);
+        const res = await fetch('/api/kelas', { cache: 'no-store' });
         const json = await res.json();
-        if (json.success) {
-          allStudents = json.data;
-          renderTable(allStudents);
+        if (!res.ok || !json.success || !Array.isArray(json.data)) return;
+
+        const names = [...new Set(json.data.map((k) => k && k.name).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'id'));
+
+        const selectedFilter = filterKelas.value;
+        filterKelas.replaceChildren(new Option('Semua Kelas', 'Semua Kelas'));
+        names.forEach((name) => filterKelas.appendChild(new Option(name, name)));
+        filterKelas.value = names.includes(selectedFilter) ? selectedFilter : 'Semua Kelas';
+
+        const placeholder = new Option('Pilih kelas', '');
+        placeholder.disabled = true;
+        mKelas.replaceChildren(placeholder);
+        names.forEach((name) => mKelas.appendChild(new Option(name, name)));
+      } catch (_) {
+        // Biarkan opsi default agar daftar siswa tetap dapat dimuat.
+      }
+    }
+
+    function fitTableHeight() {
+      const savedScrollTop = tableScroll.scrollTop;
+      tbody.querySelectorAll('tr.student-filler-row').forEach((row) => row.remove());
+
+      const header = document.querySelector('#siswa-table thead');
+      if (!header) return;
+
+      let rowHeight = 0;
+      const dataRow = tbody.querySelector('tr.student-row');
+      if (dataRow) {
+        rowHeight = dataRow.getBoundingClientRect().height;
+      } else {
+        const probe = createFillerRow();
+        tbody.appendChild(probe);
+        rowHeight = probe.getBoundingClientRect().height;
+        probe.remove();
+      }
+
+      const headerHeight = header.getBoundingClientRect().height;
+      const bodyHeight = tbody.getBoundingClientRect().height;
+      const available = tableScroll.clientHeight - headerHeight - bodyHeight;
+      const fillerCount = Math.max(0, Math.floor(available / (rowHeight || ROW_FALLBACK_HEIGHT)));
+
+      if (fillerCount > 0) {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < fillerCount; i += 1) {
+          fragment.appendChild(createFillerRow());
         }
+        tbody.appendChild(fragment);
+      }
+
+      tableScroll.scrollTop = savedScrollTop;
+    }
+
+    async function loadStudents({ showLoading = false } = {}) {
+      const seq = ++requestSeq;
+      if (showLoading || !tbody.querySelector('tr.student-row')) {
+        tbody.innerHTML = messageRow('Memuat data siswa...');
+        requestAnimationFrame(fitTableHeight);
+      }
+
+      try {
+        const params = new URLSearchParams({
+          kelas: filterKelas.value || 'Semua Kelas',
+          q: searchInput.value.trim()
+        });
+        const res = await fetch(`/api/siswa?${params.toString()}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (seq !== requestSeq) return;
+        if (!res.ok || !json.success) throw new Error(json.message || 'Gagal memuat data siswa.');
+        renderTable(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#ef4444;">Gagal memuat data siswa.</td></tr>';
+        if (seq !== requestSeq) return;
+        footCount.textContent = 'Gagal memuat data siswa';
+        tbody.innerHTML = messageRow(err.message || 'Gagal memuat data siswa.', '#ef4444');
+        requestAnimationFrame(fitTableHeight);
       }
     }
 
     function renderTable(list) {
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">Tidak ada siswa yang cocok.</td></tr>';
-        footCount.textContent = 'Menampilkan 0 Siswa';
+        tbody.innerHTML = messageRow('Tidak ada siswa yang cocok.');
+        footCount.textContent = 'Menampilkan 0 siswa';
+        tableScroll.scrollTop = 0;
+        requestAnimationFrame(fitTableHeight);
         return;
       }
-      tbody.innerHTML = '';
+
+      const fragment = document.createDocumentFragment();
       list.forEach((s, idx) => {
         const tr = document.createElement('tr');
+        tr.className = 'student-row';
+        const rfid = s.rfid_uid
+          ? escapeHtml(s.rfid_uid)
+          : '<span style="color:#94a3b8">Belum terdaftar</span>';
+
         tr.innerHTML = `
           <td>${idx + 1}</td>
-          <td class="bold">${s.nis}</td>
-          <td>${s.name}</td>
-          <td>${s.kelas}</td>
-          <td>${s.gender || 'Laki-laki'}</td>
-          <td>${s.phone || '-'}</td>
-          <td>${s.rfid_uid || '<span style="color:#94a3b8">Belum terdaftar</span>'}</td>
+          <td class="bold">${escapeHtml(s.nis)}</td>
+          <td>${escapeHtml(s.name)}</td>
+          <td>${escapeHtml(s.kelas)}</td>
+          <td>${escapeHtml(s.gender || 'Laki-laki')}</td>
+          <td>${escapeHtml(s.phone || '-')}</td>
+          <td>${rfid}</td>
           <td class="right">
             <div class="actions">
-              <button type="button" class="btn-edit-s" data-id="${s.id}" aria-label="Ubah"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
-              <button type="button" class="del btn-del-s" data-id="${s.id}" data-name="${s.name}" aria-label="Hapus"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+              <button type="button" class="btn-edit-s" data-id="${escapeHtml(s.id)}" aria-label="Ubah ${escapeHtml(s.name)}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+              <button type="button" class="del btn-del-s" data-id="${escapeHtml(s.id)}" data-name="${escapeHtml(s.name)}" aria-label="Hapus ${escapeHtml(s.name)}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
             </div>
           </td>
         `;
 
-        // Edit button
         tr.querySelector('.btn-edit-s').addEventListener('click', () => openEditModal(s));
-        // Delete button
-        tr.querySelector('.btn-del-s').addEventListener('click', () => deleteStudent(s.id, s.name));
-
-        tbody.appendChild(tr);
+        tr.querySelector('.btn-del-s').addEventListener('click', (event) => deleteStudent(s.id, s.name, event.currentTarget));
+        fragment.appendChild(tr);
       });
-      footCount.textContent = `Menampilkan ${list.length} Siswa Terdaftar`;
+
+      tbody.replaceChildren(fragment);
+      tableScroll.scrollTop = 0;
+      footCount.textContent = `Menampilkan ${list.length} siswa`;
+      requestAnimationFrame(fitTableHeight);
     }
 
     const mPassword = document.getElementById('m-password');
@@ -219,31 +455,15 @@
       });
     }
 
-    function openAddModal() {
-      modalTitle.textContent = 'Tambah Siswa Baru';
-      editId.value = '';
-      document.getElementById('m-nis').value = '';
-      document.getElementById('m-name').value = '';
-      document.getElementById('m-phone').value = '';
-      document.getElementById('m-email').value = '';
-      document.getElementById('m-kelas').selectedIndex = 0;
-      document.getElementById('m-gender').selectedIndex = 0;
-      rfidInput.value = '';
-      rfidHelp.textContent = 'Opsional. ESP32 harus menyala dan terhubung ke server.';
-      mPassword.value = '';
-      mPassword.required = true;
-      mPassword.type = 'password';
-      mPassword.placeholder = 'Tentukan kata sandi akun siswa (min. 4 karakter)...';
-      mPasswordHelp.textContent = 'Wajib ditentukan oleh guru agar siswa dapat login ke dashboard.';
-      modal.style.display = 'flex';
-    }
-
     function openEditModal(s) {
       modalTitle.textContent = 'Ubah Data Siswa';
       editId.value = s.id;
       document.getElementById('m-nis').value = s.nis;
       document.getElementById('m-name').value = s.name;
-      document.getElementById('m-kelas').value = s.kelas;
+      if (s.kelas && ![...mKelas.options].some((option) => option.value === s.kelas)) {
+        mKelas.appendChild(new Option(s.kelas, s.kelas));
+      }
+      mKelas.value = s.kelas || '';
       document.getElementById('m-gender').value = s.gender || 'Laki-laki';
       document.getElementById('m-phone').value = s.phone || '';
       document.getElementById('m-email').value = s.email || '';
@@ -261,8 +481,15 @@
       modal.style.display = 'none';
     }
 
-    async function deleteStudent(id, name) {
-      if (!confirm(`Apakah Anda yakin ingin menghapus siswa ${name}? Akun login siswa ini juga akan dihapus dari database.`)) return;
+    async function deleteStudent(id, name, button) {
+      const confirmed = await SiPresensi.confirm({
+        title: 'Hapus Data Siswa?',
+        message: `Data siswa ${name} beserta akun login dan data terkait akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`,
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal'
+      });
+      if (!confirmed) return;
+      if (button) button.disabled = true;
       try {
         const res = await fetch(`/api/siswa/${id}`, { method: 'DELETE' });
         const json = await res.json();
@@ -274,16 +501,23 @@
         }
       } catch (err) {
         SiPresensi.showToast('Gagal terhubung ke server.', 'error');
+      } finally {
+        if (button) button.disabled = false;
       }
     }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const isEdit = !!editId.value;
-      const passVal = mPassword.value.trim();
+      const id = editId.value;
 
-      if (!isEdit && (!passVal || passVal.length < 4)) {
-        SiPresensi.showToast('Kata sandi akun siswa wajib diisi minimal 4 karakter!', 'error');
+      if (!id) {
+        closeModal();
+        return;
+      }
+
+      const passVal = mPassword.value.trim();
+      if (passVal && passVal.length < 4) {
+        SiPresensi.showToast('Kata sandi baru minimal 4 karakter!', 'error');
         mPassword.focus();
         return;
       }
@@ -302,12 +536,9 @@
         payload.password = passVal;
       }
 
-      const url = isEdit ? `/api/siswa/${editId.value}` : '/api/siswa';
-      const method = isEdit ? 'PUT' : 'POST';
-
       try {
-        const res = await fetch(url, {
-          method,
+        const res = await fetch(`/api/siswa/${encodeURIComponent(id)}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
@@ -362,16 +593,47 @@
 
     btnReadRfid.addEventListener('click', readRfidCard);
 
-    btnAdd.addEventListener('click', openAddModal);
     modalClose.addEventListener('click', closeModal);
     modalCancel.addEventListener('click', closeModal);
-    filterKelas.addEventListener('change', loadStudents);
-    searchInput.addEventListener('input', () => {
-      clearTimeout(window._searchTimer);
-      window._searchTimer = setTimeout(loadStudents, 300);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
     });
 
-    loadStudents();
+    filterKelas.addEventListener('change', () => loadStudents());
+    searchInput.addEventListener('input', () => {
+      clearTimeout(window._searchTimer);
+      window._searchTimer = setTimeout(() => loadStudents(), 300);
+    });
+    searchInput.addEventListener('search', () => loadStudents());
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitTableHeight, 120);
+    });
+
+    if ('ResizeObserver' in window) {
+      let resizeFrame = null;
+      const tableObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(fitTableHeight);
+      });
+      tableObserver.observe(tableScroll);
+    }
+
+    async function init() {
+      await loadClasses();
+      await loadStudents({ showLoading: true });
+    }
+
+    init();
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => requestAnimationFrame(fitTableHeight));
+    }
   })();
 </script>
 </body>

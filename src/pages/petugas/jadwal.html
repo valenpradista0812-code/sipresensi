@@ -9,15 +9,74 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/styles/shared.css">
   <style>
-    .schedule-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .schedule-toolbar select, .schedule-toolbar input, .schedule-field input, .schedule-field select {
-      min-height: 40px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: #fff;
+    .schedule-field { display: grid; align-content: start; gap: 5px; min-width: 0; }
+    .schedule-field label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+    .schedule-field input, .schedule-field select,
+    .schedule-filters select, .schedule-filters input {
+      width: 100%; min-width: 0; height: 40px; padding: 8px 11px;
+      border: 1px solid var(--border); border-radius: 9px; background: #fff;
     }
-    .schedule-search { flex: 1 1 220px; }
-    .schedule-table { min-width: 900px; }
+    .schedule-hint { font-size: 11px; color: var(--muted); }
+
+    .worktime-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 170px) minmax(0, 170px) auto;
+      align-items: end;
+      gap: 12px;
+    }
+    .worktime-controls .schedule-field { align-self: end; }
+    .worktime-save {
+      height: 40px;
+      min-height: 40px;
+      padding: 0 18px;
+      align-self: end;
+      justify-self: start;
+    }
+
+    .schedule-filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(180px, 1.4fr) auto;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .schedule-filters > * { min-width: 0; max-width: 100%; }
+    .schedule-filters .btn { height: 40px; padding: 0 16px; }
+
+    .schedule-table-card { min-width: 0; padding: 18px; }
+    .schedule-table-scroll {
+      height: clamp(360px, 46vh, 460px);
+      max-width: 100%;
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .schedule-table-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    .schedule-table { width: 100%; min-width: 900px; }
+    .schedule-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #fff;
+      box-shadow: inset 0 -1px 0 var(--border);
+    }
+    .schedule-empty-row td {
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .schedule-filler-row td {
+      height: 46px;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+    .schedule-filler-row:last-child td { border-bottom: 0; }
     .schedule-action { white-space: nowrap; }
-    .schedule-action button { padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--navy); }
+    .schedule-action button { padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--navy); background: #fff; }
     .schedule-action button + button { margin-left: 5px; }
+
     .schedule-modal { position: fixed; inset: 0; z-index: 9999; display: none; place-items: center; padding: 16px; background: rgba(15,23,42,.5); }
     .schedule-modal.open { display: grid; }
     .schedule-dialog { width: min(100%, 620px); max-height: 92vh; overflow-y: auto; padding: 22px; border-radius: 16px; background: #fff; box-shadow: 0 20px 50px rgba(15,23,42,.2); }
@@ -25,15 +84,31 @@
     .schedule-dialog-head h2 { font-size: 18px; }
     .schedule-dialog-head button { font-size: 24px; color: var(--muted); }
     .schedule-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
-    .schedule-field { display: grid; gap: 5px; }
-    .schedule-field label { font-size: 12px; font-weight: 700; color: var(--text-2); }
     .schedule-field--wide { grid-column: 1 / -1; }
     .schedule-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
     .schedule-form-error { min-height: 20px; margin-top: 10px; color: var(--red-dark); font-size: 12px; }
+
+    @media (max-width: 1200px) {
+      .schedule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .schedule-filters .schedule-search { grid-column: 1 / -1; }
+      .schedule-filters #add-schedule { grid-column: 1 / -1; }
+    }
     @media (max-width: 640px) {
+      .worktime-controls { grid-template-columns: 1fr; gap: 10px; }
+      .worktime-controls .schedule-field,
+      .worktime-save { width: 100%; justify-self: stretch; }
       .schedule-form-grid { grid-template-columns: 1fr; }
       .schedule-field--wide { grid-column: auto; }
-      .schedule-toolbar > * { width: 100%; }
+      .schedule-filters { grid-template-columns: 1fr; gap: 10px; }
+      .schedule-filters .schedule-search,
+      .schedule-filters #add-schedule { grid-column: auto; width: 100%; }
+      .schedule-table-card { padding: 14px; }
+      .schedule-table-scroll { height: 360px; }
+      .schedule-table th, .schedule-table td { padding-left: 12px; padding-right: 12px; }
+      .schedule-filler-row td { padding-left: 12px; padding-right: 12px; }
+      .schedule-modal { padding: 12px; }
+      .schedule-dialog { max-height: 94vh; padding: 18px; border-radius: 14px; }
+      .schedule-form-actions .btn { flex: 1; }
     }
   </style>
 </head>
@@ -52,23 +127,23 @@
       <section class="card" style="padding:18px;">
         <h2 style="margin:0 0 6px; font-size:15px;">Jam Kerja Absensi Siswa</h2>
         <p style="margin:0 0 12px; font-size:12px; color:var(--muted);">Acuan seluruh perangkat RFID. Tap sebelum/tepat jam masuk tercatat <b>Hadir</b>, tap setelah jam masuk tercatat <b>Terlambat</b>. Setelah absen masuk, tap berikutnya dikunci sampai jam pulang; tap mulai jam pulang mencatat absensi pulang.</p>
-        <div class="schedule-toolbar">
+        <div class="worktime-controls">
           <div class="schedule-field"><label for="work-jam-masuk">Jam Masuk</label><input id="work-jam-masuk" type="time" value="07:00"></div>
           <div class="schedule-field"><label for="work-jam-pulang">Jam Pulang</label><input id="work-jam-pulang" type="time" value="15:00"></div>
-          <button id="work-save" class="btn btn-primary" type="button">Simpan Jam Kerja</button>
+          <button id="work-save" class="btn btn-primary worktime-save" type="button">Simpan Jam Kerja</button>
         </div>
         <div id="work-feedback" style="min-height:18px; margin-top:8px; font-size:12px;"></div>
       </section>
-      <section class="card" style="padding:18px;">
-        <div class="schedule-toolbar">
+      <section class="card schedule-table-card">
+        <div class="schedule-filters">
           <select id="filter-day" aria-label="Filter hari"><option value="">Semua Hari</option></select>
           <select id="filter-class" aria-label="Filter kelas"><option value="">Semua Kelas</option></select>
           <select id="filter-teacher" aria-label="Filter guru"><option value="">Semua Guru</option></select>
           <select id="filter-subject" aria-label="Filter mata pelajaran"><option value="">Semua Mata Pelajaran</option></select>
-          <input id="schedule-search" class="schedule-search" type="search" placeholder="Cari jadwal...">
+          <input id="schedule-search" class="schedule-search" type="search" placeholder="Cari jadwal..." aria-label="Cari jadwal">
           <button id="add-schedule" class="btn btn-primary admin-only" type="button">+ Tambah Jadwal</button>
         </div>
-        <div class="table-scroll">
+        <div id="schedule-table-scroll" class="table-scroll schedule-table-scroll" tabindex="0" aria-label="Daftar jadwal. Gulir di dalam tabel untuk melihat data lainnya.">
           <table class="schedule-table">
             <thead><tr><th>Hari</th><th>Jam</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th><th>Ruang</th><th class="admin-only">Aksi</th></tr></thead>
             <tbody id="schedule-body"><tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">Memuat jadwal...</td></tr></tbody>
@@ -90,7 +165,11 @@
       <input id="schedule-id" type="hidden">
       <div class="schedule-form-grid">
         <div class="schedule-field"><label for="schedule-day">Hari</label><select id="schedule-day" required></select></div>
-        <div class="schedule-field"><label for="schedule-class">Kelas</label><select id="schedule-class" required></select></div>
+        <div class="schedule-field">
+          <label for="schedule-class">Kelas</label>
+          <select id="schedule-class" required></select>
+          <small id="schedule-class-students" class="schedule-hint">Pilih kelas; seluruh siswa otomatis menjadi peserta.</small>
+        </div>
         <div class="schedule-field"><label for="schedule-teacher">Guru Pengajar</label><select id="schedule-teacher" required></select></div>
         <div class="schedule-field"><label for="schedule-subject">Mata Pelajaran</label><select id="schedule-subject" required></select></div>
         <div class="schedule-field"><label for="schedule-start">Jam Mulai</label><input id="schedule-start" type="time" required></div>
@@ -119,7 +198,7 @@
   const modal = document.getElementById('schedule-modal');
   const errorBox = document.getElementById('schedule-error');
   const filters = {
-    day: document.getElementById('filter-day'),
+    hari: document.getElementById('filter-day'),
     kelas: document.getElementById('filter-class'),
     guruId: document.getElementById('filter-teacher'),
     mapel: document.getElementById('filter-subject')
@@ -128,6 +207,8 @@
   let teachers = [];
   let classes = [];
   let subjects = [];
+  let students = [];
+  const selectedStudentIds = new Set();
   let isAdmin = false;
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -162,18 +243,20 @@
         teachers = data.teachers || [];
         classes = data.classes || [];
         subjects = data.subjects || [];
+        students = data.students || [];
         setOptions(filters.kelas, classes, 'Semua Kelas', item => item.name, item => item.name);
         setOptions(filters.guruId, teachers, 'Semua Guru', item => item.id, item => item.name);
         setOptions(filters.mapel, subjects, 'Semua Mata Pelajaran');
         setOptions(document.getElementById('schedule-class'), classes, 'Pilih kelas', item => item.name, item => item.name);
         setOptions(document.getElementById('schedule-teacher'), teachers, 'Pilih guru', item => item.id, item => `${item.name} (${item.nip})`);
         updateFormSubjects();
+        updateClassStudentHint();
       } else {
         filters.kelas.hidden = true;
         filters.guruId.hidden = true;
         filters.mapel.hidden = true;
       }
-      setOptions(filters.day, days, 'Semua Hari');
+      setOptions(filters.hari, days, 'Semua Hari');
       setOptions(document.getElementById('schedule-day'), days, 'Pilih hari');
       await loadSchedules();
     } catch (error) {
@@ -201,6 +284,26 @@
     }
   }
 
+  function appendFillerRows(renderedRows) {
+    const scroller = document.getElementById('schedule-table-scroll');
+    if (!scroller) return;
+    const headerHeight = scroller.querySelector('thead')?.offsetHeight || 46;
+    const available = Math.max(0, scroller.clientHeight - headerHeight);
+    const capacity = Math.max(5, Math.floor(available / 46));
+    const fillerCount = Math.max(0, capacity - renderedRows);
+    if (!fillerCount) return;
+
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < fillerCount; index += 1) {
+      const filler = document.createElement('tr');
+      filler.className = 'schedule-filler-row';
+      filler.setAttribute('aria-hidden', 'true');
+      filler.innerHTML = '<td colspan="7">&nbsp;</td>';
+      fragment.appendChild(filler);
+    }
+    body.appendChild(fragment);
+  }
+
   function renderSchedules() {
     const query = document.getElementById('schedule-search').value.trim().toLowerCase();
     const visible = schedules.filter(item =>
@@ -209,14 +312,22 @@
       )
     );
     body.replaceChildren();
+    let renderedRows = 0;
     if (!visible.length) {
-      body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b;">Belum ada jadwal yang cocok.</td></tr>`;
+      const empty = document.createElement('tr');
+      empty.className = 'schedule-empty-row';
+      empty.innerHTML = '<td colspan="7">Belum ada jadwal yang cocok.</td>';
+      body.appendChild(empty);
+      renderedRows = 1;
     }
     visible.forEach(item => {
       const row = document.createElement('tr');
+      const peserta = isAdmin && item.siswa_count !== undefined
+        ? `<span style="display:block;font-size:11px;color:var(--muted);">${item.siswa_count > 0 ? `${item.siswa_count} siswa` : 'Seluruh kelas'}</span>`
+        : '';
       row.innerHTML = `<td>${escapeHtml(item.hari)}</td>
         <td>${escapeHtml(String(item.jam_mulai).slice(0, 5))}–${escapeHtml(String(item.jam_selesai).slice(0, 5))}</td>
-        <td>${escapeHtml(item.kelas)}</td><td>${escapeHtml(item.mapel)}</td>
+        <td>${escapeHtml(item.kelas)}${peserta}</td><td>${escapeHtml(item.mapel)}</td>
         <td>${escapeHtml(item.name_guru)}</td><td>${escapeHtml(item.ruangan || '-')}</td>
         <td class="schedule-action admin-only"></td>`;
       if (isAdmin) {
@@ -236,9 +347,17 @@
         row.lastElementChild.remove();
       }
       body.appendChild(row);
+      renderedRows += 1;
     });
+    appendFillerRows(renderedRows);
     count.textContent = `Menampilkan ${visible.length} jadwal`;
   }
+
+  let tableResizeTimer = null;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(tableResizeTimer);
+    tableResizeTimer = window.setTimeout(renderSchedules, 150);
+  });
 
   function updateFormSubjects(selected = '') {
     const teacher = teachers.find(item => item.id === document.getElementById('schedule-teacher').value);
@@ -246,6 +365,34 @@
     setOptions(document.getElementById('schedule-subject'), options, 'Pilih mata pelajaran');
     if (selected && options.includes(selected)) document.getElementById('schedule-subject').value = selected;
   }
+
+  const scheduleClass = document.getElementById('schedule-class');
+  const classStudentHint = document.getElementById('schedule-class-students');
+
+  function studentsInClass() {
+    const kelas = scheduleClass.value;
+    return kelas ? students.filter(student => student.kelas === kelas) : [];
+  }
+
+  function updateClassStudentHint() {
+    if (!classStudentHint) return;
+    if (!scheduleClass.value) {
+      classStudentHint.textContent = 'Pilih kelas; seluruh siswa otomatis menjadi peserta.';
+      return;
+    }
+    const total = studentsInClass().length;
+    classStudentHint.textContent = total
+      ? `Seluruh ${total} siswa pada kelas ini otomatis menjadi peserta.`
+      : 'Belum ada siswa pada kelas ini. Jadwal tetap dapat disimpan.';
+  }
+
+  function syncClassStudents() {
+    selectedStudentIds.clear();
+    studentsInClass().forEach(student => selectedStudentIds.add(student.id));
+    updateClassStudentHint();
+  }
+
+  scheduleClass.addEventListener('change', syncClassStudents);
 
   function openModal(item) {
     errorBox.textContent = '';
@@ -260,6 +407,7 @@
     document.getElementById('schedule-end').value = String(item?.jam_selesai || '').slice(0, 5);
     document.getElementById('schedule-room').value = item?.ruangan || '';
     document.getElementById('schedule-note').value = item?.catatan || '';
+    syncClassStudents();
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
   }
@@ -286,7 +434,13 @@
       openModal(item);
       return;
     }
-    if (!window.confirm(`Hapus jadwal ${item.mapel} kelas ${item.kelas} hari ${item.hari}?`)) return;
+    const confirmed = await SiPresensi.confirm({
+      title: 'Hapus Jadwal?',
+      message: `Jadwal ${item.mapel} kelas ${item.kelas} hari ${item.hari} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal'
+    });
+    if (!confirmed) return;
     button.disabled = true;
     try {
       const result = await request(`/api/jadwal/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
@@ -310,7 +464,8 @@
       jamMulai: document.getElementById('schedule-start').value,
       jamSelesai: document.getElementById('schedule-end').value,
       ruangan: document.getElementById('schedule-room').value,
-      catatan: document.getElementById('schedule-note').value
+      catatan: document.getElementById('schedule-note').value,
+      siswaIds: [...selectedStudentIds]
     };
     if (payload.jamSelesai <= payload.jamMulai) {
       errorBox.textContent = 'Jam selesai harus lebih besar daripada jam mulai.';
@@ -351,6 +506,11 @@
     const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
     return match ? `${match[1]}:${match[2]} WIB` : value;
   };
+  function setWorkFeedback(message, tone = 'error') {
+    workFeedback.textContent = message || '';
+    workFeedback.style.color = tone === 'success' ? '#047857' : '#b91c1c';
+    workFeedback.style.fontWeight = message ? '700' : '';
+  }
   async function loadWorktime() {
     try {
       const { data } = await request('/api/pengaturan');
@@ -362,27 +522,44 @@
   if (workSave) {
     workSave.addEventListener('click', async () => {
       if (!workJamMasuk.value || !workJamPulang.value) {
-        workFeedback.innerHTML = '<span style="color:#b91c1c;font-weight:700;">Jam masuk dan jam pulang wajib diisi.</span>';
+        setWorkFeedback('Jam masuk dan jam pulang wajib diisi.');
         return;
       }
       if (workJamPulang.value <= workJamMasuk.value) {
-        workFeedback.innerHTML = '<span style="color:#b91c1c;font-weight:700;">Jam pulang harus lebih besar daripada jam masuk.</span>';
+        setWorkFeedback('Jam pulang harus lebih besar daripada jam masuk.');
         return;
       }
+
+      const confirmed = await SiPresensi.confirm({
+        title: 'Simpan Jam Kerja?',
+        message: `Jam masuk ${withWib(workJamMasuk.value)} dan jam pulang ${withWib(workJamPulang.value)} akan digunakan sebagai acuan absensi seluruh perangkat RFID.`,
+        confirmText: 'Ya, Simpan',
+        cancelText: 'Batal',
+        variant: 'success',
+        icon: 'save'
+      });
+      if (!confirmed) return;
+
+      const originalLabel = workSave.textContent;
       workSave.disabled = true;
+      workSave.setAttribute('aria-busy', 'true');
+      workSave.textContent = 'Menyimpan...';
+      setWorkFeedback('Menyimpan pengaturan jam kerja...', 'success');
       try {
         const result = await request('/api/pengaturan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jamMasuk: withWib(workJamMasuk.value), jamPulang: withWib(workJamPulang.value) })
         });
-        workFeedback.innerHTML = `<span style="color:#047857;font-weight:700;">${result.message}</span>`;
-        SiPresensi.showToast(result.message, 'success');
         await loadWorktime();
+        setWorkFeedback(result.message, 'success');
+        SiPresensi.showToast(result.message, 'success');
       } catch (error) {
-        workFeedback.innerHTML = `<span style="color:#b91c1c;font-weight:700;">${error.message}</span>`;
+        setWorkFeedback(error.message);
       } finally {
         workSave.disabled = false;
+        workSave.removeAttribute('aria-busy');
+        workSave.textContent = originalLabel;
       }
     });
     loadWorktime();
