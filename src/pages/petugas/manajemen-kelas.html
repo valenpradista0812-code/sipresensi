@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manajemen Kelas - SiPresensi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles/shared.css">
+  <style>
+    .class-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .class-toolbar .search { flex:1 1 260px; max-width:380px; }
+    .class-table { min-width:720px; }
+    .class-actions { display:flex; justify-content:flex-end; gap:8px; }
+    .class-actions .btn { padding:6px 10px; }
+    .class-actions .btn-danger { color:var(--red-dark); border:1px solid #fecaca; background:#fff; }
+    .class-actions .btn-danger:hover { background:var(--red-soft); }
+    .class-dialog { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; background:rgba(15,23,42,.5); }
+    .class-dialog-panel { width:100%; max-width:620px; max-height:90vh; overflow:auto; padding:24px; border-radius:12px; background:#fff; box-shadow:0 20px 25px -5px rgba(0,0,0,.2); }
+    .class-dialog-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .class-dialog-head h2 { font-size:18px; }
+    .class-dialog-close { color:var(--muted); font-size:22px; }
+    .class-field { margin-bottom:14px; }
+    .class-field label { display:block; margin-bottom:5px; font-size:13px; font-weight:600; }
+    .class-field input, .class-field select { width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:7px; background:#fff; }
+    .class-roster-summary { color:var(--muted); font-size:12px; }
+    .class-roster-search { margin-bottom:8px; }
+    .class-roster-list { max-height:220px; overflow:auto; border:1px solid var(--border); border-radius:8px; }
+    .class-roster-empty { padding:16px; color:var(--muted); text-align:center; font-size:12px; }
+    .class-student-option { display:flex; align-items:flex-start; gap:9px; padding:9px 10px; border-bottom:1px solid #eef2f7; cursor:pointer; }
+    .class-student-option:last-child { border-bottom:0; }
+    .class-student-option:hover { background:#f8fafc; }
+    .class-student-option input { margin-top:3px; accent-color:var(--green); }
+    .class-student-details { display:flex; flex:1; min-width:0; flex-direction:column; gap:2px; }
+    .class-student-name { font-size:12px; font-weight:600; color:var(--text); }
+    .class-student-meta { font-size:11px; color:var(--muted); }
+    .class-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+    @media (max-width:640px) { .class-toolbar .search { max-width:none; } }
+  </style>
+</head>
+<body class="petugas admin">
+<div class="app">
+  <div id="sidebar-container"></div>
+  <div class="main">
+    <header class="topbar">
+      <h1 class="page-title">Manajemen Kelas</h1>
+      <div class="topbar-right">
+        <div class="user"><div><div class="user-name">-</div><div class="user-role">Petugas</div></div></div>
+      </div>
+    </header>
+    <main class="content">
+      <div class="toolbar class-toolbar">
+        <div class="toolbar-left">
+          <span class="toolbar-desc" id="kelas-count">Memuat data kelas...</span>
+          <label class="search" aria-label="Cari kelas">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="kelas-search" type="search" placeholder="Cari nama kelas atau wali kelas..." autocomplete="off">
+          </label>
+        </div>
+        <button class="btn btn-primary" id="btn-add-kelas" type="button">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah Kelas
+        </button>
+      </div>
+      <section class="card table-card">
+        <div class="table-scroll">
+          <table class="class-table">
+            <thead><tr><th>Nama Kelas</th><th>Jumlah Siswa</th><th>Wali Kelas</th><th>Ruangan</th><th class="right">Aksi</th></tr></thead>
+            <tbody id="kelas-tbody" aria-live="polite">
+              <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Memuat data kelas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span id="kelas-foot-count">Memuat...</span></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="class-dialog" id="kelas-dialog" role="dialog" aria-modal="true" aria-labelledby="kelas-dialog-title">
+  <div class="class-dialog-panel">
+    <div class="class-dialog-head">
+      <h2 id="kelas-dialog-title">Tambah Kelas</h2>
+      <button class="class-dialog-close" id="kelas-dialog-close" type="button" aria-label="Tutup">&times;</button>
+    </div>
+    <form id="kelas-form">
+      <input type="hidden" id="kelas-id">
+      <div class="class-field">
+        <label for="kelas-name">Nama Kelas</label>
+        <input id="kelas-name" name="name" type="text" maxlength="50" required placeholder="Contoh: XII IPA 3">
+      </div>
+      <div class="class-field">
+        <label for="kelas-wali">Wali Kelas</label>
+        <select id="kelas-wali" name="waliKelasId">
+          <option value="">Belum Ditentukan</option>
+        </select>
+      </div>
+      <div class="class-field">
+        <label for="kelas-student-search">Pilih Siswa <span class="class-roster-summary" id="kelas-student-count">0 siswa dipilih</span></label>
+        <input id="kelas-student-search" class="class-roster-search" type="search" placeholder="Cari nama atau NIS..." autocomplete="off">
+        <div class="class-roster-list" id="kelas-student-list" role="group" aria-label="Daftar siswa"></div>
+      </div>
+      <div class="class-field">
+        <label for="kelas-room">Ruangan</label>
+        <input id="kelas-room" name="ruangan" type="text" maxlength="100" placeholder="Gedung dan lantai">
+      </div>
+      <div class="class-dialog-actions">
+        <button class="btn btn-outline" id="kelas-cancel" type="button">Batal</button>
+        <button class="btn btn-primary" id="kelas-save" type="submit">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/src/js/sidebar-loader.js"></script>
+<script src="/src/js/script.js"></script>
+<script src="/src/js/app-core.js"></script>
+<script>
+  (function() {
+    const tbody = document.getElementById('kelas-tbody');
+    const countLabel = document.getElementById('kelas-count');
+    const footCount = document.getElementById('kelas-foot-count');
+    const search = document.getElementById('kelas-search');
+    const dialog = document.getElementById('kelas-dialog');
+    const form = document.getElementById('kelas-form');
+    const idInput = document.getElementById('kelas-id');
+    const saveButton = document.getElementById('kelas-save');
+    const teacherSelect = document.getElementById('kelas-wali');
+    const studentSearch = document.getElementById('kelas-student-search');
+    const studentList = document.getElementById('kelas-student-list');
+    const studentCount = document.getElementById('kelas-student-count');
+    let classes = [];
+    let teachers = [];
+    let students = [];
+    let selectedStudentIds = new Set();
+    let editingClassName = '';
+
+    function showMessage(message, color = 'var(--muted)') {
+      tbody.replaceChildren();
+      const row = tbody.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 5;
+      cell.textContent = message;
+      cell.style.cssText = `text-align:center;padding:24px;color:${color};`;
+    }
+
+    function render() {
+      const query = search.value.trim().toLocaleLowerCase('id');
+      const filtered = classes.filter((item) =>
+        [item.name, item.waliKelas, item.ruangan].some((value) =>
+          String(value || '').toLocaleLowerCase('id').includes(query)
+        )
+      );
+      tbody.replaceChildren();
+
+      if (filtered.length === 0) {
+        showMessage(classes.length ? 'Tidak ada kelas yang cocok dengan pencarian.' : 'Belum ada data kelas.');
+      } else {
+        filtered.forEach((item) => {
+          const row = tbody.insertRow();
+          for (const value of [
+            item.name,
+            `${Number(item.totalSiswa) || 0} siswa`,
+            item.waliKelas || 'Belum Ditentukan',
+            item.ruangan || '-'
+          ]) {
+            row.insertCell().textContent = value;
+          }
+
+          const actions = row.insertCell();
+          actions.className = 'right';
+          actions.innerHTML = '<div class="class-actions"><button type="button" class="btn btn-outline" data-action="edit">Ubah</button><button type="button" class="btn btn-danger" data-action="delete">Hapus</button></div>';
+          actions.querySelectorAll('button').forEach((button) => {
+            button.dataset.id = item.id;
+            button.dataset.name = item.name;
+          });
+        });
+      }
+
+      countLabel.textContent = `${classes.length} kelas terdaftar`;
+      footCount.textContent = `Menampilkan ${filtered.length} dari ${classes.length} kelas`;
+    }
+
+    async function loadClasses() {
+      showMessage('Memuat data kelas...');
+      try {
+        const response = await fetch('/api/kelas', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Gagal memuat data kelas.');
+        classes = result.data;
+        render();
+      } catch (error) {
+        classes = [];
+        countLabel.textContent = 'Data kelas tidak tersedia';
+        footCount.textContent = 'Gagal memuat data';
+        showMessage(error.message || 'Gagal memuat data kelas.', 'var(--red-dark)');
+      }
+    }
+
+    async function loadRosterOptions() {
+      const [teacherResponse, studentResponse] = await Promise.all([
+        fetch('/api/guru', { cache: 'no-store' }),
+        fetch('/api/siswa', { cache: 'no-store' })
+      ]);
+      const [teacherResult, studentResult] = await Promise.all([teacherResponse.json(), studentResponse.json()]);
+      if (!teacherResponse.ok || !teacherResult.success) throw new Error(teacherResult.message || 'Gagal memuat data guru.');
+      if (!studentResponse.ok || !studentResult.success) throw new Error(studentResult.message || 'Gagal memuat data siswa.');
+      teachers = Array.isArray(teacherResult.data) ? teacherResult.data : [];
+      students = Array.isArray(studentResult.data) ? studentResult.data : [];
+    }
+
+    function renderTeachers(selectedId, classId) {
+      teacherSelect.replaceChildren(new Option('Belum Ditentukan', ''));
+      const assigned = new Map();
+      classes.forEach((item) => {
+        if (item.waliKelasId && String(item.id) !== String(classId || '')) assigned.set(String(item.waliKelasId), item.name);
+      });
+
+      teachers.forEach((teacher) => {
+        const option = new Option(teacher.name, teacher.id);
+        const assignedClass = assigned.get(String(teacher.id));
+        if (assignedClass) {
+          option.disabled = true;
+          option.textContent = `${teacher.name} — sudah menjadi wali ${assignedClass}`;
+        }
+        teacherSelect.add(option);
+      });
+      teacherSelect.value = selectedId || '';
+    }
+
+    function renderStudents() {
+      const query = studentSearch.value.trim().toLocaleLowerCase('id');
+      const filtered = students.filter((student) =>
+        [student.name, student.nis].some((value) => String(value || '').toLocaleLowerCase('id').includes(query))
+      );
+      studentList.replaceChildren();
+
+      if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'class-roster-empty';
+        empty.textContent = students.length ? 'Tidak ada siswa yang cocok dengan pencarian.' : 'Belum ada data siswa.';
+        studentList.appendChild(empty);
+      } else {
+        filtered.forEach((student) => {
+          const studentId = String(student.id);
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = studentId;
+          checkbox.checked = selectedStudentIds.has(studentId);
+          checkbox.setAttribute('aria-label', `Pilih ${student.name}, NIS ${student.nis}`);
+
+          const details = document.createElement('span');
+          details.className = 'class-student-details';
+          const name = document.createElement('span');
+          name.className = 'class-student-name';
+          name.textContent = student.name;
+          const meta = document.createElement('span');
+          meta.className = 'class-student-meta';
+          const assignedClass = student.kelas || '';
+          const membership = assignedClass
+            ? (assignedClass === editingClassName
+              ? (selectedStudentIds.has(studentId) ? 'Anggota kelas ini' : 'Anggota saat ini · akan dilepas')
+              : `Saat ini: ${assignedClass}${selectedStudentIds.has(studentId) ? ' · akan dipindahkan' : ''}`)
+            : (selectedStudentIds.has(studentId) ? 'Akan ditambahkan' : 'Belum memiliki kelas');
+          meta.textContent = `NIS ${student.nis || '-'} · ${membership}`;
+          details.append(name, meta);
+
+          const label = document.createElement('label');
+          label.className = 'class-student-option';
+          label.append(checkbox, details);
+          studentList.appendChild(label);
+        });
+      }
+
+      studentCount.textContent = `${selectedStudentIds.size} siswa dipilih`;
+    }
+
+    async function openDialog(item) {
+      saveButton.disabled = true;
+      try {
+        await loadRosterOptions();
+      } catch (error) {
+        SiPresensi.showToast(error.message || 'Gagal memuat data guru dan siswa.', 'error');
+        saveButton.disabled = false;
+        return;
+      }
+      form.reset();
+      idInput.value = item?.id || '';
+      editingClassName = item?.name || '';
+      document.getElementById('kelas-dialog-title').textContent = item ? 'Ubah Data Kelas' : 'Tambah Kelas';
+      document.getElementById('kelas-name').value = item?.name || '';
+      document.getElementById('kelas-room').value = item?.ruangan || '';
+      renderTeachers(item?.waliKelasId, item?.id);
+      selectedStudentIds = new Set(
+        students.filter((student) => String(student.kelas || '') === String(item?.name || '')).map((student) => String(student.id))
+      );
+      studentSearch.value = '';
+      renderStudents();
+      dialog.style.display = 'flex';
+      document.getElementById('kelas-name').focus();
+      saveButton.disabled = false;
+    }
+
+    function closeDialog() {
+      dialog.style.display = 'none';
+    }
+
+    async function deleteClass(id, name, button) {
+      const confirmed = await SiPresensi.confirm({
+        title: 'Hapus Kelas?',
+        message: `Kelas ${name} hanya dapat dihapus jika tidak lagi digunakan oleh siswa, akun, absensi, jadwal, atau pengajuan izin.`,
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal'
+      });
+      if (!confirmed) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/kelas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Gagal menghapus kelas.');
+        SiPresensi.showToast(result.message, 'success');
+        await loadClasses();
+      } catch (error) {
+        SiPresensi.showToast(error.message || 'Gagal menghapus kelas.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    tbody.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const item = classes.find((kelas) => String(kelas.id) === button.dataset.id);
+      if (!item) return;
+      if (button.dataset.action === 'edit') openDialog(item);
+      if (button.dataset.action === 'delete') deleteClass(item.id, item.name, button);
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      saveButton.disabled = true;
+      const isEdit = Boolean(idInput.value);
+      const payload = {
+        name: document.getElementById('kelas-name').value.trim(),
+        waliKelasId: teacherSelect.value || null,
+        studentIds: [...selectedStudentIds],
+        ruangan: document.getElementById('kelas-room').value.trim()
+      };
+      try {
+        const response = await fetch(isEdit ? `/api/kelas/${encodeURIComponent(idInput.value)}` : '/api/kelas', {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Gagal menyimpan data kelas.');
+        SiPresensi.showToast(result.message, 'success');
+        closeDialog();
+        await loadClasses();
+      } catch (error) {
+        SiPresensi.showToast(error.message || 'Gagal menyimpan data kelas.', 'error');
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    search.addEventListener('input', render);
+    studentSearch.addEventListener('input', renderStudents);
+    document.getElementById('kelas-name').addEventListener('input', renderStudents);
+    studentList.addEventListener('change', (event) => {
+      const checkbox = event.target.closest('input[type="checkbox"]');
+      if (!checkbox) return;
+      if (checkbox.checked) selectedStudentIds.add(checkbox.value);
+      else selectedStudentIds.delete(checkbox.value);
+      studentCount.textContent = `${selectedStudentIds.size} siswa dipilih`;
+      const student = students.find((item) => String(item.id) === checkbox.value);
+      const meta = checkbox.closest('.class-student-option')?.querySelector('.class-student-meta');
+      if (student && meta) {
+        const assignedClass = student.kelas || '';
+        meta.textContent = assignedClass
+          ? (assignedClass === editingClassName
+            ? (checkbox.checked ? 'Anggota kelas ini' : 'Anggota saat ini · akan dilepas')
+            : `Saat ini: ${assignedClass}${checkbox.checked ? ' · akan dipindahkan' : ''}`)
+          : (checkbox.checked ? 'Akan ditambahkan' : 'Belum memiliki kelas');
+      }
+    });
+    document.getElementById('btn-add-kelas').addEventListener('click', () => openDialog(null));
+    document.getElementById('kelas-dialog-close').addEventListener('click', closeDialog);
+    document.getElementById('kelas-cancel').addEventListener('click', closeDialog);
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) closeDialog();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && dialog.style.display === 'flex') closeDialog();
+    });
+
+    loadClasses();
+  })();
+</script>
+</body>
+</html>

@@ -48,7 +48,7 @@ function prepareCreateAccount(body = {}) {
     if (!data.nis) return { error: 'NIS/NISN wajib diisi untuk akun siswa.' };
     if (data.nis.length > 20) return { error: 'NIS/NISN maksimal 20 karakter.' };
     if (!data.kelas) return { error: 'Kelas wajib dipilih untuk akun siswa.' };
-    if (data.kelas.length > 30) return { error: 'Kelas maksimal 30 karakter.' };
+    if (data.kelas.length > 50) return { error: 'Kelas maksimal 50 karakter.' };
   }
 
   data.title = text(body.title) || roleTitle(role, data);
@@ -103,7 +103,7 @@ function prepareEditAccount(account, body = {}) {
     if (body.kelas !== undefined) {
       data.kelas = text(body.kelas);
       if (!data.kelas) return { error: 'Kelas tidak boleh kosong.' };
-      if (data.kelas.length > 30) return { error: 'Kelas maksimal 30 karakter.' };
+      if (data.kelas.length > 50) return { error: 'Kelas maksimal 50 karakter.' };
     }
   }
 

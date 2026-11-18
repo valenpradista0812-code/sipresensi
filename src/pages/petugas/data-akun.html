@@ -266,6 +266,15 @@
           <option value="">Memuat kelas...</option>
         </select>
       </div>
+      <div id="a-field-siswa-rfid" style="display:none; margin-bottom:12px;">
+        <label for="a-rfid-uid" style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Registrasi Kartu RFID</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="a-rfid-uid" readonly aria-label="UID RFID siswa" placeholder="Belum ada kartu terdaftar" style="flex:1; min-width:0; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; box-sizing:border-box; background:#f8fafc;">
+          <button type="button" id="a-rfid-scan" class="btn btn-primary" style="white-space:nowrap; padding:8px 10px;">Mulai Pemindaian</button>
+          <button type="button" id="a-rfid-release" class="btn btn-outline" style="white-space:nowrap; padding:8px 10px; display:none;">Lepaskan</button>
+        </div>
+        <small id="a-rfid-status" role="status" aria-live="polite" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Opsional. ESP32 harus menyala dan terhubung ke server.</small>
+      </div>
       <div style="margin-bottom:12px;">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">No. Telepon</label>
         <input type="text" id="a-phone" placeholder="0812-xxxx-xxxx" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; box-sizing:border-box;">
@@ -286,6 +295,7 @@
 <script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
+<script src="/src/js/rfid-scanner.js"></script>
 <script>
   (function() {
     const tbody = document.getElementById('akun-tbody');
@@ -306,10 +316,16 @@
     const fMapel = document.getElementById('a-field-guru-mapel');
     const fNis = document.getElementById('a-field-siswa-nis');
     const fKelas = document.getElementById('a-field-siswa-kelas');
+    const fRfid = document.getElementById('a-field-siswa-rfid');
+    const rfidInput = document.getElementById('a-rfid-uid');
+    const rfidStatus = document.getElementById('a-rfid-status');
+    const rfidScanButton = document.getElementById('a-rfid-scan');
+    const rfidReleaseButton = document.getElementById('a-rfid-release');
     const ROW_FALLBACK_HEIGHT = 45;
     let currentUserId = null;
     let requestSeq = 0;
     let searchTimer = null;
+    let scanController = null;
 
     async function loadCurrentUser() {
       try {
@@ -324,6 +340,46 @@
       fMapel.style.display = role === 'guru' ? 'block' : 'none';
       fNis.style.display = role === 'siswa' ? 'block' : 'none';
       fKelas.style.display = role === 'siswa' ? 'block' : 'none';
+      fRfid.style.display = role === 'siswa' ? 'block' : 'none';
+      if (role !== 'siswa') scanController?.abort();
+    }
+
+    function setRfidStatus(message, state = 'default') {
+      rfidStatus.textContent = message;
+      rfidStatus.style.color = state === 'error' ? '#b91c1c' : state === 'success' ? '#047857' : '#64748b';
+    }
+
+    async function readRfidCard() {
+      if (scanController) return;
+      scanController = new AbortController();
+      rfidScanButton.disabled = true;
+      rfidScanButton.textContent = 'Menunggu...';
+      rfidReleaseButton.disabled = true;
+      try {
+        const uid = await SiPresensi.scanRfidCard({
+          signal: scanController.signal,
+          onStatus: (message) => setRfidStatus(message)
+        });
+        rfidInput.value = uid;
+        rfidReleaseButton.style.display = '';
+        setRfidStatus(`UID ${uid} berhasil dibaca. Klik Simpan untuk mendaftarkan kartu.`, 'success');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setRfidStatus(`Gagal: ${error.message || 'Pemindaian kartu gagal.'}`, 'error');
+          SiPresensi.showToast(error.message || 'Pemindaian kartu gagal.', 'error');
+        }
+      } finally {
+        scanController = null;
+        rfidScanButton.disabled = false;
+        rfidScanButton.textContent = 'Mulai Pemindaian';
+        rfidReleaseButton.disabled = false;
+      }
+    }
+
+    function releaseRfidCard() {
+      rfidInput.value = '';
+      rfidReleaseButton.style.display = 'none';
+      setRfidStatus('Kartu akan dilepaskan saat perubahan akun disimpan.');
     }
 
     async function loadKelasOptions() {
@@ -332,7 +388,7 @@
         const json = await res.json();
         if (json.success) {
           const sel = document.getElementById('a-kelas');
-          sel.innerHTML = '<option value="">Pilih kelas...</option>' +
+          sel.innerHTML = '<option value="">Belum Ditugaskan</option>' +
             json.data.map((k) => `<option value="${k.name}">${k.name}</option>`).join('');
         }
       } catch (_) { /* biarkan opsi default */ }
@@ -442,7 +498,7 @@
           <td>${escapeHtml(u.email)}</td>
           <td>${escapeHtml(ROLE_LABEL[u.role] || u.role)}</td>
           <td>${escapeHtml(idLabel)}${profileNote}</td>
-          <td>${escapeHtml(u.kelas || '-')}</td>
+          <td>${escapeHtml(u.role === 'siswa' ? (u.kelas || 'Belum Ditugaskan') : (u.kelas || '-'))}</td>
           <td class="right">
             <div class="actions">
               <button type="button" class="btn-edit-a" data-id="${escapeHtml(u.id)}" aria-label="Ubah akun ${escapeHtml(u.name)}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
@@ -472,6 +528,9 @@
       toggleRoleFields('guru');
       ['a-name', 'a-email', 'a-nip', 'a-mapel', 'a-nis', 'a-phone'].forEach((id) => { document.getElementById(id).value = ''; });
       document.getElementById('a-kelas').selectedIndex = 0;
+      rfidInput.value = '';
+      rfidReleaseButton.style.display = 'none';
+      setRfidStatus('Opsional. ESP32 harus menyala dan terhubung ke server.');
       const pass = document.getElementById('a-password');
       pass.value = '';
       pass.required = true;
@@ -493,6 +552,9 @@
       document.getElementById('a-nis').value = u.nis || '';
       document.getElementById('a-kelas').value = u.kelas || '';
       document.getElementById('a-phone').value = u.phone || '';
+      rfidInput.value = u.rfid_uid || '';
+      rfidReleaseButton.style.display = u.rfid_uid ? '' : 'none';
+      setRfidStatus(u.rfid_uid ? `Berhasil Terdaftar: ${u.rfid_uid}` : 'Belum ada kartu RFID yang terhubung.');
       const pass = document.getElementById('a-password');
       pass.value = '';
       pass.required = false;
@@ -502,6 +564,7 @@
     }
 
     function closeModal() {
+      scanController?.abort();
       modal.style.display = 'none';
       roleSelect.disabled = false;
     }
@@ -532,6 +595,8 @@
     }
 
     roleSelect.addEventListener('change', () => toggleRoleFields(roleSelect.value));
+    rfidScanButton.addEventListener('click', readRfidCard);
+    rfidReleaseButton.addEventListener('click', releaseRfidCard);
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -554,8 +619,10 @@
 
       if (role === 'siswa') {
         payload.nis = document.getElementById('a-nis').value.trim();
-        payload.kelas = document.getElementById('a-kelas').value;
-        if (!isEdit && (!payload.nis || !payload.kelas)) {
+        const kelas = document.getElementById('a-kelas').value;
+        if (!isEdit || kelas) payload.kelas = kelas;
+        payload.rfid_uid = rfidInput.value.trim();
+        if (!isEdit && (!payload.nis || !kelas)) {
           SiPresensi.showToast('NIS dan kelas wajib diisi untuk akun siswa!', 'error');
           return;
         }
@@ -575,13 +642,18 @@
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const json = await res.json();
         if (json.success) {
+          if (role === 'siswa') {
+            setRfidStatus(payload.rfid_uid ? `Berhasil Terdaftar: ${payload.rfid_uid}` : 'Kartu RFID berhasil dilepaskan.', 'success');
+          }
           SiPresensi.showToast(json.message || 'Akun berhasil disimpan!', 'success');
           closeModal();
           loadAccounts();
         } else {
+          if (role === 'siswa' && json.message) setRfidStatus(`Gagal: ${json.message}`, 'error');
           SiPresensi.showToast(json.message || 'Gagal menyimpan akun.', 'error');
         }
       } catch (err) {
+        if (role === 'siswa') setRfidStatus('Gagal: tidak dapat terhubung ke server.', 'error');
         SiPresensi.showToast('Gagal terhubung ke server.', 'error');
       }
     });

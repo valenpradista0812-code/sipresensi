@@ -6,6 +6,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
 const { resolveTeacher, getAccessibleClasses } = require('../utils/teacher-access');
 const { jakartaNow, readJamKerja, statusMasuk } = require('../utils/jam-kerja');
+const { normalizeRfidUid, isRfidUniqueViolation } = require('../utils/rfid-uid');
 let dispensasiSchemaWarningLogged = false;
 
 async function aturanJamKerja() {
@@ -36,17 +37,6 @@ async function validasiAbsenPulang(nis, kelas) {
   }
   const todayAbsensi = await db.findAbsensiByNisDate(nis, aturan.now.date, kelas);
   return { ...aturan, todayAbsensi };
-}
-
-function normalizeRfidUid(value) {
-  if (value === undefined || value === null || String(value).trim() === '') return null;
-  const uid = String(value).trim().toUpperCase().replace(/[:\s]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  if (!/^[0-9A-F]{2}(?:-[0-9A-F]{2}){3,9}$/.test(uid)) {
-    const err = new Error('Format UID RFID tidak valid. Contoh: 08-AB-12-CD.');
-    err.statusCode = 400;
-    throw err;
-  }
-  return uid;
 }
 
 // GET /api/siswa
@@ -94,7 +84,14 @@ async function createStudentAccount({ nis, name, kelas, gender, phone, email, pa
 
   const cleanNis = String(nis).trim();
   const cleanName = name.trim();
-  const cleanKelas = kelas.trim();
+  const requestedKelas = kelas.trim();
+  const classRecord = await db.findKelasByName(requestedKelas);
+  if (!classRecord) {
+    const err = new Error('Kelas tidak ditemukan.');
+    err.statusCode = 400;
+    throw err;
+  }
+  const cleanKelas = classRecord.name;
   const studentEmail = (email && email.trim()) ? email.trim() : `${cleanNis}@sman1jkt.sch.id`;
 
   const existing = await db.findSiswaByNis(cleanNis);
@@ -171,6 +168,9 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
     });
   } catch (err) {
     if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
+    if (isRfidUniqueViolation(err)) {
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+    }
     console.error('addSiswa error:', err);
     res.status(500).json({ success: false, message: 'Gagal menambahkan data siswa ke database.' });
   }
@@ -197,7 +197,9 @@ router.post('/bulk', authenticate, requireRole('petugas'), async (req, res) => {
         results.failed.push({
           nis: item.nis || '-',
           name: item.name || '-',
-          reason: err.statusCode === 400 ? err.message : 'Gagal menyimpan ke database.'
+          reason: err.statusCode === 400 || isRfidUniqueViolation(err)
+            ? err.message || 'UID RFID sudah terdaftar pada akun siswa lain.'
+            : 'Gagal menyimpan ke database.'
         });
       }
     }
@@ -217,13 +219,20 @@ router.post('/bulk', authenticate, requireRole('petugas'), async (req, res) => {
 router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const { nis, name, kelas, gender, phone, email, password } = req.body;
-    const rfidUid = normalizeRfidUid(req.body.rfid_uid);
+    const rfidUid = Object.prototype.hasOwnProperty.call(req.body, 'rfid_uid')
+      ? normalizeRfidUid(req.body.rfid_uid)
+      : undefined;
     const existingStudent = await db.findSiswaByIdOrNis(req.params.id);
     if (!existingStudent) return res.status(404).json({ success: false, message: 'Data siswa tidak ditemukan.' });
 
     const cleanNis = nis ? String(nis).trim() : existingStudent.nis;
     const cleanName = name ? name.trim() : existingStudent.name;
-    const cleanKelas = kelas ? kelas.trim() : existingStudent.kelas;
+    const requestedKelas = kelas !== undefined ? String(kelas || '').trim() : existingStudent.kelas;
+    const classRecord = requestedKelas ? await db.findKelasByName(requestedKelas) : null;
+    if (requestedKelas && !classRecord) {
+      return res.status(400).json({ success: false, message: 'Kelas tidak ditemukan.' });
+    }
+    const cleanKelas = classRecord?.name || null;
     const cleanEmail = email ? email.trim() : existingStudent.email;
     const cleanPhone = phone !== undefined ? phone.trim() : existingStudent.phone;
 
@@ -256,7 +265,7 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
         nis: cleanNis,
         kelas: cleanKelas,
         phone: cleanPhone,
-        title: `Siswa - ${cleanKelas}`,
+        title: cleanKelas ? `Siswa - ${cleanKelas}` : 'Siswa',
         avatar: initials
       };
       // Jika kata sandi diubah (bukan string kosong)
@@ -274,7 +283,7 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
         password: hashedPassword,
         name: cleanName,
         role: 'siswa',
-        title: `Siswa - ${cleanKelas}`,
+        title: cleanKelas ? `Siswa - ${cleanKelas}` : 'Siswa',
         nip: null,
         nis: cleanNis,
         kelas: cleanKelas,
@@ -286,6 +295,9 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
     res.json({ success: true, message: 'Data siswa dan akun berhasil diperbarui di database.', data: updated });
   } catch (err) {
     if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
+    if (isRfidUniqueViolation(err)) {
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+    }
     console.error('updateSiswa error:', err);
     res.status(500).json({ success: false, message: 'Gagal memperbarui data siswa.' });
   }
@@ -359,8 +371,11 @@ router.get('/tracker', authenticate, async (req, res) => {
 // POST /api/siswa/tracker/start (Mulai tracker)
 router.post('/tracker/start', authenticate, async (req, res) => {
   try {
-    const nis = req.user.nis || '0089211478';
-    const kelas = req.user.kelas || 'XII IPA 1';
+    const nis = req.user.nis;
+    const kelas = req.user.kelas;
+    if (!nis || !kelas) {
+      return res.status(403).json({ success: false, message: 'Akun siswa belum ditugaskan ke kelas.' });
+    }
     const clientStartTime = Number(req.body.startTime) || Date.now();
     const cek = await validasiAbsenMasuk(nis, kelas);
     if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
@@ -411,8 +426,11 @@ router.post('/tracker/start', authenticate, async (req, res) => {
 // POST /api/siswa/tracker/stop (Hentikan tracker)
 router.post('/tracker/stop', authenticate, async (req, res) => {
   try {
-    const nis = req.user.nis || '0089211478';
-    const kelas = req.user.kelas || 'XII IPA 1';
+    const nis = req.user.nis;
+    const kelas = req.user.kelas;
+    if (!nis || !kelas) {
+      return res.status(403).json({ success: false, message: 'Akun siswa belum ditugaskan ke kelas.' });
+    }
     const cek = await validasiAbsenPulang(nis, kelas);
     if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
     const timeStr = `${cek.now.time} WIB`;
@@ -456,8 +474,11 @@ router.post('/tracker/stop', authenticate, async (req, res) => {
 // POST /api/siswa/absen-masuk
 router.post('/absen-masuk', authenticate, async (req, res) => {
   try {
-    const nis = req.user.nis || '0089211478';
-    const kelas = req.user.kelas || 'XII IPA 1';
+    const nis = req.user.nis;
+    const kelas = req.user.kelas;
+    if (!nis || !kelas) {
+      return res.status(403).json({ success: false, message: 'Akun siswa belum ditugaskan ke kelas.' });
+    }
     const cek = await validasiAbsenMasuk(nis, kelas);
     if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
 
@@ -495,8 +516,11 @@ router.post('/absen-masuk', authenticate, async (req, res) => {
 // POST /api/siswa/absen-keluar
 router.post('/absen-keluar', authenticate, async (req, res) => {
   try {
-    const nis = req.user.nis || '0089211478';
-    const kelas = req.user.kelas || 'XII IPA 1';
+    const nis = req.user.nis;
+    const kelas = req.user.kelas;
+    if (!nis || !kelas) {
+      return res.status(403).json({ success: false, message: 'Akun siswa belum ditugaskan ke kelas.' });
+    }
     const cek = await validasiAbsenPulang(nis, kelas);
     if (cek.error) return res.status(cek.error.status).json({ success: false, message: cek.error.message });
     const timeStr = `${cek.now.time} WIB`;
@@ -528,7 +552,10 @@ router.post('/absen-keluar', authenticate, async (req, res) => {
 // GET /api/siswa/log
 router.get('/log', authenticate, async (req, res) => {
   try {
-    const nis  = req.user.nis || '10924';
+    const nis = req.user.nis;
+    if (!nis) {
+      return res.status(403).json({ success: false, message: 'Akun belum terhubung dengan NIS siswa.' });
+    }
     const logs = await db.getStudentLogs(nis);
     res.json({ success: true, data: logs });
   } catch (err) {

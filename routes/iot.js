@@ -106,6 +106,9 @@ router.post('/rfid', async (req, res) => {
     if (student.status && !['aktif', 'active'].includes(String(student.status).toLowerCase())) {
       return res.status(403).json({ success: false, mode: 'attendance', message: 'Status siswa tidak aktif.' });
     }
+    if (!student.kelas) {
+      return res.status(403).json({ success: false, mode: 'attendance', message: 'Siswa belum ditugaskan ke kelas.' });
+    }
 
     const dispensationContext = await db.getDispensationRfidContext(student.nis);
     let dispensationEvent = null;

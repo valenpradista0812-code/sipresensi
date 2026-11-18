@@ -281,6 +281,7 @@
 <script src="/src/js/sidebar-loader.js"></script>
 <script src="/src/js/script.js"></script>
 <script src="/src/js/app-core.js"></script>
+<script src="/src/js/rfid-scanner.js"></script>
 <script>
   (function() {
     const tbody = document.getElementById('siswa-tbody');
@@ -300,6 +301,7 @@
     const btnReadRfid = document.getElementById('btn-read-rfid');
     const ROW_FALLBACK_HEIGHT = 45;
     let scanInProgress = false;
+    let scanController = null;
     let requestSeq = 0;
 
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -332,8 +334,7 @@
         names.forEach((name) => filterKelas.appendChild(new Option(name, name)));
         filterKelas.value = names.includes(selectedFilter) ? selectedFilter : 'Semua Kelas';
 
-        const placeholder = new Option('Pilih kelas', '');
-        placeholder.disabled = true;
+        const placeholder = new Option('Belum Ditugaskan', '');
         mKelas.replaceChildren(placeholder);
         names.forEach((name) => mKelas.appendChild(new Option(name, name)));
       } catch (_) {
@@ -416,12 +417,13 @@
         const rfid = s.rfid_uid
           ? escapeHtml(s.rfid_uid)
           : '<span style="color:#94a3b8">Belum terdaftar</span>';
+        const kelas = s.kelas ? escapeHtml(s.kelas) : 'Belum Ditugaskan';
 
         tr.innerHTML = `
           <td>${idx + 1}</td>
           <td class="bold">${escapeHtml(s.nis)}</td>
           <td>${escapeHtml(s.name)}</td>
-          <td>${escapeHtml(s.kelas)}</td>
+          <td>${kelas}</td>
           <td>${escapeHtml(s.gender || 'Laki-laki')}</td>
           <td>${escapeHtml(s.phone || '-')}</td>
           <td>${rfid}</td>
@@ -478,6 +480,7 @@
     }
 
     function closeModal() {
+      scanController?.abort();
       modal.style.display = 'none';
     }
 
@@ -558,34 +561,25 @@
     async function readRfidCard() {
       if (scanInProgress) return;
       scanInProgress = true;
+      scanController = new AbortController();
       btnReadRfid.disabled = true;
       btnReadRfid.textContent = 'Menunggu...';
-      rfidHelp.textContent = 'Tempelkan kartu ke alat ESP32 dalam 30 detik...';
       try {
-        const startRes = await fetch('/api/iot/scan/start', { method: 'POST' });
-        const startJson = await startRes.json();
-        if (!startRes.ok || !startJson.success) throw new Error(startJson.message || 'Gagal memulai scan. Pastikan sudah login sebagai admin/guru.');
-
-        const deadline = Date.now() + 31000;
-        while (Date.now() < deadline) {
-          await new Promise(resolve => setTimeout(resolve, 700));
-          const statusRes = await fetch('/api/iot/scan/status');
-          const statusJson = await statusRes.json();
-          if (!statusRes.ok || !statusJson.success) throw new Error(statusJson.message || 'Gagal membaca status scan.');
-          if (statusJson.status === 'complete' && statusJson.uid) {
-            rfidInput.value = statusJson.uid;
-            rfidHelp.textContent = 'Kartu terbaca: ' + statusJson.uid + '. Klik Simpan untuk mendaftarkan.';
-            SiPresensi.showToast('UID kartu berhasil dibaca!', 'success');
-            return;
-          }
-          if (statusJson.status === 'timeout') throw new Error('Waktu scan habis. Klik Baca Kartu lalu coba lagi.');
-        }
-        throw new Error('Waktu scan habis. Pastikan ESP32 terhubung ke server.');
+        const uid = await SiPresensi.scanRfidCard({
+          signal: scanController.signal,
+          onStatus: (message) => { rfidHelp.textContent = message; }
+        });
+        rfidInput.value = uid;
+        rfidHelp.textContent = `UID ${uid} berhasil diterima. Klik Simpan untuk mendaftarkan kartu.`;
+        SiPresensi.showToast('UID kartu berhasil dibaca!', 'success');
       } catch (err) {
-        rfidHelp.textContent = err.message || 'Gagal membaca kartu.';
-        SiPresensi.showToast(rfidHelp.textContent, 'error');
+        if (err.name !== 'AbortError') {
+          rfidHelp.textContent = `Gagal: ${err.message || 'Gagal membaca kartu.'}`;
+          SiPresensi.showToast(rfidHelp.textContent, 'error');
+        }
       } finally {
         scanInProgress = false;
+        scanController = null;
         btnReadRfid.disabled = false;
         btnReadRfid.textContent = 'Baca Kartu';
       }

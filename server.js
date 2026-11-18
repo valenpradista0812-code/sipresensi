@@ -143,6 +143,7 @@ const petugasPages = [
   { old: '/data-guru.html', new: '/src/pages/petugas/data-guru.html' },
   { old: '/data-akun.html', new: '/src/pages/petugas/data-akun.html' },
   { old: '/jadwal.html', new: '/src/pages/petugas/jadwal.html' },
+  { old: '/manajemen-kelas.html', new: '/src/pages/petugas/manajemen-kelas.html' },
   { old: '/perangkat-rfid.html', new: '/src/pages/petugas/perangkat-rfid.html' }
 ];
 

@@ -3,6 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { normalizeRfidUid, isRfidUniqueViolation } = require('../utils/rfid-uid');
 
 const {
   prepareCreateAccount,
@@ -45,6 +46,8 @@ async function main() {
   assert.ok(findDuplicateNis({ siswaProfiles: [{ id: 's1', nis: 'NIS-1' }], nis: 'NIS-1' }));
   assert.strictEqual(findDuplicateNis({ siswaProfiles: [{ id: 's1', nis: 'NIS-1' }], nis: 'NIS-1', siswaProfileId: 's1' }), null);
   assert.strictEqual(sanitizeSearchTerm('  budi, (santoso)  '), 'budi santoso');
+  assert.strictEqual(normalizeRfidUid('aa:bb:cc:dd'), 'AA-BB-CC-DD');
+  assert.ok(isRfidUniqueViolation({ code: '23505', constraint: 'siswa_rfid_uid_normalized_unique' }));
 
   // ── Route integration with an in-memory database ────────────────
   const db = require('../data/db');
@@ -57,8 +60,9 @@ async function main() {
     { id: 'guru-1', nip: 'NIP-1', name: 'Guru Lama', mapel: 'Biologi', email: 'guru@test.local', user_id: 'usr-guru' }
   ];
   const siswaProfiles = [
-    { id: 'sis-1', nis: 'NIS-1', name: 'Siswa Lama', kelas: 'X-2', email: 'siswa@test.local' }
+    { id: 'sis-1', nis: 'NIS-1', name: 'Siswa Lama', kelas: 'X-2', email: 'siswa@test.local', rfid_uid: 'A1-B2-C3-D4' }
   ];
+  const classes = ['X-1', 'X-2', 'XI-1'].map((name, index) => ({ id: `kls-${index + 1}`, name }));
   let sequence = 0;
 
   const clone = (value) => (value ? { ...value } : value);
@@ -87,9 +91,13 @@ async function main() {
   };
   db.getGuru = async () => guruProfiles.map(clone);
   db.getSiswa = async () => siswaProfiles.map(clone);
+  db.getKelas = async () => classes.map(clone);
+  db.findKelasByName = async (name) =>
+    clone(classes.find((item) => item.name.toLowerCase() === String(name).trim().toLowerCase())) || null;
   db.findGuruByUserId = async (userId) => clone(guruProfiles.find((guru) => guru.user_id === userId)) || null;
   db.findGuruByNip = async (nip) => clone(guruProfiles.find((guru) => guru.nip === nip)) || null;
   db.findSiswaByNis = async (nis) => clone(siswaProfiles.find((siswa) => siswa.nis === nis)) || null;
+  db.findSiswaByRfidUid = async (uid) => clone(siswaProfiles.find((siswa) => siswa.rfid_uid === uid)) || null;
   db.addGuru = async (record) => {
     const guru = { ...record };
     guruProfiles.push(guru);
@@ -107,6 +115,12 @@ async function main() {
     return guruProfiles.splice(index, 1)[0];
   };
   db.addSiswa = async (record) => {
+    if (record.rfid_uid === 'DE-AD-BE-EF') {
+      const error = new Error('duplicate key value violates unique constraint "siswa_rfid_uid_normalized_unique"');
+      error.code = '23505';
+      error.constraint = 'siswa_rfid_uid_normalized_unique';
+      throw error;
+    }
     const siswa = { ...record };
     siswaProfiles.push(siswa);
     return clone(siswa);
@@ -200,7 +214,7 @@ async function main() {
 
     const createdSiswa = await request('/api/akun', {
       method: 'POST',
-      body: { role: 'siswa', name: 'Siswa Baru', email: 'siswa.baru@test.local', password: 'rahasia2', nis: 'NIS-2', kelas: 'X-1', gender: 'Perempuan' }
+      body: { role: 'siswa', name: 'Siswa Baru', email: 'siswa.baru@test.local', password: 'rahasia2', nis: 'NIS-2', kelas: 'X-1', gender: 'Perempuan', rfid_uid: 'aa:bb:cc:dd' }
     });
     assert.strictEqual(createdSiswa.status, 201, createdSiswa.json.message);
     const siswaAccount = users.find((user) => user.email === 'siswa.baru@test.local');
@@ -208,6 +222,43 @@ async function main() {
     assert.ok(siswaAccount && siswaProfile, 'Akun dan profil siswa harus dibuat');
     assert.strictEqual(siswaAccount.title, 'Siswa - X-1');
     assert.strictEqual(siswaProfile.gender, 'Perempuan');
+    assert.strictEqual(siswaProfile.rfid_uid, 'AA-BB-CC-DD', 'UID harus dinormalisasi dan disimpan pada profil siswa');
+
+    const duplicateRfid = await request('/api/akun', {
+      method: 'POST',
+      body: { role: 'siswa', name: 'UID Duplikat', email: 'rfid-duplikat@test.local', password: 'rahasia2', nis: 'NIS-3', kelas: 'X-1', rfid_uid: 'A1-B2-C3-D4' }
+    });
+    assert.strictEqual(duplicateRfid.status, 409);
+
+    const userCountBeforeRfidConflict = users.length;
+    const racedRfid = await request('/api/akun', {
+      method: 'POST',
+      body: { role: 'siswa', name: 'RFID Race', email: 'rfid-race@test.local', password: 'rahasia2', nis: 'NIS-RACE', kelas: 'X-1', rfid_uid: 'DE-AD-BE-EF' }
+    });
+    assert.strictEqual(racedRfid.status, 409);
+    assert.strictEqual(users.length, userCountBeforeRfidConflict, 'Akun harus dibersihkan jika constraint unik RFID menangani race');
+
+    const updatedSiswaRfid = await request(`/api/akun/${siswaAccount.id}`, {
+      method: 'PUT',
+      body: { rfid_uid: '11:22:33:44' }
+    });
+    assert.strictEqual(updatedSiswaRfid.status, 200, updatedSiswaRfid.json.message);
+    assert.strictEqual(siswaProfiles.find((siswa) => siswa.id === siswaProfile.id).rfid_uid, '11-22-33-44');
+    assert.strictEqual(siswaProfiles.find((siswa) => siswa.id === 'sis-1').rfid_uid, 'A1-B2-C3-D4', 'Mengganti UID tidak boleh mengubah profil siswa lain');
+
+    const duplicateRfidEdit = await request(`/api/akun/${siswaAccount.id}`, {
+      method: 'PUT',
+      body: { rfid_uid: 'A1-B2-C3-D4' }
+    });
+    assert.strictEqual(duplicateRfidEdit.status, 409);
+    assert.strictEqual(siswaProfiles.find((siswa) => siswa.id === siswaProfile.id).rfid_uid, '11-22-33-44');
+
+    const releasedRfid = await request(`/api/akun/${siswaAccount.id}`, {
+      method: 'PUT',
+      body: { rfid_uid: '' }
+    });
+    assert.strictEqual(releasedRfid.status, 200, releasedRfid.json.message);
+    assert.strictEqual(siswaProfiles.find((siswa) => siswa.id === siswaProfile.id).rfid_uid, null, 'Lepas kartu hanya mengosongkan profil akun yang diedit');
 
     const duplicateNis = await request('/api/akun', {
       method: 'POST',
@@ -251,6 +302,16 @@ async function main() {
     assert.strictEqual(updatedSiswa.status, 200, updatedSiswa.json.message);
     assert.strictEqual(siswaProfiles.find((siswa) => siswa.id === siswaProfile.id).kelas, 'XI-1', 'Kelas profil harus tersinkron');
     assert.strictEqual(users.find((user) => user.id === siswaAccount.id).title, 'Siswa - XI-1');
+
+    await db.updateSiswa(siswaProfile.id, { kelas: null });
+    await db.updateUser(siswaAccount.id, { kelas: null, title: 'Siswa' });
+    const editedUnassignedStudent = await request(`/api/akun/${siswaAccount.id}`, {
+      method: 'PUT',
+      body: { name: 'Siswa Belum Ditugaskan' }
+    });
+    assert.strictEqual(editedUnassignedStudent.status, 200, editedUnassignedStudent.json.message);
+    assert.strictEqual(users.find((user) => user.id === siswaAccount.id).kelas, null);
+    assert.strictEqual(users.find((user) => user.id === siswaAccount.id).title, 'Siswa');
 
     const selfDelete = await request('/api/akun/usr-petugas', { method: 'DELETE' });
     assert.strictEqual(selfDelete.status, 409, 'Petugas tidak boleh menghapus akun sendiri');

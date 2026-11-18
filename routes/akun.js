@@ -10,8 +10,10 @@ const {
   findDuplicateNis,
   sanitizeSearchTerm
 } = require('../utils/akun-validation');
+const { parseWaliAssignment } = require('../utils/akun-wali');
+const { normalizeRfidUid, isRfidUniqueViolation } = require('../utils/rfid-uid');
 
-const EDITABLE_FIELDS = ['name', 'email', 'password', 'phone', 'nip', 'mapel', 'nis', 'kelas'];
+const EDITABLE_FIELDS = ['name', 'email', 'password', 'phone', 'nip', 'mapel', 'nis', 'kelas', 'rfid_uid', 'isWaliKelas', 'waliKelasId'];
 
 function safeAccount(account) {
   if (!account) return {};
@@ -47,6 +49,7 @@ function enrichAccount(account, maps) {
     const profile = (account.nis ? maps.siswaByNis.get(String(account.nis)) : null) ||
       (account.email ? maps.siswaByEmail.get(String(account.email).toLowerCase()) : null);
     safe.profileId = profile?.id || null;
+    safe.rfid_uid = profile?.rfid_uid || null;
     safe.hasSiswaProfile = Boolean(profile);
   }
   return safe;
@@ -71,13 +74,28 @@ router.get('/', authenticate, requireRole('petugas'), async (req, res) => {
   try {
     const role = ['guru', 'siswa', 'petugas'].includes(req.query.role) ? req.query.role : undefined;
     const q = sanitizeSearchTerm(req.query.q);
-    const [list, guruList, siswaList] = await Promise.all([
+    const [list, guruList, siswaList, kelasList] = await Promise.all([
       db.getUsers({ role, q: q || undefined }),
       db.getGuru(),
-      db.getSiswa()
+      db.getSiswa(),
+      db.getKelas()
     ]);
     const maps = profileMaps(guruList, siswaList);
-    const data = list.map((account) => enrichAccount(account, maps));
+    const waliMap = {};
+    for (const k of kelasList) {
+      if (k.wali_kelas_id && !waliMap[k.wali_kelas_id]) {
+        waliMap[k.wali_kelas_id] = { waliKelas: k.name, waliKelasId: k.id };
+      }
+    }
+    const data = list.map((account) => {
+      const enriched = enrichAccount(account, maps);
+      if (account.role === 'guru' && enriched.profileId) {
+        const wali = waliMap[enriched.profileId] || null;
+        enriched.waliKelas   = wali ? wali.waliKelas   : null;
+        enriched.waliKelasId = wali ? wali.waliKelasId : null;
+      }
+      return enriched;
+    });
     res.json({ success: true, count: data.length, data });
   } catch (err) {
     console.error('getAkun error:', err);
@@ -93,6 +111,20 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
     const prepared = prepareCreateAccount(req.body);
     if (prepared.error) return res.status(400).json({ success: false, message: prepared.error });
     const data = prepared.data;
+    let rfidUid = null;
+
+    if (data.role === 'siswa') {
+      rfidUid = normalizeRfidUid(req.body.rfid_uid);
+      const classRecord = await db.findKelasByName(data.kelas);
+      if (!classRecord) return res.status(400).json({ success: false, message: 'Kelas tidak ditemukan.' });
+      data.kelas = classRecord.name;
+      if (rfidUid) {
+        const existingCard = await db.findSiswaByRfidUid(rfidUid);
+        if (existingCard) {
+          return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
+        }
+      }
+    }
 
     if (await db.findUserByEmail(data.email)) {
       return res.status(409).json({ success: false, message: 'Email/username sudah digunakan oleh akun lain.' });
@@ -111,6 +143,19 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
     const nisDuplicate = findDuplicateNis({ users, siswaProfiles: siswaList, nis: data.nis });
     if (nisDuplicate) {
       return res.status(409).json({ success: false, message: 'NIS/NISN sudah digunakan oleh akun atau data siswa lain.' });
+    }
+
+    // Validasi penugasan wali sebelum membuat akun/profil.
+    const waliResult = parseWaliAssignment(data.role, req.body);
+    if (waliResult.error) {
+      return res.status(400).json({ success: false, message: waliResult.error });
+    }
+    let targetKelas = null;
+    if (waliResult.assign) {
+      targetKelas = await db.findKelasByIdOrName(waliResult.kelasId);
+      if (!targetKelas) {
+        return res.status(400).json({ success: false, message: 'Kelas wali tidak ditemukan.' });
+      }
     }
 
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -141,6 +186,9 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
         email: data.email,
         user_id: account.id
       });
+      if (waliResult.assign) {
+        await db.assignWaliKelas(targetKelas.id, { id: profile.id, name: profile.name });
+      }
     } else if (data.role === 'siswa') {
       profile = await db.addSiswa({
         id: `sis-${suffix}`,
@@ -150,7 +198,7 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
         gender: req.body.gender || 'Laki-laki',
         phone: data.phone || '-',
         email: data.email,
-        rfid_uid: null
+        rfid_uid: rfidUid
       });
     }
 
@@ -160,6 +208,7 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
       hasGuruProfile: data.role === 'guru',
       hasSiswaProfile: data.role === 'siswa'
     };
+    if (data.role === 'siswa') response.rfid_uid = profile?.rfid_uid || null;
     if (data.role === 'guru') response.mapel = data.mapel;
 
     const profileNote = data.role === 'petugas' ? '' : ' Profil terkait juga dibuat dan terhubung.';
@@ -181,6 +230,10 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
     if (account?.id) {
       try { await db.deleteUserById(account.id); } catch (cleanupError) { console.error('rollback akun error:', cleanupError); }
     }
+    if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
+    if (isRfidUniqueViolation(err)) {
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+    }
     console.error('createAkun error:', err);
     res.status(500).json({ success: false, message: 'Gagal membuat akun.' });
   }
@@ -199,6 +252,23 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
     const prepared = prepareEditAccount({ ...account, mapel: profiles.guru?.mapel }, req.body);
     if (prepared.error) return res.status(400).json({ success: false, message: prepared.error });
     const data = prepared.data;
+    if (account.role === 'siswa' && !data.kelas && !account.kelas) data.title = 'Siswa';
+    let rfidUid;
+    if (account.role === 'siswa' && data.kelas !== undefined) {
+      const classRecord = await db.findKelasByName(data.kelas);
+      if (!classRecord) return res.status(400).json({ success: false, message: 'Kelas tidak ditemukan.' });
+      data.kelas = classRecord.name;
+      data.title = `Siswa - ${data.kelas}`;
+    }
+    if (account.role === 'siswa' && Object.prototype.hasOwnProperty.call(req.body, 'rfid_uid')) {
+      rfidUid = normalizeRfidUid(req.body.rfid_uid);
+      if (rfidUid) {
+        const existingCard = await db.findSiswaByRfidUid(rfidUid);
+        if (existingCard && existingCard.id !== profiles.siswa?.id) {
+          return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
+        }
+      }
+    }
 
     if (data.email && data.email !== String(account.email || '').toLowerCase()) {
       const duplicate = await db.findUserByEmail(data.email);
@@ -294,6 +364,7 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
         if (data.kelas !== undefined) profilePayload.kelas = data.kelas;
         if (data.email !== undefined) profilePayload.email = data.email;
         if (data.phone !== undefined) profilePayload.phone = data.phone || '-';
+        if (rfidUid !== undefined) profilePayload.rfid_uid = rfidUid;
 
         if (profiles.siswa) {
           await db.updateSiswa(profiles.siswa.id, profilePayload);
@@ -306,10 +377,9 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
             gender: 'Laki-laki',
             phone: (data.phone !== undefined ? data.phone : account.phone) || '-',
             email: data.email || account.email,
-            rfid_uid: null
+            rfid_uid: rfidUid === undefined ? null : rfidUid
           });
         }
-        await db.updateUser(account.id, { title: `Siswa - ${effectiveKelas}` });
       }
     } catch (profileError) {
       // Kembalikan data akun lama jika sinkronisasi profil gagal.
@@ -330,10 +400,32 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
       throw profileError;
     }
 
+    // Penanganan penugasan wali kelas (hanya untuk guru yang memiliki profil).
+    if (account.role === 'guru' && profiles.guru) {
+      const waliResult = parseWaliAssignment(account.role, req.body);
+      if (waliResult.error) {
+        return res.status(400).json({ success: false, message: waliResult.error });
+      }
+      if (waliResult.assign) {
+        const targetKelas = await db.findKelasByIdOrName(waliResult.kelasId);
+        if (!targetKelas) {
+          return res.status(400).json({ success: false, message: 'Kelas wali tidak ditemukan.' });
+        }
+        await db.assignWaliKelas(targetKelas.id, { id: profiles.guru.id, name: profiles.guru.name });
+      } else if (waliResult.clear) {
+        await db.clearWaliKelas(profiles.guru.id);
+      }
+      // waliResult.skip: tidak ada perubahan (kompatibilitas — pertahankan status wali yang ada)
+    }
+
     const fresh = await db.findUserById(account.id);
     const maps = profileMaps(await db.getGuru(), await db.getSiswa());
     res.json({ success: true, message: 'Akun dan profil terkait berhasil diperbarui.', data: enrichAccount(fresh, maps) });
   } catch (err) {
+    if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
+    if (isRfidUniqueViolation(err)) {
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+    }
     console.error('updateAkun error:', err);
     res.status(500).json({ success: false, message: 'Gagal memperbarui akun.' });
   }

@@ -16,6 +16,77 @@ function mapKelas(k) {
   };
 }
 
+function validateKelasPayload(body, { requireName = false } = {}) {
+  const payload = {};
+  if (requireName || body.name !== undefined) {
+    if (typeof body.name !== 'string' || !body.name.trim()) {
+      return { error: 'Nama kelas wajib diisi.' };
+    }
+    if (body.name.trim().length > 50) {
+      return { error: 'Nama kelas maksimal 50 karakter.' };
+    }
+    payload.name = body.name.trim();
+  }
+
+  for (const [field, label, maxLength] of [
+    ['waliKelas', 'Nama wali kelas', 100],
+    ['ruangan', 'Ruangan', 100]
+  ]) {
+    if (body[field] !== undefined) {
+      if (typeof body[field] !== 'string' || body[field].trim().length > maxLength) {
+        return { error: `${label} maksimal ${maxLength} karakter.` };
+      }
+      payload[field] = body[field].trim();
+    }
+  }
+
+  return { payload };
+}
+
+function validateStudentIds(studentIds) {
+  if (!Array.isArray(studentIds)) return { error: 'Daftar siswa tidak valid.' };
+  if (studentIds.length > 10000) return { error: 'Jumlah siswa pilihan melebihi batas.' };
+  const normalized = [];
+  const seen = new Set();
+  for (const id of studentIds) {
+    if (typeof id !== 'string' || !id.trim() || id.trim().length > 50) {
+      return { error: 'ID siswa tidak valid.' };
+    }
+    if (seen.has(id.trim())) return { error: 'Siswa yang sama tidak boleh dipilih lebih dari sekali.' };
+    normalized.push(id.trim());
+    seen.add(id.trim());
+  }
+  return { studentIds: normalized };
+}
+
+function writeConflict(err) {
+  if (err?.code === 'PGRST202' && /save_kelas_roster/i.test(err.message || '')) {
+    return { status: 503, message: 'Migrasi roster kelas belum diterapkan pada database.' };
+  }
+  if (/kelas_wali_kelas_id_unique/i.test(`${err?.constraint || ''} ${err?.message || ''}`)) {
+    return { status: 409, message: 'Guru sudah menjadi wali kelas di kelas lain.' };
+  }
+  if (err?.code === '23505') {
+    return { status: 409, message: 'Nama kelas sudah dipakai oleh kelas lain.' };
+  }
+  if (err?.code === '23514' && /WALI_KELAS_SUDAH_DIPAKAI/.test(err.message || '')) {
+    return { status: 409, message: 'Guru sudah menjadi wali kelas di kelas lain.' };
+  }
+  if (/SISWA_TIDAK_DITEMUKAN/.test(err?.message || '')) {
+    return { status: 400, message: 'Satu atau lebih siswa tidak ditemukan.' };
+  }
+  if (/GURU_WALI_TIDAK_DITEMUKAN/.test(err?.message || '')) {
+    return { status: 400, message: 'Guru wali kelas tidak ditemukan.' };
+  }
+  if (err?.code === '23503') {
+    return { status: 400, message: 'Relasi guru atau siswa tidak ditemukan.' };
+  }
+  if (err?.code === '22023') {
+    return { status: 400, message: 'Data kelas atau pilihan siswa tidak valid.' };
+  }
+  return null;
+}
+
 async function resolveWali(waliKelasId) {
   if (!waliKelasId) return { waliKelasId: null, waliKelas: undefined };
   const teacher = await db.findGuruByIdOrNip(waliKelasId);
@@ -51,30 +122,50 @@ router.get('/', authenticate, async (req, res) => {
 // POST /api/kelas
 router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
   try {
-    const { name, totalSiswa, waliKelas, waliKelasId, ruangan } = req.body;
-    if (!name) return res.status(400).json({ success: false, message: 'Nama kelas wajib diisi.' });
+    const { waliKelasId } = req.body;
+    const hasRoster = Object.prototype.hasOwnProperty.call(req.body, 'studentIds');
+    const validated = validateKelasPayload(req.body, { requireName: true });
+    if (validated.error) return res.status(400).json({ success: false, message: validated.error });
+    const { name, waliKelas, ruangan } = validated.payload;
+    const roster = hasRoster ? validateStudentIds(req.body.studentIds) : null;
+    if (roster?.error) return res.status(400).json({ success: false, message: roster.error });
 
-    const cleanName = name.trim();
-    const existing = await db.findKelasByName(cleanName);
+    const existing = await db.findKelasByName(name);
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Kelas dengan nama tersebut sudah ada.' });
+      return res.status(409).json({ success: false, message: 'Kelas dengan nama tersebut sudah ada.' });
     }
 
     const wali = await resolveWali(waliKelasId);
+    if (waliKelasId && !wali.waliKelasId) {
+      return res.status(400).json({ success: false, message: 'Guru wali kelas tidak ditemukan.' });
+    }
+    if (wali.waliKelasId && await db.findKelasByWaliId(wali.waliKelasId)) {
+      return res.status(409).json({ success: false, message: 'Guru sudah menjadi wali kelas di kelas lain.' });
+    }
     const payload = {
       id: 'kls-' + Date.now(),
-      name: cleanName,
-      totalSiswa: parseInt(totalSiswa, 10) || 36,
+      name,
       waliKelas: wali.waliKelas !== undefined ? wali.waliKelas : (waliKelas || 'Belum Ditentukan'),
       ruangan: ruangan || 'Gedung Sekolah'
     };
     if (waliKelasId !== undefined) payload.waliKelasId = wali.waliKelasId;
 
-    const newClass = await db.addKelas(payload);
+    const newClass = hasRoster
+      ? await db.saveKelasRoster({
+        id: payload.id,
+        name,
+        waliKelasId: payload.waliKelasId,
+        ruangan: payload.ruangan,
+        studentIds: roster.studentIds,
+        create: true
+      })
+      : await db.addKelas(payload);
 
     res.status(201).json({ success: true, message: 'Data kelas berhasil ditambahkan.', data: mapKelas(newClass) });
   } catch (err) {
     console.error('addKelas error:', err);
+    const conflict = writeConflict(err);
+    if (conflict) return res.status(conflict.status).json({ success: false, message: conflict.message });
     res.status(500).json({ success: false, message: 'Gagal menambahkan kelas.' });
   }
 });
@@ -85,23 +176,48 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
     const existing = await db.findKelasByIdOrName(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Data kelas tidak ditemukan.' });
 
-    const { waliKelasId, ...rest } = req.body;
-    const payload = { ...rest };
+    const { waliKelasId } = req.body;
+    const hasRoster = Object.prototype.hasOwnProperty.call(req.body, 'studentIds');
+    const validated = validateKelasPayload(req.body);
+    if (validated.error) return res.status(400).json({ success: false, message: validated.error });
+    const payload = validated.payload;
+    const roster = hasRoster ? validateStudentIds(req.body.studentIds) : null;
+    if (roster?.error) return res.status(400).json({ success: false, message: roster.error });
+    if (Object.keys(payload).length === 0 && waliKelasId === undefined && !hasRoster) {
+      return res.status(400).json({ success: false, message: 'Tidak ada perubahan data kelas.' });
+    }
 
     if (waliKelasId !== undefined) {
       const wali = await resolveWali(waliKelasId);
+      if (waliKelasId && !wali.waliKelasId) {
+        return res.status(400).json({ success: false, message: 'Guru wali kelas tidak ditemukan.' });
+      }
+      if (wali.waliKelasId && await db.findKelasByWaliId(wali.waliKelasId, existing.id)) {
+        return res.status(409).json({ success: false, message: 'Guru sudah menjadi wali kelas di kelas lain.' });
+      }
       payload.waliKelasId = wali.waliKelasId;
       if (wali.waliKelas !== undefined) payload.waliKelas = wali.waliKelas;
     }
 
-    const updated = await db.updateKelas(existing.id, payload);
+    const updated = hasRoster
+      ? await db.saveKelasRoster({
+        id: existing.id,
+        name: payload.name === undefined ? existing.name : payload.name,
+        waliKelasId: payload.waliKelasId === undefined ? existing.wali_kelas_id : payload.waliKelasId,
+        ruangan: payload.ruangan === undefined ? existing.ruangan : payload.ruangan,
+        studentIds: roster.studentIds,
+        create: false
+      })
+      : await db.updateKelas(existing.id, payload);
     if (!updated) return res.status(404).json({ success: false, message: 'Data kelas tidak ditemukan.' });
 
     res.json({ success: true, message: 'Data kelas berhasil diperbarui.', data: mapKelas(updated) });
   } catch (err) {
     console.error('updateKelas error:', err);
-    if (err && err.code === '23505') {
-      return res.status(409).json({ success: false, message: 'Nama kelas sudah dipakai oleh kelas lain.' });
+    const conflict = writeConflict(err);
+    if (conflict) return res.status(conflict.status).json({ success: false, message: conflict.message });
+    if (err?.code === 'P0002' || /KELAS_TIDAK_DITEMUKAN/.test(err?.message || '')) {
+      return res.status(404).json({ success: false, message: 'Data kelas tidak ditemukan.' });
     }
     res.status(500).json({ success: false, message: 'Gagal memperbarui kelas.' });
   }
