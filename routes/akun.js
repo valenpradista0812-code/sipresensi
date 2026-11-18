@@ -44,6 +44,7 @@ function enrichAccount(account, maps) {
     const profile = maps.guruByUserId.get(account.id) || (account.nip ? maps.guruByNip.get(String(account.nip)) : null);
     safe.profileId = profile?.id || null;
     safe.mapel = profile?.mapel || null;
+    safe.rfid_uid = profile?.rfid_uid || null;
     safe.hasGuruProfile = Boolean(profile);
   } else if (account.role === 'siswa') {
     const profile = (account.nis ? maps.siswaByNis.get(String(account.nis)) : null) ||
@@ -67,6 +68,14 @@ async function currentProfiles(account) {
     return { guru: null, siswa: byNis };
   }
   return { guru: null, siswa: null };
+}
+
+async function findRfidOwner(uid) {
+  const [student, teacher] = await Promise.all([
+    db.findSiswaByRfidUid(uid),
+    db.findGuruByRfidUid(uid)
+  ]);
+  return student || teacher || null;
 }
 
 // GET /api/akun - daftar seluruh akun, filter role dan pencarian
@@ -118,11 +127,14 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
       const classRecord = await db.findKelasByName(data.kelas);
       if (!classRecord) return res.status(400).json({ success: false, message: 'Kelas tidak ditemukan.' });
       data.kelas = classRecord.name;
-      if (rfidUid) {
-        const existingCard = await db.findSiswaByRfidUid(rfidUid);
-        if (existingCard) {
-          return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
-        }
+    } else if (data.role === 'guru') {
+      rfidUid = normalizeRfidUid(req.body.rfid_uid);
+    }
+
+    if (rfidUid) {
+      const existingCard = await findRfidOwner(rfidUid);
+      if (existingCard) {
+        return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
       }
     }
 
@@ -184,7 +196,8 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
         mapel: data.mapel,
         phone: data.phone || '-',
         email: data.email,
-        user_id: account.id
+        user_id: account.id,
+        rfid_uid: rfidUid
       });
       if (waliResult.assign) {
         await db.assignWaliKelas(targetKelas.id, { id: profile.id, name: profile.name });
@@ -208,7 +221,7 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
       hasGuruProfile: data.role === 'guru',
       hasSiswaProfile: data.role === 'siswa'
     };
-    if (data.role === 'siswa') response.rfid_uid = profile?.rfid_uid || null;
+    if (data.role === 'siswa' || data.role === 'guru') response.rfid_uid = profile?.rfid_uid || null;
     if (data.role === 'guru') response.mapel = data.mapel;
 
     const profileNote = data.role === 'petugas' ? '' : ' Profil terkait juga dibuat dan terhubung.';
@@ -232,7 +245,7 @@ router.post('/', authenticate, requireRole('petugas'), async (req, res) => {
     }
     if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
     if (isRfidUniqueViolation(err)) {
-      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun lain.' });
     }
     console.error('createAkun error:', err);
     res.status(500).json({ success: false, message: 'Gagal membuat akun.' });
@@ -262,11 +275,14 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
     }
     if (account.role === 'siswa' && Object.prototype.hasOwnProperty.call(req.body, 'rfid_uid')) {
       rfidUid = normalizeRfidUid(req.body.rfid_uid);
-      if (rfidUid) {
-        const existingCard = await db.findSiswaByRfidUid(rfidUid);
-        if (existingCard && existingCard.id !== profiles.siswa?.id) {
-          return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
-        }
+    } else if (account.role === 'guru' && Object.prototype.hasOwnProperty.call(req.body, 'rfid_uid')) {
+      rfidUid = normalizeRfidUid(req.body.rfid_uid);
+    }
+    if (rfidUid) {
+      const existingCard = await findRfidOwner(rfidUid);
+      const ownProfile = account.role === 'guru' ? profiles.guru : profiles.siswa;
+      if (existingCard && existingCard.id !== ownProfile?.id) {
+        return res.status(409).json({ success: false, message: `UID RFID sudah terdaftar atas nama ${existingCard.name}.` });
       }
     }
 
@@ -339,6 +355,7 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
         if (data.mapel !== undefined) profilePayload.mapel = data.mapel;
         if (data.email !== undefined) profilePayload.email = data.email;
         if (data.phone !== undefined) profilePayload.phone = data.phone || '-';
+        if (rfidUid !== undefined) profilePayload.rfid_uid = rfidUid;
 
         let profile = profiles.guru;
         if (profile) {
@@ -351,7 +368,8 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
             mapel: data.mapel || 'Belum Ditentukan',
             phone: (data.phone !== undefined ? data.phone : account.phone) || '-',
             email: data.email || account.email,
-            user_id: account.id
+            user_id: account.id,
+            rfid_uid: rfidUid === undefined ? null : rfidUid
           });
         }
         if (profile) {
@@ -424,7 +442,7 @@ router.put('/:id', authenticate, requireRole('petugas'), async (req, res) => {
   } catch (err) {
     if (err.statusCode === 400) return res.status(400).json({ success: false, message: err.message });
     if (isRfidUniqueViolation(err)) {
-      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun siswa lain.' });
+      return res.status(409).json({ success: false, message: 'UID RFID sudah terdaftar pada akun lain.' });
     }
     console.error('updateAkun error:', err);
     res.status(500).json({ success: false, message: 'Gagal memperbarui akun.' });

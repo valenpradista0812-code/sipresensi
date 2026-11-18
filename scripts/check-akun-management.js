@@ -2,6 +2,7 @@ const assert = require('assert');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { normalizeRfidUid, isRfidUniqueViolation } = require('../utils/rfid-uid');
 
@@ -14,6 +15,12 @@ const {
 } = require('../utils/akun-validation');
 
 async function main() {
+  const accountPage = fs.readFileSync(require.resolve('../src/pages/petugas/data-akun.html'), 'utf8');
+  const rfidMigration = fs.readFileSync(require.resolve('../supabase-migrations/2026112001_guru_rfid_registration.sql'), 'utf8');
+  assert.ok(accountPage.includes("role === 'petugas' ? 'none' : 'block'"), 'Form RFID tersedia untuk Guru dan Siswa, bukan Petugas');
+  assert.ok(rfidMigration.includes('ALTER TABLE public.guru ADD COLUMN IF NOT EXISTS rfid_uid'), 'RFID guru harus disimpan di database');
+  assert.ok(rfidMigration.includes('rfid_uid_global_unique'), 'UID RFID harus unik lintas profil siswa dan guru');
+
   // ── Pure helper checks ──────────────────────────────────────────
   assert.ok(prepareCreateAccount({ role: 'admin', name: 'A', email: 'a@b.co', password: '1234' }).error);
   assert.ok(prepareCreateAccount({ role: 'guru', name: 'Guru', email: 'guru@test.local', password: '1234' }).error, 'Guru wajib NIP+mapel');
@@ -57,7 +64,7 @@ async function main() {
     { id: 'usr-siswa', email: 'siswa@test.local', name: 'Siswa Lama', role: 'siswa', title: 'Siswa - X-2', password: bcrypt.hashSync('password123', 10), nis: 'NIS-1', kelas: 'X-2' }
   ];
   const guruProfiles = [
-    { id: 'guru-1', nip: 'NIP-1', name: 'Guru Lama', mapel: 'Biologi', email: 'guru@test.local', user_id: 'usr-guru' }
+    { id: 'guru-1', nip: 'NIP-1', name: 'Guru Lama', mapel: 'Biologi', email: 'guru@test.local', user_id: 'usr-guru', rfid_uid: null }
   ];
   const siswaProfiles = [
     { id: 'sis-1', nis: 'NIS-1', name: 'Siswa Lama', kelas: 'X-2', email: 'siswa@test.local', rfid_uid: 'A1-B2-C3-D4' }
@@ -98,6 +105,7 @@ async function main() {
   db.findGuruByNip = async (nip) => clone(guruProfiles.find((guru) => guru.nip === nip)) || null;
   db.findSiswaByNis = async (nis) => clone(siswaProfiles.find((siswa) => siswa.nis === nis)) || null;
   db.findSiswaByRfidUid = async (uid) => clone(siswaProfiles.find((siswa) => siswa.rfid_uid === uid)) || null;
+  db.findGuruByRfidUid = async (uid) => clone(guruProfiles.find((guru) => guru.rfid_uid === uid)) || null;
   db.addGuru = async (record) => {
     const guru = { ...record };
     guruProfiles.push(guru);
@@ -188,7 +196,7 @@ async function main() {
 
     const createdGuru = await request('/api/akun', {
       method: 'POST',
-      body: { role: 'guru', name: 'Guru Baru', email: 'guru.baru@test.local', password: 'rahasia1', nip: 'NIP-2', mapel: 'Matematika', phone: '0812' }
+      body: { role: 'guru', name: 'Guru Baru', email: 'guru.baru@test.local', password: 'rahasia1', nip: 'NIP-2', mapel: 'Matematika', phone: '0812', rfid_uid: 'aa:bb:cc:dd' }
     });
     assert.strictEqual(createdGuru.status, 201, createdGuru.json.message);
     const guruAccount = users.find((user) => user.email === 'guru.baru@test.local');
@@ -199,6 +207,13 @@ async function main() {
     assert.strictEqual(guruAccount.title, 'Guru Matematika');
     assert.notStrictEqual(guruAccount.password, 'rahasia1', 'Password harus di-hash');
     assert.ok(bcrypt.compareSync('rahasia1', guruAccount.password));
+    assert.strictEqual(guruProfile.rfid_uid, 'AA-BB-CC-DD', 'UID guru harus dinormalisasi dan disimpan pada profil guru');
+
+    const duplicateTeacherRfid = await request('/api/akun', {
+      method: 'POST',
+      body: { role: 'guru', name: 'Guru RFID Duplikat', email: 'guru.rfid.duplikat@test.local', password: 'rahasia1', nip: 'NIP-RFID', mapel: 'Fisika', rfid_uid: 'A1:B2:C3:D4' }
+    });
+    assert.strictEqual(duplicateTeacherRfid.status, 409, 'Guru tidak boleh memakai UID RFID siswa');
 
     const duplicateEmail = await request('/api/akun', {
       method: 'POST',
@@ -214,7 +229,7 @@ async function main() {
 
     const createdSiswa = await request('/api/akun', {
       method: 'POST',
-      body: { role: 'siswa', name: 'Siswa Baru', email: 'siswa.baru@test.local', password: 'rahasia2', nis: 'NIS-2', kelas: 'X-1', gender: 'Perempuan', rfid_uid: 'aa:bb:cc:dd' }
+      body: { role: 'siswa', name: 'Siswa Baru', email: 'siswa.baru@test.local', password: 'rahasia2', nis: 'NIS-2', kelas: 'X-1', gender: 'Perempuan', rfid_uid: '12:34:56:78' }
     });
     assert.strictEqual(createdSiswa.status, 201, createdSiswa.json.message);
     const siswaAccount = users.find((user) => user.email === 'siswa.baru@test.local');
@@ -222,11 +237,11 @@ async function main() {
     assert.ok(siswaAccount && siswaProfile, 'Akun dan profil siswa harus dibuat');
     assert.strictEqual(siswaAccount.title, 'Siswa - X-1');
     assert.strictEqual(siswaProfile.gender, 'Perempuan');
-    assert.strictEqual(siswaProfile.rfid_uid, 'AA-BB-CC-DD', 'UID harus dinormalisasi dan disimpan pada profil siswa');
+    assert.strictEqual(siswaProfile.rfid_uid, '12-34-56-78', 'UID harus dinormalisasi dan disimpan pada profil siswa');
 
     const duplicateRfid = await request('/api/akun', {
       method: 'POST',
-      body: { role: 'siswa', name: 'UID Duplikat', email: 'rfid-duplikat@test.local', password: 'rahasia2', nis: 'NIS-3', kelas: 'X-1', rfid_uid: 'A1-B2-C3-D4' }
+      body: { role: 'siswa', name: 'UID Duplikat', email: 'rfid-duplikat@test.local', password: 'rahasia2', nis: 'NIS-3', kelas: 'X-1', rfid_uid: 'AA-BB-CC-DD' }
     });
     assert.strictEqual(duplicateRfid.status, 409);
 
@@ -278,13 +293,21 @@ async function main() {
 
     const updatedGuru = await request(`/api/akun/${guruAccount.id}`, {
       method: 'PUT',
-      body: { name: 'Guru Diubah', mapel: 'Fisika', password: 'baru1234' }
+      body: { name: 'Guru Diubah', mapel: 'Fisika', password: 'baru1234', rfid_uid: '21:22:23:24' }
     });
     assert.strictEqual(updatedGuru.status, 200, updatedGuru.json.message);
     assert.strictEqual(guruProfiles.find((guru) => guru.id === guruProfile.id).mapel, 'Fisika');
     assert.strictEqual(guruProfiles.find((guru) => guru.id === guruProfile.id).name, 'Guru Diubah');
+    assert.strictEqual(guruProfiles.find((guru) => guru.id === guruProfile.id).rfid_uid, '21-22-23-24', 'Edit RFID hanya mengubah profil guru yang dipilih');
     assert.strictEqual(users.find((user) => user.id === guruAccount.id).title, 'Guru Fisika');
     assert.ok(bcrypt.compareSync('baru1234', users.find((user) => user.id === guruAccount.id).password));
+
+    const releasedGuruRfid = await request(`/api/akun/${guruAccount.id}`, {
+      method: 'PUT',
+      body: { rfid_uid: '' }
+    });
+    assert.strictEqual(releasedGuruRfid.status, 200, releasedGuruRfid.json.message);
+    assert.strictEqual(guruProfiles.find((guru) => guru.id === guruProfile.id).rfid_uid, null, 'Kartu guru dapat dilepaskan');
 
     const duplicateEditEmail = await request(`/api/akun/${guruAccount.id}`, {
       method: 'PUT',

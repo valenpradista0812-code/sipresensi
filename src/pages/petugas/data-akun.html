@@ -266,10 +266,10 @@
           <option value="">Memuat kelas...</option>
         </select>
       </div>
-      <div id="a-field-siswa-rfid" style="display:none; margin-bottom:12px;">
+      <div id="a-field-rfid" style="display:none; margin-bottom:12px;">
         <label for="a-rfid-uid" style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Registrasi Kartu RFID</label>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="a-rfid-uid" readonly aria-label="UID RFID siswa" placeholder="Belum ada kartu terdaftar" style="flex:1; min-width:0; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; box-sizing:border-box; background:#f8fafc;">
+          <input type="text" id="a-rfid-uid" readonly aria-label="UID RFID" placeholder="Belum ada kartu terdaftar" style="flex:1; min-width:0; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; box-sizing:border-box; background:#f8fafc;">
           <button type="button" id="a-rfid-scan" class="btn btn-primary" style="white-space:nowrap; padding:8px 10px;">Mulai Pemindaian</button>
           <button type="button" id="a-rfid-release" class="btn btn-outline" style="white-space:nowrap; padding:8px 10px; display:none;">Lepaskan</button>
         </div>
@@ -316,7 +316,7 @@
     const fMapel = document.getElementById('a-field-guru-mapel');
     const fNis = document.getElementById('a-field-siswa-nis');
     const fKelas = document.getElementById('a-field-siswa-kelas');
-    const fRfid = document.getElementById('a-field-siswa-rfid');
+    const fRfid = document.getElementById('a-field-rfid');
     const rfidInput = document.getElementById('a-rfid-uid');
     const rfidStatus = document.getElementById('a-rfid-status');
     const rfidScanButton = document.getElementById('a-rfid-scan');
@@ -340,8 +340,8 @@
       fMapel.style.display = role === 'guru' ? 'block' : 'none';
       fNis.style.display = role === 'siswa' ? 'block' : 'none';
       fKelas.style.display = role === 'siswa' ? 'block' : 'none';
-      fRfid.style.display = role === 'siswa' ? 'block' : 'none';
-      if (role !== 'siswa') scanController?.abort();
+      fRfid.style.display = role === 'petugas' ? 'none' : 'block';
+      if (role === 'petugas') scanController?.abort();
     }
 
     function setRfidStatus(message, state = 'default') {
@@ -621,7 +621,6 @@
         payload.nis = document.getElementById('a-nis').value.trim();
         const kelas = document.getElementById('a-kelas').value;
         if (!isEdit || kelas) payload.kelas = kelas;
-        payload.rfid_uid = rfidInput.value.trim();
         if (!isEdit && (!payload.nis || !kelas)) {
           SiPresensi.showToast('NIS dan kelas wajib diisi untuk akun siswa!', 'error');
           return;
@@ -634,6 +633,7 @@
           return;
         }
       }
+      if (role !== 'petugas') payload.rfid_uid = rfidInput.value.trim();
 
       const url = isEdit ? `/api/akun/${editId.value}` : '/api/akun';
       const method = isEdit ? 'PUT' : 'POST';
@@ -642,18 +642,18 @@
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const json = await res.json();
         if (json.success) {
-          if (role === 'siswa') {
+          if (role !== 'petugas') {
             setRfidStatus(payload.rfid_uid ? `Berhasil Terdaftar: ${payload.rfid_uid}` : 'Kartu RFID berhasil dilepaskan.', 'success');
           }
           SiPresensi.showToast(json.message || 'Akun berhasil disimpan!', 'success');
           closeModal();
           loadAccounts();
         } else {
-          if (role === 'siswa' && json.message) setRfidStatus(`Gagal: ${json.message}`, 'error');
+          if (role !== 'petugas' && json.message) setRfidStatus(`Gagal: ${json.message}`, 'error');
           SiPresensi.showToast(json.message || 'Gagal menyimpan akun.', 'error');
         }
       } catch (err) {
-        if (role === 'siswa') setRfidStatus('Gagal: tidak dapat terhubung ke server.', 'error');
+        if (role !== 'petugas') setRfidStatus('Gagal: tidak dapat terhubung ke server.', 'error');
         SiPresensi.showToast('Gagal terhubung ke server.', 'error');
       }
     });

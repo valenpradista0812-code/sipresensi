@@ -274,6 +274,20 @@ async function findSiswaByRfidUid(uid) {
   return data || null;
 }
 
+async function findGuruByRfidUid(uid) {
+  if (!uid) return null;
+  const { data, error } = await supabase
+    .from('guru')
+    .select('*')
+    .eq('rfid_uid', String(uid).trim().toUpperCase())
+    .maybeSingle();
+  if (error) {
+    console.error('findGuruByRfidUid error:', error.message);
+    throw error;
+  }
+  return data || null;
+}
+
 async function findSiswaByIdOrNis(idOrNis) {
   const clean = String(idOrNis).trim();
   const { data, error } = await supabase
@@ -512,7 +526,8 @@ async function addGuru(data) {
     name: data.name.trim(),
     mapel: data.mapel.trim(),
     phone: data.phone ? data.phone.trim() : '-',
-    email: data.email || null
+    email: data.email || null,
+    rfid_uid: data.rfid_uid || null
   };
   if (data.user_id !== undefined) payload.user_id = data.user_id || null;
 
@@ -535,7 +550,8 @@ async function updateGuru(id, data) {
     name: data.name !== undefined ? data.name.trim() : existing.name,
     mapel: data.mapel !== undefined ? data.mapel.trim() : existing.mapel,
     phone: data.phone !== undefined ? data.phone.trim() : existing.phone,
-    email: data.email !== undefined ? data.email.trim() : existing.email
+    email: data.email !== undefined ? data.email.trim() : existing.email,
+    rfid_uid: data.rfid_uid !== undefined ? (data.rfid_uid || null) : (existing.rfid_uid || null)
   };
   if (data.user_id !== undefined) payload.user_id = data.user_id || null;
 
@@ -1529,6 +1545,7 @@ module.exports = {
   getSiswaLimit,
   findSiswaByNis,
   findSiswaByRfidUid,
+  findGuruByRfidUid,
   findSiswaByIdOrNis,
   addSiswa,
   updateSiswa,
