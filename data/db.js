@@ -402,8 +402,11 @@ async function listTaughtClasses(guruId) {
     .from('jadwal_mapel')
     .select('kelas')
     .eq('guru_id', String(guruId))
-    .eq('aktif', true);
-  if (error) return [];
+    .eq('aktif', 1);
+  if (error) {
+    console.error('listTaughtClasses error:', error.message);
+    return [];
+  }
   return [...new Set((data || []).map((row) => row.kelas).filter(Boolean))];
 }
 
@@ -417,6 +420,65 @@ async function isWaliKelas(guruId, name) {
     .maybeSingle();
   if (error) return null;
   return data || null;
+}
+
+async function listWaliClasses(guruId) {
+  if (!guruId) return [];
+  const { data, error } = await supabase
+    .from('kelas')
+    .select('id,name')
+    .eq('wali_kelas_id', String(guruId))
+    .order('name', { ascending: true });
+  if (error) {
+    console.error('listWaliClasses error:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+async function assignWaliKelas(kelasId, guru) {
+  const targetKelas = await findKelasByIdOrName(kelasId);
+  if (!targetKelas) throw new Error('Kelas wali tidak ditemukan.');
+
+  // Catat kondisi sebelumnya untuk kompensasi
+  const previousWaliId   = targetKelas.wali_kelas_id || null;
+  const previousWaliName = targetKelas.wali_kelas || 'Belum Ditentukan';
+
+  // Cari kelas wali lama guru yang sama (selain kelas target)
+  const previousGuruKelas = await findKelasByWaliId(guru.id, targetKelas.id);
+
+  // Set wali pada kelas target
+  const { error: err1 } = await supabase
+    .from('kelas')
+    .update({ wali_kelas_id: guru.id, wali_kelas: guru.name })
+    .eq('id', targetKelas.id);
+  if (err1) throw err1;
+
+  // Jika guru sebelumnya menjadi wali kelas lain, kosongkan kelas lama itu
+  if (previousGuruKelas) {
+    const { error: err2 } = await supabase
+      .from('kelas')
+      .update({ wali_kelas_id: null, wali_kelas: 'Belum Ditentukan' })
+      .eq('id', previousGuruKelas.id);
+    if (err2) {
+      // Kompensasi: kembalikan kelas target ke kondisi semula
+      await supabase
+        .from('kelas')
+        .update({ wali_kelas_id: previousWaliId, wali_kelas: previousWaliName })
+        .eq('id', targetKelas.id)
+        .catch((e) => console.error('assignWaliKelas kompensasi error:', e.message));
+      throw err2;
+    }
+  }
+}
+
+async function clearWaliKelas(guruId) {
+  if (!guruId) return;
+  const { error } = await supabase
+    .from('kelas')
+    .update({ wali_kelas_id: null, wali_kelas: 'Belum Ditentukan' })
+    .eq('wali_kelas_id', String(guruId));
+  if (error) throw error;
 }
 
 async function getKelasWaliId(id) {
@@ -541,12 +603,57 @@ async function findKelasByIdOrName(idOrName) {
   return data || null;
 }
 
+async function findKelasByWaliId(guruId, excludeId = null) {
+  if (!guruId) return null;
+  let query = supabase
+    .from('kelas')
+    .select('id,name,wali_kelas_id')
+    .eq('wali_kelas_id', String(guruId));
+  if (excludeId) query = query.neq('id', String(excludeId));
+
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
+async function countKelasReferences(name) {
+  const clean = String(name == null ? '' : name).trim();
+  const empty = { siswa: 0, absensi: 0, jadwal: 0, izin: 0, akun: 0 };
+  if (!clean) return empty;
+
+  const targets = [
+    ['siswa', 'siswa'],
+    ['absensi', 'absensi'],
+    ['jadwal', 'jadwal_mapel'],
+    ['izin', 'pengajuan_izin'],
+    ['akun', 'users']
+  ];
+
+  const results = await Promise.all(targets.map(async ([key, table]) => {
+    const { count, error } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .eq('kelas', clean);
+    if (error) {
+      console.error(`countKelasReferences(${table}) error:`, error.message);
+      return [key, 0];
+    }
+    return [key, count || 0];
+  }));
+
+  return results.reduce((acc, [key, count]) => {
+    acc[key] = count;
+    return acc;
+  }, { ...empty });
+}
+
 async function addKelas(data) {
   const payload = {
     id: data.id,
     name: data.name.trim(),
     total_siswa: parseInt(data.totalSiswa, 10) || 0,
     wali_kelas: data.waliKelas || 'Belum Ditentukan',
+    wali_kelas_id: data.waliKelasId ? String(data.waliKelasId) : null,
     ruangan: data.ruangan || '-'
   };
 
@@ -569,6 +676,18 @@ async function updateKelas(id, data) {
   if (data.totalSiswa !== undefined)  payload.total_siswa = parseInt(data.totalSiswa, 10);
   if (data.waliKelas !== undefined)   payload.wali_kelas = data.waliKelas.trim();
   if (data.ruangan !== undefined)     payload.ruangan = data.ruangan.trim();
+
+  // Tangani waliKelasId secara eksplisit: null = kosongkan, string = simpan + sinkron nama
+  if (data.waliKelasId !== undefined) {
+    if (data.waliKelasId === null || data.waliKelasId === '') {
+      payload.wali_kelas_id = null;
+      payload.wali_kelas    = 'Belum Ditentukan';
+    } else {
+      const waliGuru = await findGuruByIdOrNip(String(data.waliKelasId));
+      payload.wali_kelas_id = waliGuru ? waliGuru.id : null;
+      payload.wali_kelas    = waliGuru ? waliGuru.name : 'Belum Ditentukan';
+    }
+  }
 
   const { data: updated, error } = await supabase
     .from('kelas')
@@ -1420,6 +1539,10 @@ module.exports = {
   getKelas,
   findKelasByName,
   findKelasByIdOrName,
+  findKelasByWaliId,
+  listWaliClasses,
+  assignWaliKelas,
+  clearWaliKelas,
   addKelas,
   updateKelas,
   deleteKelas,
