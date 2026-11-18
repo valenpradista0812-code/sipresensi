@@ -7,7 +7,7 @@ Backend terpadu berbasis **Node.js + Express** dengan database **Supabase Cloud 
 ## 🚀 Fitur Utama Backend
 
 1. **Database Supabase Cloud (PostgreSQL)**:
-   - Terhubung langsung ke Supabase (`https://rxcagbqeoevmfcbncmfd.supabase.co`).
+   - URL dan kredensial Supabase dibaca dari environment server.
    - Tidak lagi memerlukan XAMPP, MySQL lokal, atau phpMyAdmin!
    - Dilengkapi SDK `@supabase/supabase-js`.
 
@@ -67,3 +67,12 @@ Backend terpadu berbasis **Node.js + Express** dengan database **Supabase Cloud 
    ```
    http://localhost:3000
    ```
+
+## 🚀 Deployment Vercel
+
+- Entry point `api/index.js` mengekspor Express app. Vercel mengarahkan seluruh URL ke handler tersebut, sehingga URL halaman dan `/api/...` yang sudah ada tetap digunakan.
+- Tambahkan `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, dan `JWT_SECRET` pada **Project Settings → Environment Variables** Vercel. `SUPABASE_KEY` dapat dipakai sebagai pengganti service-role key hanya jika fitur server tidak memerlukan hak akses service role. Tambahkan `IOT_DEVICE_TOKEN` untuk autentikasi perangkat RFID/IoT dan `IOT_DEVICE_ID` bila ID perangkat bukan nilai default.
+- Jangan commit file `.env` atau menaruh nilai secret di `vercel.json`. Atur environment variables untuk Production (serta Preview/Development bila diperlukan) lalu redeploy setelah perubahan.
+- Pengujian lokal: jalankan `npm install`, atur variabel di `.env`, lalu `npm run dev`. Untuk menguji routing lokal Vercel, jalankan `vercel dev` setelah menghubungkan proyek dengan `vercel link`.
+- Deployment: impor repository melalui Vercel atau jalankan `vercel`, periksa project settings/environment variables, lalu deploy dengan `vercel --prod`. Uji `/login.html`, aset di `/public` dan `/src`, serta endpoint `/api/auth/me` setelah deploy.
+- UDP Discovery hanya aktif pada server lokal; fungsi serverless tidak membuka listener UDP. Endpoint HTTP perangkat tetap tersedia. Vercel Functions juga tidak menjamin state lokal `/tmp` atau memori bersama antarpanggilan, sehingga alur pendaftaran RFID yang bergantung pada state scan lokal perlu diuji dengan pola instance Vercel yang digunakan.

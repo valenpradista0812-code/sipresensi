@@ -7,8 +7,12 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rxcagbqeoevmfcbncmfd.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || 'sb_publishable_tan5CwGU9E-FM8NeCZ3oSw_IafCpIeQ';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY atau SUPABASE_KEY harus disetel di environment.');
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
@@ -88,7 +92,7 @@ async function initSupabase() {
         console.warn('Supabase menolak operasi tulis via token publishable karena RLS masih aktif di Supabase.');
         console.warn('Langkah mudah untuk mengaktifkan database:');
         console.warn('1. Buka Supabase SQL Editor:');
-        console.warn('   https://supabase.com/dashboard/project/rxcagbqeoevmfcbncmfd/sql/new');
+        console.warn('   SQL Editor pada project yang ditentukan oleh SUPABASE_URL.');
         console.warn('2. Salin isi file `supabase-setup.sql` yang telah disediakan di folder ini.');
         console.warn('3. Tempel di SQL Editor lalu klik tombol "RUN".');
         console.warn('4. Jalankan kembali script ini dengan: npm run db:init\n');
