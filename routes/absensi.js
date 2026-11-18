@@ -3,7 +3,7 @@ const router  = express.Router();
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
-const { resolveTeacher, getTaughtClasses, canAccessClass } = require('../utils/teacher-access');
+const { resolveTeacher, getAccessibleClasses, canAccessClass } = require('../utils/teacher-access');
 const { jakartaNow } = require('../utils/jam-kerja');
 
 // GET /api/absensi
@@ -29,19 +29,24 @@ router.get('/', authenticate, async (req, res) => {
     const mapel = req.query.mapel || null;
 
     let teacher = null;
-    let taught = null;
+    let accessAll = null;
+    let accessTaught = null;
     if (role === 'guru') {
       teacher = await resolveTeacher(req.user);
-      taught = teacher ? await getTaughtClasses(teacher.id) : [];
-      if (taught.length === 0) {
+      const { all, taught } = teacher
+        ? await getAccessibleClasses(teacher.id)
+        : { all: [], taught: [] };
+      accessAll = all;
+      accessTaught = taught;
+      if (all.length === 0) {
         return res.json({ success: true, filter: { kelas, tanggal, mapel }, count: 0, data: [] });
       }
-      if (kelas && !taught.includes(kelas) && !(await canAccessClass(req.user, teacher && teacher.id, kelas, { allowWali: true }))) {
+      if (kelas && !all.includes(kelas)) {
         return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
       }
     }
 
-    const targetKelas = kelas || (role === 'guru' ? taught[0] : null);
+    const targetKelas = kelas || (role === 'guru' ? (accessTaught[0] || accessAll[0]) : null);
     if (!targetKelas) {
       return res.json({ success: true, filter: { kelas: null, tanggal, mapel }, count: 0, data: [] });
     }
@@ -174,10 +179,11 @@ router.get('/riwayat', authenticate, async (req, res) => {
 
     if (role === 'guru') {
       const teacher = await resolveTeacher(req.user);
-      taught = teacher ? await getTaughtClasses(teacher.id) : [];
-      if (targetKelas && !taught.includes(targetKelas)) {
+      const { all } = teacher ? await getAccessibleClasses(teacher.id) : { all: [] };
+      if (targetKelas && !all.includes(targetKelas)) {
         return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
       }
+      taught = all;
     }
 
     let rows;
@@ -249,10 +255,23 @@ router.get('/rekap-bulanan', authenticate, async (req, res) => {
     let taught = null;
     if (role === 'guru') {
       const teacher = await resolveTeacher(req.user);
-      taught = teacher ? await getTaughtClasses(teacher.id) : [];
-      if (kelas && kelas !== 'Semua Kelas' && !taught.includes(kelas) && !(await canAccessClass(req.user, teacher && teacher.id, kelas, { allowWali: true }))) {
+      const { all } = teacher ? await getAccessibleClasses(teacher.id) : { all: [] };
+      if (kelas && kelas !== 'Semua Kelas' && !all.includes(kelas)) {
         return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke kelas tersebut.' });
       }
+      if (all.length === 0) {
+        return res.json({
+          success: true,
+          filter: { kelas: kelas || 'Semua Kelas', bulan: bulan || null, startDate, endDate },
+          summary: {
+            kehadiranOverall: null, persentaseSekolah: null, hariEfektif: '0 hari',
+            hadir: 0, terlambat: 0, izin: 0, sakit: 0, alfa: 0, dispensasi: 0, totalHadir: 0,
+            pctHadir: null, siswaTerajin: '-', siswaSeringAlfa: '-'
+          },
+          count: 0, data: []
+        });
+      }
+      taught = all;
     }
 
     let startDate, endDate;

@@ -3,7 +3,7 @@ const router  = express.Router();
 const db      = require('../data/db');
 const { authenticate } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
-const { resolveTeacher, getTaughtClasses } = require('../utils/teacher-access');
+const { resolveTeacher, getAccessibleClasses } = require('../utils/teacher-access');
 const { jakartaNow } = require('../utils/jam-kerja');
 
 function getWeekDays() {
@@ -49,8 +49,8 @@ router.get('/overview', authenticate, async (req, res) => {
     let classFilter = null;
     if (role === 'guru') {
       const teacher = await resolveTeacher(req.user);
-      const taught = teacher ? await getTaughtClasses(teacher.id) : [];
-      if (taught.length === 0) {
+      const { all } = teacher ? await getAccessibleClasses(teacher.id) : { all: [] };
+      if (all.length === 0) {
         return res.json({
           success: true,
           data: {
@@ -61,7 +61,7 @@ router.get('/overview', authenticate, async (req, res) => {
           }
         });
       }
-      classFilter = taught;
+      classFilter = all;
     }
 
     let totalSiswa = await db.countSiswa();

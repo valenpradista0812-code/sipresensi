@@ -4,7 +4,7 @@ const bcrypt  = require('bcryptjs');
 const db      = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
-const { resolveTeacher, getTaughtClasses } = require('../utils/teacher-access');
+const { resolveTeacher, getAccessibleClasses } = require('../utils/teacher-access');
 const { jakartaNow, readJamKerja, statusMasuk } = require('../utils/jam-kerja');
 let dispensasiSchemaWarningLogged = false;
 
@@ -62,12 +62,13 @@ router.get('/', authenticate, async (req, res) => {
 
     if (role === 'guru') {
       const teacher = await resolveTeacher(req.user);
-      const taught = teacher ? await getTaughtClasses(teacher.id) : [];
-      const requested = typeof req.query.kelas === 'string' && req.query.kelas.trim() ? req.query.kelas.trim() : null;
-      if (requested && !taught.includes(requested)) {
-        return res.status(403).json({ success: false, message: 'Kelas tersebut bukan kelas yang Anda ampu.' });
+      const { all } = teacher ? await getAccessibleClasses(teacher.id) : { all: [] };
+      const requested = typeof req.query.kelas === 'string' && req.query.kelas.trim()
+        ? req.query.kelas.trim() : null;
+      if (requested && !all.includes(requested)) {
+        return res.status(403).json({ success: false, message: 'Kelas tersebut bukan kelas yang dapat Anda akses.' });
       }
-      list = taught.length === 0 ? [] : list.filter((s) => taught.includes(s.kelas));
+      list = all.length === 0 ? [] : list.filter((s) => all.includes(s.kelas));
     }
 
     res.json({ success: true, count: list.length, data: list });

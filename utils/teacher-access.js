@@ -35,7 +35,22 @@ function createTeacherAccess(db) {
     return false;
   }
 
-  return { resolveTeacher, getTaughtClasses, isWaliOf, canAccessClass };
+  async function getWaliClasses(guruId) {
+    if (!guruId) return [];
+    const rows = await db.listWaliClasses(guruId);
+    return (rows || []).map((r) => r.name);
+  }
+
+  async function getAccessibleClasses(guruId) {
+    const [taught, wali] = await Promise.all([
+      getTaughtClasses(guruId),
+      getWaliClasses(guruId)
+    ]);
+    const all = [...new Set([...taught, ...wali])];
+    return { taught, wali, all };
+  }
+
+  return { resolveTeacher, getTaughtClasses, isWaliOf, canAccessClass, getWaliClasses, getAccessibleClasses };
 }
 
 module.exports = { createTeacherAccess, ...createTeacherAccess(require('../data/db')) };

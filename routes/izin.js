@@ -4,7 +4,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
-const { resolveTeacher, getTaughtClasses, isWaliOf } = require('../utils/teacher-access');
+const { resolveTeacher, getAccessibleClasses } = require('../utils/teacher-access');
 
 const MAX_PROOF_BYTES = 2 * 1024 * 1024;
 const MAX_LEAVE_DAYS = 90;
@@ -56,21 +56,14 @@ router.get('/', authenticate, requireServiceRoleKey, async (req, res) => {
 
     const teacher = await resolveTeacher(req.user);
     if (!teacher) return res.json({ success: true, data: [] });
-    const taught = await getTaughtClasses(teacher.id);
-    const waliMap = {};
+    const { all, wali: waliClasses } = await getAccessibleClasses(teacher.id);
 
     const data = await db.getIzinApplications(undefined, { excludeApproved: true });
     const visible = [];
     for (const app of (data || [])) {
-      if (!app.kelas) continue;
-      let canReview = waliMap[app.kelas];
-      if (canReview === undefined) {
-        canReview = await isWaliOf(teacher.id, app.kelas);
-        waliMap[app.kelas] = canReview;
-      }
-      if (taught.includes(app.kelas) || canReview) {
-        visible.push({ ...app, canReview });
-      }
+      if (!app.kelas || !all.includes(app.kelas)) continue;
+      const isWali = waliClasses.includes(app.kelas);
+      visible.push({ ...app, canReview: isWali });
     }
     return res.json({ success: true, data: visible });
   } catch (error) {
