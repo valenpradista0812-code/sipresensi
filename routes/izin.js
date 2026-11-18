@@ -5,6 +5,7 @@ const db = require('../data/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { effectiveRole } = require('../middleware/role');
 const { resolveTeacher, getAccessibleClasses } = require('../utils/teacher-access');
+const { canReviewIzin } = require('../utils/izin-approval');
 
 const MAX_PROOF_BYTES = 2 * 1024 * 1024;
 const MAX_LEAVE_DAYS = 90;
@@ -58,12 +59,28 @@ router.get('/', authenticate, requireServiceRoleKey, async (req, res) => {
     if (!teacher) return res.json({ success: true, data: [] });
     const { all, wali: waliClasses } = await getAccessibleClasses(teacher.id);
 
+    let schedulesByClass = {};
+    try {
+      const schedules = await db.getJadwal({ guruId: teacher.id, activeOnly: true });
+      for (const s of (schedules || [])) {
+        if (!schedulesByClass[s.kelas]) schedulesByClass[s.kelas] = [];
+        schedulesByClass[s.kelas].push(s);
+      }
+    } catch (schedErr) {
+      console.error('getJadwal untuk izin-approval error:', schedErr.message);
+    }
+
     const data = await db.getIzinApplications(undefined, { excludeApproved: true });
     const visible = [];
     for (const app of (data || [])) {
       if (!app.kelas || !all.includes(app.kelas)) continue;
       const isWali = waliClasses.includes(app.kelas);
-      visible.push({ ...app, canReview: isWali });
+      const canReview = canReviewIzin({
+        isWali,
+        application: app,
+        schedules: schedulesByClass[app.kelas] || []
+      });
+      visible.push({ ...app, canReview });
     }
     return res.json({ success: true, data: visible });
   } catch (error) {
@@ -86,8 +103,19 @@ router.get('/:id', authenticate, requireServiceRoleKey, async (req, res) => {
     }
 
     const application = await db.getIzinApplicationById(req.params.id);
-    if (!application || (role === 'siswa' && application.nis !== req.user.nis)) {
+    if (!application) {
       return res.status(404).json({ success: false, message: 'Pengajuan izin tidak ditemukan.' });
+    }
+    if (role === 'siswa' && application.nis !== req.user.nis) {
+      return res.status(404).json({ success: false, message: 'Pengajuan izin tidak ditemukan.' });
+    }
+    if (role === 'guru') {
+      const teacher = await resolveTeacher(req.user);
+      if (!teacher) return res.status(403).json({ success: false, message: 'Akun guru belum terhubung.' });
+      const { all } = await getAccessibleClasses(teacher.id);
+      if (!all.includes(application.kelas)) {
+        return res.status(404).json({ success: false, message: 'Pengajuan izin tidak ditemukan.' });
+      }
     }
     return res.json({ success: true, data: application });
   } catch (error) {
@@ -180,9 +208,20 @@ router.post('/:id/review', authenticate, requireRole('guru'), requireServiceRole
     if (!teacher) {
       return res.status(403).json({ success: false, message: 'Akun guru belum terhubung dengan profil guru.' });
     }
-    const wali = await isWaliOf(teacher.id, application.kelas);
-    if (!wali) {
-      return res.status(403).json({ success: false, message: 'Hanya wali kelas yang dapat mengonfirmasi pengajuan ini.' });
+    const { all, wali: waliClasses } = await getAccessibleClasses(teacher.id);
+    const isWali = waliClasses.includes(application.kelas);
+
+    let schedules = [];
+    try {
+      schedules = await db.getJadwal({ guruId: teacher.id, kelas: application.kelas, activeOnly: true });
+    } catch (e) { /* jadwal tidak tersedia */ }
+
+    const allowed = canReviewIzin({ isWali, application, schedules });
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya wali kelas atau guru yang sedang mengajar di kelas ini saat pengajuan dibuat yang dapat mengonfirmasi.'
+      });
     }
 
     const data = await db.reviewIzinApplication(
